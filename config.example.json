@@ -1,0 +1,6 @@
+{
+    "coreProvider": { "blockfrostKey": "..." },
+    "networkId": "testnet-preview",
+    "logging": [{ "type": { "tag": "stderr" }, "severity": "Debug", "verbosity": "V2" }],
+    "utxoCacheEnable": false
+}

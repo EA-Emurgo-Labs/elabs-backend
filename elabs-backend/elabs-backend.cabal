@@ -1,0 +1,91 @@
+cabal-version:   3.4
+name:            elabs-backend
+version:         0.1.0.0
+copyright:       2023 EMURGO Africa
+maintainer:      eduardo@emurgo.africa
+extra-doc-files: CHANGELOG.md
+
+common opts
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -eventlog -O2
+
+common profiling
+  ghc-options: -prof -fprof-auto -O2
+
+common deps
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , atlas-cardano
+    , base
+    , bytestring
+    , cardano-api
+    , containers
+    , mtl
+    , newtype
+    , optics
+    , plutus-ledger-api
+    , ply-core
+    , serialise
+    , tagged
+    , text
+    , transformers
+    , vector
+
+common lang
+  ghc-options:
+    -Werror -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wno-unused-do-bind -Wno-partial-type-signatures
+    -Wmissing-export-lists -Wincomplete-record-updates
+    -Wmissing-deriving-strategies -Wno-name-shadowing -Wunused-foralls
+    -fprint-explicit-foralls -fprint-explicit-kinds -Wunused-do-bind
+
+  default-extensions:
+    DataKinds
+    DeriveAnyClass
+    DeriveGeneric
+    DerivingStrategies
+    DuplicateRecordFields
+    FlexibleContexts
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    KindSignatures
+    NumericUnderscores
+    OverloadedRecordDot
+    OverloadedStrings
+    PackageImports
+    PolyKinds
+    RankNTypes
+    RecordWildCards
+    TypeApplications
+    TypeOperators
+
+  default-language:   Haskell2010
+
+library
+  import:          lang, deps, opts
+  hs-source-dirs:  src
+  exposed-modules:
+    EA
+    EA.Helpers
+    EA.Script
+
+executable cli
+  import:         lang, deps, opts
+  hs-source-dirs: cli
+  main-is:        Main.hs
+  build-depends:
+    , optparse-applicative
+    , elabs-backend
+
+executable server
+  import:         lang, deps, opts
+  hs-source-dirs: server
+  main-is:        Main.hs
+  build-depends:
+    , optparse-applicative
+    , elabs-backend
+    , http-types
+    , servant-server
+    , wai
+    , wai-cors
+    , warp
