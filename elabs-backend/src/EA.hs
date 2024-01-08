@@ -4,8 +4,6 @@ module EA (
   runEAApp,
 ) where
 
-import Control.Monad.Reader (MonadIO, MonadReader, ReaderT (runReaderT))
-
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.Types (
   GYProviders,

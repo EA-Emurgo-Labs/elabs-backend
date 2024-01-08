@@ -25,11 +25,17 @@ common deps
     , optics
     , plutus-ledger-api
     , ply-core
+    , relude
     , serialise
     , tagged
     , text
     , transformers
     , vector
+
+  mixins:
+    base hiding (Prelude),
+    relude (Relude as Prelude),
+    relude
 
 common lang
   ghc-options:
