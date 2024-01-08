@@ -74,17 +74,17 @@ executable cli
   hs-source-dirs: cli
   main-is:        Main.hs
   build-depends:
-    , optparse-applicative
     , elabs-backend
+    , optparse-applicative
 
 executable server
   import:         lang, deps, opts
   hs-source-dirs: server
   main-is:        Main.hs
   build-depends:
-    , optparse-applicative
     , elabs-backend
     , http-types
+    , optparse-applicative
     , servant-server
     , wai
     , wai-cors
