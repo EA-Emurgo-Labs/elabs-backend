@@ -7,9 +7,14 @@ module EA (
   eaLogInfo,
   eaLogWarning,
   eaLogError,
+  eaThrow,
+  eaCatch,
+  eaHandle,
 ) where
 
+import Control.Exception (catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
+import UnliftIO (MonadUnliftIO (withRunInIO))
 
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.Types (
@@ -28,7 +33,14 @@ import GeniusYield.Types (
 newtype EAApp a = EAApp
   { unEAApp :: ReaderT EAAppEnv IO a
   }
-  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader EAAppEnv)
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadReader EAAppEnv
+    , MonadUnliftIO
+    )
 
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
@@ -70,3 +82,15 @@ eaLogError :: (HasCallStack) => GYLogNamespace -> String -> EAApp ()
 eaLogError name msg = do
   providers <- asks eaAppEnvGYProviders
   liftIO $ gyLogError providers name msg
+
+--------------------------------------------------------------------------------
+-- Exception
+
+eaThrow :: (HasCallStack, Exception e) => e -> EAApp a
+eaThrow = liftIO . throwIO
+
+eaCatch :: (HasCallStack, Exception e) => EAApp a -> (e -> EAApp a) -> EAApp a
+eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
+
+eaHandle :: (HasCallStack, Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
+eaHandle = flip eaCatch

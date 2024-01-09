@@ -33,6 +33,7 @@ common deps
     , tagged
     , text
     , transformers
+    , unliftio
     , vector
     , wai
     , wai-cors
