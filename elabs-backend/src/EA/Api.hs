@@ -12,7 +12,8 @@ import EA.Api.Tx (TxApi, handleTxApi)
 
 type Api =
   TxApi
-  -- :<|> TODO:
+
+-- :<|> TODO:
 
 appApi :: Proxy Api
 appApi = Proxy

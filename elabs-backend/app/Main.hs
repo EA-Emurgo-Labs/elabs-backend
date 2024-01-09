@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Control.Exception (try)
+import Control.Monad.Metrics qualified as Metrics
 
 import Options.Applicative
 
@@ -12,8 +13,8 @@ import Network.Wai.Middleware.Cors
 
 import Servant
 
-import EA (EAAppEnv(..))
-import EA.Api (appApi, apiServer)
+import EA (EAAppEnv (..))
+import EA.Api (apiServer, appApi)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
@@ -59,6 +60,7 @@ main = app =<< execParser opts
 
 app :: Options -> IO ()
 app opts = do
+  metrics <- Metrics.initialize
   conf <- coreConfigIO $ optionsCoreConfigFile opts
 
   withCfgProviders conf (fromString $ optionsLogNameSpace opts) $
@@ -69,6 +71,7 @@ app opts = do
           EAAppEnv
             { eaAppEnvGYProviders = providers
             , eaAppEnvGYCoreConfig = conf
+            , eaAppEnvMetrics = metrics
             -- , eaAppEnvScripts = undefined --- TODO :: !Scripts
             }
       putStrLn $ "Starting server at \n " <> "http://localhost:" <> show port
