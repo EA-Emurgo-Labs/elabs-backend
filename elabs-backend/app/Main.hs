@@ -5,7 +5,11 @@ import Control.Monad.Metrics qualified as Metrics
 
 import Options.Applicative
 
-import GeniusYield.GYConfig (coreConfigIO, withCfgProviders)
+import GeniusYield.GYConfig (
+  coreConfigIO,
+  withCfgProviders,
+ )
+import GeniusYield.Types (gyLogInfo)
 
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
@@ -74,7 +78,8 @@ app opts = do
             , eaAppEnvMetrics = metrics
             -- , eaAppEnvScripts = undefined --- TODO :: !Scripts
             }
-      putStrLn $ "Starting server at \n " <> "http://localhost:" <> show port
+      gyLogInfo providers "app" $
+        "Starting server at " <> "http://localhost:" <> show port
       run port $ server env
 
 server :: EAAppEnv -> Application
