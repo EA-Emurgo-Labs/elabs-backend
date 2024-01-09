@@ -20,6 +20,9 @@ common deps
     , bytestring
     , cardano-api
     , containers
+    , http-types
+    , monad-logger
+    , monad-metrics
     , mtl
     , newtype
     , optics
@@ -27,10 +30,14 @@ common deps
     , ply-core
     , relude
     , serialise
+    , servant-server
     , tagged
     , text
     , transformers
     , vector
+    , wai
+    , wai-cors
+    , warp
 
   mixins:
     base hiding (Prelude),
@@ -72,26 +79,15 @@ library
   hs-source-dirs:  src
   exposed-modules:
     EA
+    EA.Api
+    EA.Api.Tx
     EA.Helpers
     EA.Script
 
-executable cli
+executable app
   import:         lang, deps, opts
-  hs-source-dirs: cli
+  hs-source-dirs: app
   main-is:        Main.hs
   build-depends:
     , elabs-backend
     , optparse-applicative
-
-executable server
-  import:         lang, deps, opts
-  hs-source-dirs: server
-  main-is:        Main.hs
-  build-depends:
-    , elabs-backend
-    , http-types
-    , optparse-applicative
-    , servant-server
-    , wai
-    , wai-cors
-    , warp
