@@ -9,8 +9,6 @@ import GeniusYield.Types (
   GYProviders,
  )
 
-import EA.Script (Scripts (..))
-
 --------------------------------------------------------------------------------
 
 newtype EAApp a = EAApp
@@ -21,7 +19,7 @@ newtype EAApp a = EAApp
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
-  , eaAppEnvScripts :: !Scripts
+  -- , eaAppEnvScripts :: !Scripts
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
