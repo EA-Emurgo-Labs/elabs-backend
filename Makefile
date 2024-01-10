@@ -42,4 +42,10 @@ test:
 	cabal test --test-options="--hide-successes -t $(TEST_CASE_TIMEOUT) -j$(THREADS)"
 
 build:
-	cabal build -j$(THREADS)
+	cabal build elabs-backend -j$(THREADS)
+
+swagger:
+	cabal run elabs-backend:app -j$(THREADS) -- swagger
+
+run:
+	cabal run elabs-backend:app -j$(THREADS) -- run
