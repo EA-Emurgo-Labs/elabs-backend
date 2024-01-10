@@ -16,7 +16,7 @@ import GeniusYield.Types (
   unsignedTx,
  )
 
-import Servant
+import Servant (JSON, Post, ReqBody, type (:>))
 
 import Data.Maybe (fromJust)
 import Data.Swagger qualified as Swagger

@@ -3,7 +3,7 @@ module EA.Api.Tx (
   handleTxApi,
 ) where
 
-import GeniusYield.Imports
+import GeniusYield.Imports (FromJSON, ToJSON)
 import GeniusYield.Types (
   GYProviders (gySubmitTx),
   GYTx,
@@ -16,7 +16,7 @@ import GeniusYield.Types (
   txBodyTxId,
  )
 
-import Servant
+import Servant (JSON, Post, ReqBody, type (:>))
 
 import Data.Swagger qualified as Swagger
 
@@ -48,7 +48,7 @@ txBodySubmitTxResponse txBody =
     , submitTxId = txBodyTxId txBody
     }
 
-handleTxApi :: SubmitTxParams -> EAApp SubmitTxResponse
+handleTxApi :: SubmitTxParams -> EA.EAApp SubmitTxResponse
 handleTxApi SubmitTxParams {..} = do
   providers <- asks eaAppEnvGYProviders
   void . liftIO $ gySubmitTx providers $ makeSignedTransaction txWit txBody
