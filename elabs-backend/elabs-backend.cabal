@@ -72,8 +72,8 @@ common lang
     GADTs
     GeneralizedNewtypeDeriving
     HexFloatLiterals
-    InstanceSigs
     ImportQualifiedPost
+    InstanceSigs
     KindSignatures
     LambdaCase
     MultiParamTypeClasses

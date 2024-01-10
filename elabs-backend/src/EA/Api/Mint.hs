@@ -64,8 +64,8 @@ handleMintApi WalletParams {..} = do
     skeleton = Tx.oneShotMint addr oref 1 policy
 
   txBody <-
-    liftIO $
-      runGYTxMonadNode
+    liftIO
+      $ runGYTxMonadNode
         nid
         providers
         [addr]
