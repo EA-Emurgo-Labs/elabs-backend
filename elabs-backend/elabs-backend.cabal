@@ -82,9 +82,11 @@ library
   exposed-modules:
     EA
     EA.Api
+    EA.Api.Mint
     EA.Api.Tx
     EA.Helpers
     EA.Script
+    EA.Tx.OneShotMint
 
 executable app
   import:         lang, deps, opts

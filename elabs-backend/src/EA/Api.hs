@@ -10,14 +10,13 @@ import Servant
 import Servant.Swagger (toSwagger)
 
 import EA (EAAppEnv, runEAApp)
+import EA.Api.Mint (MintApi, handleMintApi)
 import EA.Api.Tx (TxApi, handleTxApi)
 
 --------------------------------------------------------------------------------
 
 type Api =
-  TxApi
-
--- :<|> TODO:
+  TxApi :<|> MintApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi
@@ -28,3 +27,4 @@ appApi = Proxy
 apiServer :: EAAppEnv -> ServerT Api IO
 apiServer env =
   runEAApp env . handleTxApi
+    :<|> runEAApp env . handleMintApi
