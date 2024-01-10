@@ -6,7 +6,7 @@ module EA.Api (
 
 import Data.Swagger (Swagger)
 
-import Servant
+import Servant (HasServer (ServerT), type (:<|>) (..))
 import Servant.Swagger (toSwagger)
 
 import EA (EAAppEnv, runEAApp)

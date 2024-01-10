@@ -104,13 +104,13 @@ eaLogError name msg = do
 --------------------------------------------------------------------------------
 -- Exception
 
-eaThrow :: (HasCallStack, Exception e) => e -> EAApp a
+eaThrow :: (Exception e) => e -> EAApp a
 eaThrow = liftIO . throwIO
 
-eaCatch :: (HasCallStack, Exception e) => EAApp a -> (e -> EAApp a) -> EAApp a
+eaCatch :: (Exception e) => EAApp a -> (e -> EAApp a) -> EAApp a
 eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
 
-eaHandle :: (HasCallStack, Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
+eaHandle :: (Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 eaHandle = flip eaCatch
 
 --------------------------------------------------------------------------------
