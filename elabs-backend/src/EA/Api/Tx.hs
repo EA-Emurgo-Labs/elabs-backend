@@ -18,6 +18,8 @@ import GeniusYield.Types (
 
 import Servant
 
+import Data.Swagger qualified as Swagger
+
 import EA (EAApp, EAAppEnv (..))
 
 type TxApi =
@@ -30,14 +32,14 @@ data SubmitTxParams = SubmitTxParams
   , txWit :: !GYTxWitness
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, Swagger.ToSchema)
 
 data SubmitTxResponse = SubmitTxResponse
   { submitTxFee :: !Integer
   , submitTxId :: !GYTxId
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, Swagger.ToSchema)
 
 txBodySubmitTxResponse :: GYTxBody -> SubmitTxResponse
 txBodySubmitTxResponse txBody =

@@ -30,6 +30,8 @@ common deps
     , relude
     , serialise
     , servant-server
+    , servant-swagger
+    , swagger2
     , tagged
     , text
     , transformers
