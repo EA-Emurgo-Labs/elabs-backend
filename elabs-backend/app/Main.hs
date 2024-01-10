@@ -25,10 +25,13 @@ import Servant
 
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
+import EA.Script (Scripts (Scripts))
+import Ply (readTypedScript)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
   , optionsLogNameSpace :: !String
+  , optionsScriptsFile :: !String
   , optionsCommand :: !Commands
   }
 
@@ -62,6 +65,13 @@ options =
           <> help "Log namespace"
           <> showDefault
           <> value "elabs-backend"
+      )
+    <*> option
+      auto
+      ( long "scripts"
+          <> help "Scripts file"
+          <> showDefault
+          <> value "scripts.json"
       )
     <*> subparser
       ( command "run" (info serverOptions (progDesc "Run backend server"))
@@ -112,14 +122,19 @@ app opts = do
     \providers -> do
       case optionsCommand opts of
         RunServer opt -> do
+          -- TODO: This is one particular script
+          --       -> Make FromJSON instance of Scripts
+          policyTypedScript <- readTypedScript (optionsScriptsFile opts)
+
           let
             port = serverOptionsPort opt
+            scripts = Scripts policyTypedScript
             env =
               EAAppEnv
                 { eaAppEnvGYProviders = providers
                 , eaAppEnvGYCoreConfig = conf
                 , eaAppEnvMetrics = metrics
-                -- , eaAppEnvScripts = undefined --- TODO :: !Scripts
+                , eaAppEnvScripts = scripts
                 }
           gyLogInfo providers "app" $
             "Starting server at " <> "http://localhost:" <> show port

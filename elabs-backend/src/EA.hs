@@ -10,23 +10,41 @@ module EA (
   eaThrow,
   eaCatch,
   eaHandle,
+  oneShotMintingPolicy,
 ) where
 
 import Control.Exception (catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
+
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.Types (
   GYLogNamespace,
   GYLogSeverity,
+  GYMintingPolicy,
   GYProviders,
+  GYTxOutRef,
+  PlutusVersion (PlutusV2),
   gyLog,
   gyLogDebug,
   gyLogError,
   gyLogInfo,
   gyLogWarning,
+  txOutRefToPlutus,
  )
+
+import Ply (
+  AsData (AsData),
+  PlyArg,
+  ScriptRole (MintingPolicyRole),
+  TypedScript,
+  (#),
+ )
+import Ply.Core.Class (PlyArg (..))
+
+import EA.Helpers (mintingPolicyFromPly)
+import EA.Script (Scripts (..))
 
 --------------------------------------------------------------------------------
 
@@ -49,7 +67,7 @@ data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
   , eaAppEnvMetrics :: !Metrics
-  -- , eaAppEnvScripts :: !Scripts
+  , eaAppEnvScripts :: !Scripts
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
@@ -94,3 +112,30 @@ eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
 
 eaHandle :: (HasCallStack, Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 eaHandle = flip eaCatch
+
+--------------------------------------------------------------------------------
+-- Reader helpers
+
+oneShotMintingPolicy :: GYTxOutRef -> EAAppEnv -> GYMintingPolicy 'PlutusV2
+oneShotMintingPolicy oref =
+  applyToMintingPolicy (AsData . txOutRefToPlutus $ oref) scriptsOneShotPolicy
+
+applyToScript ::
+  forall r a.
+  (PlyArg a, ToDataConstraint a) =>
+  AsData a ->
+  (Scripts -> TypedScript r '[AsData a]) ->
+  EAAppEnv ->
+  TypedScript r '[]
+applyToScript a f =
+  (# a) . f . eaAppEnvScripts
+
+applyToMintingPolicy ::
+  forall a.
+  (PlyArg a, ToDataConstraint a) =>
+  AsData a ->
+  (Scripts -> TypedScript 'MintingPolicyRole '[AsData a]) ->
+  EAAppEnv ->
+  GYMintingPolicy 'PlutusV2
+applyToMintingPolicy a f =
+  mintingPolicyFromPly . applyToScript a f
