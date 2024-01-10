@@ -6,7 +6,6 @@ module EA.Api (
 
 import Data.Swagger (Swagger)
 
-
 import Servant
 import Servant.Swagger (toSwagger)
 

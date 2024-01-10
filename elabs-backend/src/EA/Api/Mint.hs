@@ -1,14 +1,20 @@
 module EA.Api.Mint (MintApi, handleMintApi) where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 
-import GeniusYield.Imports
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
-import GeniusYield.Types (
-  GYTxOutRefCbor (getTxOutRefHex),
-  gyQueryUtxosAtAddresses, randomTxOutRef, GYAddress, GYTxBody, unsignedTx, txToHex, txBodyFee,
- )
+import GeniusYield.Imports
 import GeniusYield.TxBuilder (runGYTxMonadNode)
+import GeniusYield.Types (
+  GYAddress,
+  GYTxBody,
+  GYTxOutRefCbor (getTxOutRefHex),
+  gyQueryUtxosAtAddresses,
+  randomTxOutRef,
+  txBodyFee,
+  txToHex,
+  unsignedTx,
+ )
 
 import Servant
 
