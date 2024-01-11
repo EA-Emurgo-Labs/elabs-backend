@@ -20,6 +20,10 @@
 
     buildInputs = with pkgs; [
       jq
+      haskellPackages.cabal-fmt
+      haskellPackages.fourmolu
+      nixpkgs-fmt
+      gnumake
     ];
   };
 }
