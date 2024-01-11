@@ -56,6 +56,7 @@ common lang
     -Wredundant-constraints
 
   default-extensions:
+    NoImplicitPrelude
     BangPatterns
     BinaryLiterals
     ConstraintKinds

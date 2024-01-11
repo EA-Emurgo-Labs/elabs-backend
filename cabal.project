@@ -37,6 +37,7 @@ source-repository-package
   tag: ea954740990847f00d047eb9d40a6c206d913ba4
   subdir: .
   subdir: plutarch-extra
+  --sha256: sha256-I52I5UVesIP5ZUgYWZulrGKYaWmMVnuDp/87aY6h6cU=
 
 source-repository-package
   type: git
@@ -48,6 +49,7 @@ source-repository-package
   subdir: plutarch-context-builder
   subdir: plutarch-quickcheck
   subdir: plutarch-unit
+  --sha256: sha256-ioUyXgpBGLYjLtMIFRFFtV+h8QoRIi3TaYsb2GgWrg4=
 
 source-repository-package
   type: git
@@ -85,6 +87,7 @@ source-repository-package
   type: git
   location: https://github.com/geniusyield/atlas
   tag: 04366fb4367b6e734c8722872f98892bcffcf413
+  --sha256: sha256-WM/G0dlSuRD7oZZxwir4InpD+hxoLHhwHeEW0tKS12M=
 
 source-repository-package
   type: git
