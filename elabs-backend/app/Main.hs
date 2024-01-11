@@ -117,8 +117,8 @@ app opts = do
   metrics <- Metrics.initialize
   conf <- coreConfigIO $ optionsCoreConfigFile opts
 
-  withCfgProviders conf (fromString $ optionsLogNameSpace opts)
-    $ \providers -> do
+  withCfgProviders conf (fromString $ optionsLogNameSpace opts) $
+    \providers -> do
       case optionsCommand opts of
         RunServer opt -> do
           -- TODO: This is one particular script
@@ -135,10 +135,10 @@ app opts = do
                 , eaAppEnvMetrics = metrics
                 , eaAppEnvScripts = scripts
                 }
-          gyLogInfo providers "app"
-            $ "Starting server at "
-            <> "http://localhost:"
-            <> show port
+          gyLogInfo providers "app" $
+            "Starting server at "
+              <> "http://localhost:"
+              <> show port
           run port $ server env
         ExportSwagger opt -> do
           let file = swaggerOptionsFile opt
@@ -148,8 +148,8 @@ app opts = do
 server :: EAAppEnv -> Application
 server env =
   cors
-    ( const
-        $ Just
+    ( const $
+        Just
           simpleCorsResourcePolicy
             { corsRequestHeaders = [HttpTypes.hContentType] -- FIXME: better CORS policy
             }

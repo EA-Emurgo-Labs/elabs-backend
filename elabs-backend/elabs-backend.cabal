@@ -52,7 +52,7 @@ common lang
     -Wno-unused-do-bind -Wno-partial-type-signatures
     -Wmissing-export-lists -Wincomplete-record-updates
     -Wmissing-deriving-strategies -Wno-name-shadowing -Wunused-foralls
-    -fprint-explicit-foralls -fprint-explicit-kinds
+    -fprint-explicit-foralls -fprint-explicit-kinds -Wunused-do-bind
     -Wredundant-constraints
 
   default-extensions:
@@ -60,11 +60,9 @@ common lang
     BinaryLiterals
     ConstraintKinds
     DataKinds
-    DeriveFunctor
+    DeriveAnyClass
     DeriveGeneric
-    DeriveTraversable
     DerivingStrategies
-    DerivingVia
     DuplicateRecordFields
     EmptyCase
     FlexibleContexts
@@ -77,9 +75,14 @@ common lang
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
-    NoImplicitPrelude
     NumericUnderscores
+    NumericUnderscores
+    OverloadedRecordDot
     OverloadedStrings
+    PackageImports
+    PolyKinds
+    RankNTypes
+    RecordWildCards
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
