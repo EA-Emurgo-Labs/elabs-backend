@@ -18,10 +18,9 @@ import GeniusYield.Types (
 
 import Servant (JSON, Post, ReqBody, type (:>))
 
-import Data.Maybe (fromJust)
 import Data.Swagger qualified as Swagger
 
-import EA (EAApp, EAAppEnv (..), oneShotMintingPolicy)
+import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
 import EA.Tx.OneShotMint qualified as Tx
 
 type MintApi =
@@ -56,12 +55,13 @@ handleMintApi WalletParams {..} = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers usedAddrs
-  oref <- liftIO $ fst . fromJust <$> randomTxOutRef utxos -- FIXME:
+
+  (oref, _) <-
+    liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
+
   policy <- asks (oneShotMintingPolicy oref)
 
-  let
-    addr = fromJust $ viaNonEmpty head usedAddrs -- FIXME:
-    skeleton = Tx.oneShotMint addr oref 1 policy
+  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head usedAddrs
 
   txBody <-
     liftIO $
@@ -78,6 +78,6 @@ handleMintApi WalletParams {..} = do
                       )
                 )
         )
-        (return skeleton)
+        (return $ Tx.oneShotMint addr oref 1 policy)
 
   pure $ unSignedTxWithFee txBody
