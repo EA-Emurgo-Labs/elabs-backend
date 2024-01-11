@@ -11,9 +11,12 @@ module EA (
   eaCatch,
   eaHandle,
   oneShotMintingPolicy,
+  eaLiftMaybe,
+  eaLiftEither,
+  eaLiftEither',
 ) where
 
-import Control.Exception (catch, throwIO)
+import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 
 import UnliftIO (MonadUnliftIO (withRunInIO))
@@ -103,6 +106,19 @@ eaLogError name msg = do
 
 --------------------------------------------------------------------------------
 -- Exception
+
+eaLiftMaybe :: String -> Maybe a -> EAApp a
+eaLiftMaybe = eaLiftMaybe' . ErrorCall
+
+eaLiftMaybe' :: (Exception e) => e -> Maybe a -> EAApp a
+eaLiftMaybe' e Nothing = eaThrow e
+eaLiftMaybe' _ (Just x) = return x
+
+eaLiftEither :: (a -> String) -> Either a b -> EAApp b
+eaLiftEither f = either (eaThrow . ErrorCall . f) return
+
+eaLiftEither' :: (Exception e) => (a -> e) -> Either a b -> EAApp b
+eaLiftEither' f = either (eaThrow . f) return
 
 eaThrow :: (Exception e) => e -> EAApp a
 eaThrow = liftIO . throwIO
