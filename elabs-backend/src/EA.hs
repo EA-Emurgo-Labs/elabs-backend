@@ -14,9 +14,15 @@ module EA (
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
+  eaRunErrorLoggingT,
 ) where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
+import Control.Monad.Logger (
+  LogLevel (..),
+  LoggingT (runLoggingT),
+  fromLogStr,
+ )
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 
 import UnliftIO (MonadUnliftIO (withRunInIO))
@@ -24,7 +30,7 @@ import UnliftIO (MonadUnliftIO (withRunInIO))
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.Types (
   GYLogNamespace,
-  GYLogSeverity,
+  GYLogSeverity (..),
   GYMintingPolicy,
   GYProviders,
   GYTxOutRef,
@@ -78,6 +84,21 @@ runEAApp env = flip runReaderT env . unEAApp
 
 --------------------------------------------------------------------------------
 -- Logging
+
+eaRunErrorLoggingT :: (HasCallStack) => GYLogNamespace -> LoggingT IO a -> EAApp a
+eaRunErrorLoggingT name logging = do
+  providers <- asks eaAppEnvGYProviders
+  liftIO $
+    runLoggingT logging $
+      \_ _ serv msg ->
+        gyLog providers name (fromLogLevel serv) (decodeUtf8 $ fromLogStr msg)
+  where
+    fromLogLevel :: LogLevel -> GYLogSeverity
+    fromLogLevel LevelDebug = GYDebug
+    fromLogLevel LevelInfo = GYInfo
+    fromLogLevel LevelWarn = GYWarning
+    fromLogLevel LevelError = GYError
+    fromLogLevel (LevelOther _) = GYError
 
 eaLog :: (HasCallStack) => GYLogNamespace -> GYLogSeverity -> String -> EAApp ()
 eaLog name sev msg = do
