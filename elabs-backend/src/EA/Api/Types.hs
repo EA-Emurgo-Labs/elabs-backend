@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module EA.Api.Types (
   SubmitTxParams (..),
   SubmitTxResponse (..),
@@ -12,12 +10,6 @@ module EA.Api.Types (
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import Data.Text qualified as T
-import Data.Text.Class qualified as TC
-
-import Servant (
-  FromHttpApiData (parseUrlPiece),
-  ToHttpApiData (toUrlPiece),
- )
 
 import GeniusYield.Types (
   GYAddress,
@@ -31,8 +23,6 @@ import GeniusYield.Types (
   txToHex,
   unsignedTx,
  )
-
-import EA.Wallet (UserId (..))
 
 data SubmitTxParams = SubmitTxParams
   { txUnsigned :: !GYTx
@@ -76,9 +66,3 @@ unSignedTxWithFee txBody =
     { txBodyHex = T.pack $ txToHex $ unsignedTx txBody
     , txFee = Just $ txBodyFee txBody
     }
-
-instance FromHttpApiData UserId where
-  parseUrlPiece = bimap (T.pack . TC.getTextDecodingError) UserId . TC.fromText
-
-instance ToHttpApiData UserId where
-  toUrlPiece = TC.toText . unUserId

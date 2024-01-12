@@ -113,7 +113,6 @@ library
     EA.Wallet
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
-    Internal.Wallet.DB.Types
 
 executable app
   import:         lang, deps, opts

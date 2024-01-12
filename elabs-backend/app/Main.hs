@@ -65,14 +65,13 @@ options =
           <> value "scripts.json"
       )
     <*> subparser
-      ( command "run" (info serverOptions (progDesc "Run backend server"))
-          <> command "swagger" (info swaggerOptions (progDesc "Export swagger api"))
+      ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
+          <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
       )
 
-serverOptions :: Parser Commands
+serverOptions :: Parser ServerOptions
 serverOptions =
-  RunServer
-    . ServerOptions
+  ServerOptions
     <$> option
       auto
       ( long "port"
@@ -96,10 +95,9 @@ serverOptions =
           <> value 10
       )
 
-swaggerOptions :: Parser Commands
+swaggerOptions :: Parser SwaggerOptions
 swaggerOptions =
-  ExportSwagger
-    . SwaggerOptions
+  SwaggerOptions
     <$> option
       auto
       ( long "outfile"

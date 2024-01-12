@@ -2,10 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Internal.Wallet.DB.Schema where
+module Internal.Wallet.DB.Schema (
+  EntityField (WalletUsed, WalletUser),
+  Wallet (..),
+  migrateAll,
+) where
 
 import Data.Time (UTCTime)
 import Database.Persist (
+  EntityField,
   FieldDef (
     fieldAttrs,
     fieldCascade,
