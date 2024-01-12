@@ -60,11 +60,11 @@ instance FromHttpApiData UserId where
 instance ToHttpApiData UserId where
   toUrlPiece = TC.toText . unUserId
 
--- TODO: Check OverflowNatural documentation
+-- Check OverflowNatural documentation
 instance PersistField UserId where
   toPersistValue = (toPersistValue :: Int64 -> PersistValue) . fromIntegral . unUserId
   fromPersistValue x = case (fromPersistValue x :: Either Text Int64) of
-    Left err -> Left $ T.replace "Int64" "OverflowNatural" err
+    Left err -> Left $ T.replace "Int64" "UserId" err
     Right int -> Right $ UserId $ fromIntegral int
 
 instance PersistFieldSql UserId where
