@@ -1,18 +1,27 @@
 module EA.Api.Types (
- SubmitTxParams (..),
- SubmitTxResponse (..),
- WalletParams (..),
- UnsignedTxResponse (..),
- txBodySubmitTxResponse,
- unSignedTxWithFee
+  SubmitTxParams (..),
+  SubmitTxResponse (..),
+  WalletParams (..),
+  UnsignedTxResponse (..),
+  txBodySubmitTxResponse,
+  unSignedTxWithFee,
 ) where
 
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
+import Data.Text qualified as T
 import GeniusYield.Types (
+  GYAddress,
   GYTx,
-  GYTxWitness, GYTxId, GYTxBody, txBodyFee, txBodyTxId, GYAddress, GYTxOutRefCbor, unsignedTx, txToHex)
-import qualified Data.Swagger as Swagger
-import qualified Data.Aeson as Aeson
-import qualified Data.Text as T
+  GYTxBody,
+  GYTxId,
+  GYTxOutRefCbor,
+  GYTxWitness,
+  txBodyFee,
+  txBodyTxId,
+  txToHex,
+  unsignedTx,
+ )
 
 data SubmitTxParams = SubmitTxParams
   { txUnsigned :: !GYTx
