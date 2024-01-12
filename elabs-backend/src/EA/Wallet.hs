@@ -1,19 +1,22 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
+
 module EA.Wallet (
   WalletId (..),
   eaGetAddress,
   eaSignGYTxBody,
 ) where
 
-import qualified Data.Text.Class as TC
-import qualified Data.Text as T
-import qualified Data.Aeson as Aeson
-import qualified Data.Swagger as Swagger
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
+import Data.Text qualified as T
+import Data.Text.Class qualified as TC
 
 import GeniusYield.Types (GYAddress, GYTx, GYTxBody)
 
-import Servant
-    ( FromHttpApiData(parseUrlPiece), ToHttpApiData(toUrlPiece) )
+import Servant (
+  FromHttpApiData (parseUrlPiece),
+  ToHttpApiData (toUrlPiece),
+ )
 
 import EA (EAApp)
 
