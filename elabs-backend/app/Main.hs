@@ -27,7 +27,6 @@ import Ply (readTypedScript)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
-  , optionsLogNameSpace :: !String
   , optionsScriptsFile :: !String
   , optionsCommand :: !Commands
   }
@@ -38,6 +37,8 @@ data Commands
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
+  , serverOptionsSqliteFile :: !String
+  , serverOptionsSqlitePoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -55,13 +56,6 @@ options =
           <> help "Core config file path"
           <> showDefault
           <> value "config.json"
-      )
-    <*> option
-      auto
-      ( long "log-namespace"
-          <> help "Log namespace"
-          <> showDefault
-          <> value "elabs-backend"
       )
     <*> option
       auto
@@ -86,6 +80,20 @@ serverOptions =
           <> help "Port"
           <> showDefault
           <> value 8081
+      )
+    <*> option
+      auto
+      ( long "sqlite"
+          <> help "Sqlite file"
+          <> showDefault
+          <> value "wallet.db"
+      )
+    <*> option
+      auto
+      ( long "sqlite-pool-size"
+          <> help "Sqlite pool size"
+          <> showDefault
+          <> value 10
       )
 
 swaggerOptions :: Parser Commands
@@ -117,7 +125,7 @@ app opts = do
   metrics <- Metrics.initialize
   conf <- coreConfigIO $ optionsCoreConfigFile opts
 
-  withCfgProviders conf (fromString $ optionsLogNameSpace opts) $
+  withCfgProviders conf "app" $
     \providers -> do
       case optionsCommand opts of
         RunServer opt -> do
@@ -134,6 +142,8 @@ app opts = do
                 , eaAppEnvGYCoreConfig = conf
                 , eaAppEnvMetrics = metrics
                 , eaAppEnvScripts = scripts
+                , eaAppEnvSqliteFile = serverOptionsSqliteFile opt
+                , eaAppEnvSqlitePoolSize = serverOptionsSqlitePoolSize opt
                 }
           gyLogInfo providers "app" $
             "Starting server at "

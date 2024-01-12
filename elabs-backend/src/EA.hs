@@ -77,6 +77,8 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
+  , eaAppEnvSqliteFile :: !String
+  , eaAppEnvSqlitePoolSize :: !Int
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
