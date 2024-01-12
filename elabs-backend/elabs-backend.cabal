@@ -21,6 +21,7 @@ common deps
     , cardano-api
     , containers
     , http-types
+    , monad-logger
     , monad-metrics
     , mtl
     , newtype
@@ -101,6 +102,7 @@ library
     EA.Api
     EA.Api.Mint
     EA.Api.Tx
+    EA.Api.Types
     EA.Helpers
     EA.Script
     EA.Tx.OneShotMint
