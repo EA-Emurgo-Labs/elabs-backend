@@ -38,6 +38,7 @@ common deps
     , tagged
     , text
     , text-class
+    , time
     , transformers
     , unliftio
     , vector
@@ -110,6 +111,9 @@ library
     EA.Script
     EA.Tx.OneShotMint
     EA.Wallet
+    Internal.Wallet.DB.Schema
+    Internal.Wallet.DB.Sqlite
+    Internal.Wallet.DB.Types
 
 executable app
   import:         lang, deps, opts

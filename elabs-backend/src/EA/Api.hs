@@ -12,8 +12,8 @@ import Servant.Swagger (toSwagger)
 import EA (EAAppEnv, runEAApp)
 import EA.Api.Mint (
   MintApi,
+  handleOneShotMintByUserId,
   handleOneShotMintByWallet,
-  handleOneShotMintByWalletId,
  )
 import EA.Api.Tx (TxApi, handleTxApi)
 
@@ -32,4 +32,4 @@ apiServer :: EAAppEnv -> ServerT Api IO
 apiServer env =
   runEAApp env . handleTxApi
     :<|> runEAApp env . handleOneShotMintByWallet
-    :<|> runEAApp env . handleOneShotMintByWalletId
+    :<|> runEAApp env . handleOneShotMintByUserId

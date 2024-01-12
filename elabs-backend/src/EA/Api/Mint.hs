@@ -1,6 +1,6 @@
 module EA.Api.Mint (
   MintApi,
-  handleOneShotMintByWalletId,
+  handleOneShotMintByUserId,
   handleOneShotMintByWallet,
 ) where
 
@@ -24,25 +24,32 @@ import EA.Api.Types (
   unSignedTxWithFee,
  )
 import EA.Tx.OneShotMint qualified as Tx
-import EA.Wallet (WalletId, eaGetAddresses, eaGetCollateral, eaSignGYTxBody)
+import EA.Wallet (
+  UserId,
+  eaGetCollateral,
+  eaGetUnusedAddresses,
+  eaGetUsedAddresses,
+  eaSignGYTxBody,
+ )
 
-type MintApi = OneShotMintByWallet :<|> OneShotMintByWalletId
+type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
 
 type OneShotMintByWallet =
   "one-shot-mint"
     :> ReqBody '[JSON] WalletParams
     :> Post '[JSON] UnsignedTxResponse
 
-type OneShotMintByWalletId =
+type OneShotMintByUserId =
   "one-shot-mint"
-    :> Capture "walletId" WalletId
+    :> Capture "userId" UserId
     :> Post '[JSON] SubmitTxResponse
 
-handleOneShotMintByWalletId :: WalletId -> EAApp SubmitTxResponse
-handleOneShotMintByWalletId walletId = do
+handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
+handleOneShotMintByUserId userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
-  addrs <- eaGetAddresses walletId
+  addrs <- eaGetUsedAddresses userId
+  unusedAddrs <- eaGetUnusedAddresses userId
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
 
   (oref, _) <-
@@ -50,7 +57,7 @@ handleOneShotMintByWalletId walletId = do
 
   policy <- asks (oneShotMintingPolicy oref)
 
-  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
+  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head unusedAddrs
   collateral <- eaGetCollateral
 
   txBody <-
