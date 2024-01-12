@@ -104,7 +104,7 @@ library
     EA.Api.Mint
     EA.Api.Tx
     EA.Api.Types
-    EA.Helpers
+    EA.Internal
     EA.Script
     EA.Tx.OneShotMint
 

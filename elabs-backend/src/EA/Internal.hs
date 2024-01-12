@@ -1,4 +1,4 @@
-module EA.Helpers (
+module EA.Internal (
   validatorFromPly,
   mintingPolicyFromPly,
 ) where

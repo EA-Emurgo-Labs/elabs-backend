@@ -52,7 +52,7 @@ import Ply (
  )
 import Ply.Core.Class (PlyArg (..))
 
-import EA.Helpers (mintingPolicyFromPly)
+import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
 
 --------------------------------------------------------------------------------
