@@ -25,6 +25,7 @@ import Database.Persist.Sqlite (
   PersistField (..),
   PersistFieldSql (sqlType),
   PersistValue,
+  SqlType (SqlInt64),
  )
 
 import EA (EAApp)
@@ -59,15 +60,12 @@ instance FromHttpApiData UserId where
 instance ToHttpApiData UserId where
   toUrlPiece = TC.toText . unUserId
 
-persistUserId :: UserId -> PersistValue
-persistUserId = toPersistValue . unUserId
-
-unPersistUserId :: PersistValue -> Either Text UserId
-unPersistUserId = fmap UserId . fromPersistValue
-
+-- TODO: Check OverflowNatural documentation
 instance PersistField UserId where
-  toPersistValue = persistUserId
-  fromPersistValue = unPersistUserId
+  toPersistValue = (toPersistValue :: Int64 -> PersistValue) . fromIntegral . unUserId
+  fromPersistValue x = case (fromPersistValue x :: Either Text Int64) of
+    Left err -> Left $ T.replace "Int64" "OverflowNatural" err
+    Right int -> Right $ UserId $ fromIntegral int
 
 instance PersistFieldSql UserId where
-  sqlType _ = sqlType (Proxy @Word64)
+  sqlType _ = SqlInt64
