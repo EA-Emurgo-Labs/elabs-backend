@@ -3,5 +3,8 @@ module Main (main) where
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
-main = defaultMain $ testGroup "elabs-backend"
-  [ ]
+main =
+  defaultMain $
+    testGroup
+      "elabs-backend"
+      []
