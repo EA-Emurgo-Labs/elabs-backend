@@ -1,4 +1,8 @@
-module EA.Api.Mint (MintApi, handleMintApi) where
+module EA.Api.Mint (
+  MintApi,
+  handleOneShotMintByWalletId,
+  handleOneShotMintByWallet,
+) where
 
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
@@ -8,19 +12,34 @@ import GeniusYield.Types (
   randomTxOutRef,
  )
 
-import Servant (JSON, Post, ReqBody, type (:>))
+import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
-import EA.Api.Types (UnsignedTxResponse, WalletParams (..), unSignedTxWithFee)
+import EA.Api.Types (
+  UnsignedTxResponse,
+  WalletId,
+  WalletParams (..),
+  unSignedTxWithFee,
+ )
 import EA.Tx.OneShotMint qualified as Tx
 
-type MintApi =
+type MintApi = OneShotMintByWallet :<|> OneShotMintByWalletId
+
+type OneShotMintByWallet =
   "one-shot-mint"
     :> ReqBody '[JSON] WalletParams
     :> Post '[JSON] UnsignedTxResponse
 
-handleMintApi :: WalletParams -> EAApp UnsignedTxResponse
-handleMintApi WalletParams {..} = do
+type OneShotMintByWalletId =
+  "one-shot-mint"
+    :> Capture "walletId" WalletId
+    :> Post '[JSON] UnsignedTxResponse
+
+handleOneShotMintByWalletId :: WalletId -> EAApp UnsignedTxResponse
+handleOneShotMintByWalletId = undefined
+
+handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
+handleOneShotMintByWallet WalletParams {..} = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers usedAddrs

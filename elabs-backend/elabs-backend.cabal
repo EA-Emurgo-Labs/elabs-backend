@@ -35,6 +35,7 @@ common deps
     , swagger2
     , tagged
     , text
+    , text-class
     , transformers
     , unliftio
     , vector
