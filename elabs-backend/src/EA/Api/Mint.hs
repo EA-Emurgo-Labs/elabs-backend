@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
 module EA.Api.Mint (
   MintApi,
   handleOneShotMintByWalletId,
@@ -9,6 +7,7 @@ module EA.Api.Mint (
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
 import GeniusYield.Types (
+  GYProviders (gySubmitTx),
   GYTxOutRefCbor (getTxOutRefHex),
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
@@ -18,12 +17,14 @@ import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
 import EA.Api.Types (
+  SubmitTxResponse,
   UnsignedTxResponse,
   WalletParams (..),
+  txBodySubmitTxResponse,
   unSignedTxWithFee,
  )
 import EA.Tx.OneShotMint qualified as Tx
-import EA.Wallet (WalletId)
+import EA.Wallet (WalletId, eaGetAddresses, eaGetCollateral, eaSignGYTxBody)
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByWalletId
 
@@ -35,10 +36,37 @@ type OneShotMintByWallet =
 type OneShotMintByWalletId =
   "one-shot-mint"
     :> Capture "walletId" WalletId
-    :> Post '[JSON] UnsignedTxResponse
+    :> Post '[JSON] SubmitTxResponse
 
-handleOneShotMintByWalletId :: WalletId -> EAApp UnsignedTxResponse
-handleOneShotMintByWalletId = undefined
+handleOneShotMintByWalletId :: WalletId -> EAApp SubmitTxResponse
+handleOneShotMintByWalletId walletId = do
+  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  providers <- asks eaAppEnvGYProviders
+  addrs <- eaGetAddresses walletId
+  utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
+
+  (oref, _) <-
+    liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
+
+  policy <- asks (oneShotMintingPolicy oref)
+
+  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
+  collateral <- eaGetCollateral
+
+  txBody <-
+    liftIO $
+      runGYTxMonadNode
+        nid
+        providers
+        [addr]
+        addr
+        collateral
+        (return $ Tx.oneShotMint addr oref 1 policy)
+
+  signedTx <- eaSignGYTxBody txBody
+
+  void . liftIO $ gySubmitTx providers signedTx
+  return $ txBodySubmitTxResponse txBody
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
 handleOneShotMintByWallet WalletParams {..} = do

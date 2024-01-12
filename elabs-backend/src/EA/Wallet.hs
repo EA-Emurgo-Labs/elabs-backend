@@ -2,8 +2,9 @@
 
 module EA.Wallet (
   WalletId (..),
-  eaGetAddress,
+  eaGetAddresses,
   eaSignGYTxBody,
+  eaGetCollateral,
 ) where
 
 import Data.Aeson qualified as Aeson
@@ -11,7 +12,7 @@ import Data.Swagger qualified as Swagger
 import Data.Text qualified as T
 import Data.Text.Class qualified as TC
 
-import GeniusYield.Types (GYAddress, GYTx, GYTxBody)
+import GeniusYield.Types (GYAddress, GYTx, GYTxBody, GYTxOutRef)
 
 import Servant (
   FromHttpApiData (parseUrlPiece),
@@ -22,10 +23,13 @@ import EA (EAApp)
 
 --------------------------------------------------------------------------------
 
-eaGetAddress :: WalletId -> EAApp GYAddress
-eaGetAddress = undefined
+eaGetAddresses :: WalletId -> EAApp [GYAddress]
+eaGetAddresses = undefined
 
-eaSignGYTxBody :: GYTxBody -> GYTx
+eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
+eaGetCollateral = return Nothing -- TODO: implement
+
+eaSignGYTxBody :: GYTxBody -> EAApp GYTx
 eaSignGYTxBody = undefined
 
 --------------------------------------------------------------------------------
