@@ -1,23 +1,41 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module Internal.Wallet.DB.Schema where
 
-import Database.Persist
-    ( FieldDef(fieldIsImplicitIdColumn, fieldHaskell, fieldDB,
-               fieldType, fieldSqlType, fieldAttrs, fieldStrict, fieldReference,
-               fieldCascade, fieldComments, fieldGenerated) )
-import Database.Persist.Sqlite
-    ( BackendKey(SqlBackendKey) )
-import Database.Persist.TH
-    ( sqlSettings, share, persistLowerCase, mkPersist, mkMigrate )
-import Data.Time ( UTCTime )
+import Data.Time (UTCTime)
+import Database.Persist (
+  FieldDef (
+    fieldAttrs,
+    fieldCascade,
+    fieldComments,
+    fieldDB,
+    fieldGenerated,
+    fieldHaskell,
+    fieldIsImplicitIdColumn,
+    fieldReference,
+    fieldSqlType,
+    fieldStrict,
+    fieldType
+  ),
+ )
+import Database.Persist.Sqlite (
+  BackendKey (SqlBackendKey),
+ )
+import Database.Persist.TH (
+  mkMigrate,
+  mkPersist,
+  persistLowerCase,
+  share,
+  sqlSettings,
+ )
 
-import EA.Wallet (UserId(..))
+import EA.Wallet (UserId (..))
 
 share
-    [mkPersist sqlSettings, mkMigrate "migrateAll"]
-    [persistLowerCase|
+  [mkPersist sqlSettings, mkMigrate "migrateAll"]
+  [persistLowerCase|
 Wallet
   user UserId
   address ByteString

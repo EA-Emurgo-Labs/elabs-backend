@@ -1,28 +1,35 @@
 module Internal.Wallet.DB.Sqlite (
-  getAddresses
+  getAddresses,
 ) where
 
+import Data.Aeson qualified as Aeson
 import Data.Maybe (fromJust)
-import qualified Data.Aeson as Aeson
 
 import GeniusYield.Types (GYAddress)
 
 import Database.Persist.Sql (
-	SqlBackend, selectList, Entity (entityVal), (==.), runMigration)
+  Entity (entityVal),
+  SqlBackend,
+  runMigration,
+  selectList,
+  (==.),
+ )
 
 import EA.Wallet (UserId)
 
 import Internal.Wallet.DB.Schema (
-        Wallet(..), EntityField (WalletUsed, WalletUser), migrateAll)
+  EntityField (WalletUsed, WalletUser),
+  Wallet (..),
+  migrateAll,
+ )
 
 --------------------------------------------------------------------------------
 
-getAddresses :: MonadIO m => UserId -> Bool -> ReaderT SqlBackend m [GYAddress]
+getAddresses :: (MonadIO m) => UserId -> Bool -> ReaderT SqlBackend m [GYAddress]
 getAddresses userId used = do
   addrs <- selectList [WalletUsed ==. used, WalletUser ==. userId] []
   pure $
-	  map (fromJust . Aeson.decode . fromStrict . walletAddress . entityVal) addrs
+    map (fromJust . Aeson.decode . fromStrict . walletAddress . entityVal) addrs
 
-
-_runAutoMigration :: MonadIO m => ReaderT SqlBackend m ()
+_runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 _runAutoMigration = runMigration migrateAll
