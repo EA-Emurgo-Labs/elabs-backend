@@ -26,6 +26,8 @@ common deps
     , mtl
     , newtype
     , optics
+    , persistent
+    , persistent-sqlite
     , plutus-ledger-api
     , ply-core
     , relude
@@ -107,6 +109,7 @@ library
     EA.Internal
     EA.Script
     EA.Tx.OneShotMint
+    EA.Wallet
 
 executable app
   import:         lang, deps, opts

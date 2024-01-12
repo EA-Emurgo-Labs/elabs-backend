@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module EA.Api.Mint (
   MintApi,
   handleOneShotMintByWalletId,
@@ -17,11 +19,11 @@ import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
 import EA.Api.Types (
   UnsignedTxResponse,
-  WalletId,
   WalletParams (..),
   unSignedTxWithFee,
  )
 import EA.Tx.OneShotMint qualified as Tx
+import EA.Wallet (WalletId)
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByWalletId
 
