@@ -14,13 +14,14 @@ module EA (
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
-  eaRunErrorLoggingT,
 ) where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Logger (
+  Loc (..),
   LogLevel (..),
-  LoggingT (runLoggingT),
+  MonadLogger (monadLoggerLog),
+  ToLogStr (toLogStr),
   fromLogStr,
  )
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
@@ -72,6 +73,16 @@ newtype EAApp a = EAApp
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
 
+instance MonadLogger EAApp where
+  monadLoggerLog loc _src lvl msg = do
+    providers <- asks eaAppEnvGYProviders
+    liftIO $
+      gyLog
+        providers
+        (fromLoc loc)
+        (fromLogLevel lvl)
+        (decodeUtf8 . fromLogStr . toLogStr $ msg)
+
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
@@ -86,21 +97,6 @@ runEAApp env = flip runReaderT env . unEAApp
 
 --------------------------------------------------------------------------------
 -- Logging
-
-eaRunErrorLoggingT :: (HasCallStack) => GYLogNamespace -> LoggingT IO a -> EAApp a
-eaRunErrorLoggingT name logging = do
-  providers <- asks eaAppEnvGYProviders
-  liftIO $
-    runLoggingT logging $
-      \_ _ serv msg ->
-        gyLog providers name (fromLogLevel serv) (decodeUtf8 $ fromLogStr msg)
-  where
-    fromLogLevel :: LogLevel -> GYLogSeverity
-    fromLogLevel LevelDebug = GYDebug
-    fromLogLevel LevelInfo = GYInfo
-    fromLogLevel LevelWarn = GYWarning
-    fromLogLevel LevelError = GYError
-    fromLogLevel (LevelOther _) = GYError
 
 eaLog :: (HasCallStack) => GYLogNamespace -> GYLogSeverity -> String -> EAApp ()
 eaLog name sev msg = do
@@ -126,6 +122,22 @@ eaLogError :: (HasCallStack) => GYLogNamespace -> String -> EAApp ()
 eaLogError name msg = do
   providers <- asks eaAppEnvGYProviders
   liftIO $ gyLogError providers name msg
+
+--------------------------------------------------------------------------------
+--- Internal logging helpers
+
+fromLoc :: Loc -> GYLogNamespace
+fromLoc (Loc {..}) =
+  fromString loc_package
+    <> fromString loc_module
+    <> fromString loc_filename
+
+fromLogLevel :: LogLevel -> GYLogSeverity
+fromLogLevel LevelDebug = GYDebug
+fromLogLevel LevelInfo = GYInfo
+fromLogLevel LevelWarn = GYWarning
+fromLogLevel LevelError = GYError
+fromLogLevel (LevelOther _) = GYError
 
 --------------------------------------------------------------------------------
 -- Exception
