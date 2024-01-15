@@ -15,7 +15,7 @@ import Database.Persist.Sql (
   (==.),
  )
 
-import EA.Wallet (UserId)
+import EA.Api.Types (UserId)
 
 import Internal.Wallet.DB.Schema (
   EntityField (WalletUsed, WalletUser),

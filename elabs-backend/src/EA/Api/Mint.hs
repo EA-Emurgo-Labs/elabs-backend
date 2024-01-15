@@ -19,13 +19,13 @@ import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
 import EA.Api.Types (
   SubmitTxResponse,
   UnsignedTxResponse,
+  UserId,
   WalletParams (..),
   txBodySubmitTxResponse,
   unSignedTxWithFee,
  )
 import EA.Tx.OneShotMint qualified as Tx
 import EA.Wallet (
-  UserId,
   eaGetCollateral,
   eaGetUnusedAddresses,
   eaGetUsedAddresses,

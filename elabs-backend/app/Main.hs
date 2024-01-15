@@ -2,28 +2,63 @@ module Main (main) where
 
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
+import Data.Text qualified as T
 
 import Control.Exception (try)
+import Control.Monad.Logger (
+  LoggingT (runLoggingT),
+  fromLogStr,
+ )
 import Control.Monad.Metrics qualified as Metrics
 
-import Options.Applicative
+import Options.Applicative (
+  Parser,
+  auto,
+  command,
+  execParser,
+  fullDesc,
+  header,
+  help,
+  helper,
+  info,
+  long,
+  option,
+  progDesc,
+  short,
+  showDefault,
+  subparser,
+  value,
+ )
 
 import GeniusYield.GYConfig (
   coreConfigIO,
   withCfgProviders,
  )
-import GeniusYield.Types (gyLogInfo)
+import GeniusYield.Types (gyLog, gyLogInfo)
+
+import Ply (readTypedScript)
 
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
 
-import Servant
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
+
+import Database.Persist.Sqlite (createSqlitePool)
 
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
+import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
-import Ply (readTypedScript)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
@@ -119,37 +154,47 @@ main = app =<< execParser opts
         )
 
 app :: Options -> IO ()
-app opts = do
-  metrics <- Metrics.initialize
-  conf <- coreConfigIO $ optionsCoreConfigFile opts
+app (Options {..}) = do
+  conf <- coreConfigIO optionsCoreConfigFile
 
   withCfgProviders conf "app" $
     \providers -> do
-      case optionsCommand opts of
-        RunServer opt -> do
+      case optionsCommand of
+        RunServer (ServerOptions {..}) -> do
           -- TODO: This is one particular script
           --       -> Make FromJSON instance of Scripts
-          policyTypedScript <- readTypedScript (optionsScriptsFile opts)
+          policyTypedScript <- readTypedScript optionsScriptsFile
+          metrics <- Metrics.initialize
+
+          pool <-
+            runLoggingT
+              ( createSqlitePool
+                  (T.pack serverOptionsSqliteFile)
+                  serverOptionsSqlitePoolSize
+              )
+              $ \_ _ lvl msg ->
+                gyLog
+                  providers
+                  "db"
+                  (fromLogLevel lvl)
+                  (decodeUtf8 $ fromLogStr msg)
 
           let
-            port = serverOptionsPort opt
-            scripts = Scripts policyTypedScript
             env =
               EAAppEnv
                 { eaAppEnvGYProviders = providers
                 , eaAppEnvGYCoreConfig = conf
                 , eaAppEnvMetrics = metrics
-                , eaAppEnvScripts = scripts
-                , eaAppEnvSqliteFile = serverOptionsSqliteFile opt
-                , eaAppEnvSqlitePoolSize = serverOptionsSqlitePoolSize opt
+                , eaAppEnvScripts = Scripts policyTypedScript
+                , eaAppEnvSqlPool = pool
                 }
           gyLogInfo providers "app" $
             "Starting server at "
               <> "http://localhost:"
-              <> show port
-          run port $ server env
-        ExportSwagger opt -> do
-          let file = swaggerOptionsFile opt
+              <> show serverOptionsPort
+          run serverOptionsPort $ server env
+        ExportSwagger (SwaggerOptions {..}) -> do
+          let file = swaggerOptionsFile
           gyLogInfo providers "app" $ "Writting swagger file to " <> file
           BL8.writeFile file (encodePretty apiSwagger)
 

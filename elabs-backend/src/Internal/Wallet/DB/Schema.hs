@@ -36,7 +36,7 @@ import Database.Persist.TH (
   sqlSettings,
  )
 
-import EA.Wallet (UserId (..))
+import EA.Api.Types (UserId (..))
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]

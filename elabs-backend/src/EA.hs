@@ -17,14 +17,10 @@ module EA (
 ) where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
-import Control.Monad.Logger (
-  Loc (..),
-  LogLevel (..),
-  MonadLogger (monadLoggerLog),
-  ToLogStr (toLogStr),
-  fromLogStr,
- )
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
+
+import Data.Pool (Pool)
+import Database.Persist.Sql (SqlBackend)
 
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
@@ -73,23 +69,12 @@ newtype EAApp a = EAApp
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
 
-instance MonadLogger EAApp where
-  monadLoggerLog loc _src lvl msg = do
-    providers <- asks eaAppEnvGYProviders
-    liftIO $
-      gyLog
-        providers
-        (fromLoc loc)
-        (fromLogLevel lvl)
-        (decodeUtf8 . fromLogStr . toLogStr $ msg)
-
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
-  , eaAppEnvSqliteFile :: !String
-  , eaAppEnvSqlitePoolSize :: !Int
+  , eaAppEnvSqlPool :: !(Pool SqlBackend)
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
@@ -122,22 +107,6 @@ eaLogError :: (HasCallStack) => GYLogNamespace -> String -> EAApp ()
 eaLogError name msg = do
   providers <- asks eaAppEnvGYProviders
   liftIO $ gyLogError providers name msg
-
---------------------------------------------------------------------------------
---- Internal logging helpers
-
-fromLoc :: Loc -> GYLogNamespace
-fromLoc (Loc {..}) =
-  fromString loc_package
-    <> fromString loc_module
-    <> fromString loc_filename
-
-fromLogLevel :: LogLevel -> GYLogSeverity
-fromLogLevel LevelDebug = GYDebug
-fromLogLevel LevelInfo = GYInfo
-fromLogLevel LevelWarn = GYWarning
-fromLogLevel LevelError = GYError
-fromLogLevel (LevelOther _) = GYError
 
 --------------------------------------------------------------------------------
 -- Exception
