@@ -1,6 +1,21 @@
 {
   description = "EMURGO Labs Backend";
 
+  nixConfig = {
+    extra-experimental-features = [ "nix-command" "flakes" ];
+    extra-substituters = [
+      "https://cache.iog.io"
+      "https://ea-emurgo-labs.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "ea-emurgo-labs.cachix.org-1:C4qCB9BfOH+otex5Mr5YclmyXer66BA7Oe4H1BmOzII="
+    ];
+    allow-import-from-derivation = "true";
+    max-jobs = "auto";
+    auto-optimise-store = "true";
+  };
+
   inputs.haskellNix.url = "github:input-output-hk/haskell.nix";
   inputs.nixpkgs.follows = "haskellNix/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
@@ -14,6 +29,7 @@
       supportedSystems = [
         "x86_64-linux"
         "x86_64-darwin"
+        "aarch64-linux"
         "aarch64-darwin"
       ];
     in

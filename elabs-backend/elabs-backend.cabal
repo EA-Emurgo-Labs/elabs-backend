@@ -114,3 +114,15 @@ executable app
   build-depends:
     , elabs-backend
     , optparse-applicative
+
+test-suite tests
+  import:         lang, deps, opts
+  hs-source-dirs: test
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , elabs-backend
+    , hspec
+    , hspec-wai
+    , optparse-applicative
+    , tasty
