@@ -1,8 +1,9 @@
-module EA.Utils.Wallet (AccountKeys (..), deriveChildKeys, mkAddress) where
+module EA.Utils.Wallet (AccountKeys (..), deriveChildKeys, mkAddress, genRootKeyFromBS) where
 
 import Cardano.Address (bech32)
 import Cardano.Address.Derivation
 import Cardano.Address.Style.Shelley qualified as S
+import Data.ByteString qualified as BS
 import Data.Text qualified as T
 import GeniusYield.Types.NetworkId
 
@@ -31,6 +32,8 @@ deriveChildKeys rootKey acctN addrN =
           stakeK = S.deriveDelegationPrivateKey acctK
        in Right $ AccountKeys addrK stakeK
 
+-- | Generate a Shelley address from a payment key and a stake key
+--  If the stake key is Nothing, then a only payment address is generated
 mkAddress ::
   GYNetworkId ->
   S.Shelley 'PaymentK XPrv -> -- Payment Private Key
@@ -49,3 +52,8 @@ mkAddress nid paymentKey =
       case nid of
         GYMainnet -> S.shelleyMainnet
         _ -> S.shelleyTestnet
+
+-- | Generate a Shelley root key from a bytestring
+genRootKeyFromBS :: BS.ByteString -> Either String (S.Shelley 'RootK XPrv)
+genRootKeyFromBS bs =
+  maybe (Left $ "Invalid XPrv: " ++ show bs) (Right . S.genMasterKeyFromXPrv) $ xprvFromBytes bs
