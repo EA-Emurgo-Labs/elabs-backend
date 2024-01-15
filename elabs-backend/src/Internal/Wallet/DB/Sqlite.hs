@@ -1,5 +1,6 @@
 module Internal.Wallet.DB.Sqlite (
   getAddresses,
+  runAutoMigration,
 ) where
 
 import Data.Aeson qualified as Aeson
@@ -31,5 +32,5 @@ getAddresses userId used = do
   pure $
     map (fromJust . Aeson.decode . fromStrict . walletAddress . entityVal) addrs
 
-_runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
-_runAutoMigration = runMigration migrateAll
+runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
+runAutoMigration = runMigration migrateAll

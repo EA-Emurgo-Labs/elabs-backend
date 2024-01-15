@@ -53,12 +53,17 @@ import Servant (
   serve,
  )
 
-import Database.Persist.Sqlite (createSqlitePool)
+import Database.Persist.Sqlite (
+  createSqlitePool,
+  runSqlPool,
+ )
 
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
+
+import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
@@ -166,6 +171,7 @@ app (Options {..}) = do
           policyTypedScript <- readTypedScript optionsScriptsFile
           metrics <- Metrics.initialize
 
+          -- Create Sqlite pool and run migrations
           pool <-
             runLoggingT
               ( createSqlitePool
@@ -178,6 +184,8 @@ app (Options {..}) = do
                   "db"
                   (fromLogLevel lvl)
                   (decodeUtf8 $ fromLogStr msg)
+          -- migrate tables
+          void $ runSqlPool runAutoMigration pool
 
           let
             env =
