@@ -32,6 +32,7 @@ appApi = Proxy
 apiServer :: EAAppEnv -> ServerT Api IO
 apiServer env =
   runEAApp env . handleTxApi
-    :<|> runEAApp env . handleOneShotMintByWallet
-    :<|> runEAApp env . handleOneShotMintByUserId
+    :<|> ( runEAApp env . handleOneShotMintByWallet
+            :<|> runEAApp env . handleOneShotMintByUserId
+         )
     :<|> runEAApp env . handleWalletApi

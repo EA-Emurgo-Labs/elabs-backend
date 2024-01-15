@@ -41,7 +41,7 @@ type OneShotMintByWallet =
 
 type OneShotMintByUserId =
   "one-shot-mint"
-    :> Capture "userId" UserId
+    :> Capture "user" UserId
     :> Post '[JSON] SubmitTxResponse
 
 handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse

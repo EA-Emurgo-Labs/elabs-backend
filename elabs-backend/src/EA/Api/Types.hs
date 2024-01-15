@@ -110,7 +110,7 @@ instance PersistFieldSql UserId where
 -- Wallet
 
 data WalletResponse = WalletResponse
-  { addresses :: [GYAddress]
+  { addresses :: ![GYAddress]
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)

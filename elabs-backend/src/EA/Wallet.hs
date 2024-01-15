@@ -8,15 +8,22 @@ module EA.Wallet (
   eaCreateAddresses,
 ) where
 
-import GeniusYield.Types (GYAddress, GYTx, GYTxBody, GYTxOutRef)
+import Data.Aeson qualified as Aeson
+
+import GeniusYield.Types (
+  GYAddress,
+  GYTx,
+  GYTxBody,
+  GYTxOutRef,
+  unsafeAddressFromText,
+ )
 
 import Database.Persist.Sql (runSqlPool)
 
 import EA (EAApp, eaAppEnvSqlPool, eaLiftMaybe)
 import EA.Api.Types (UserId)
 
-import Data.Aeson.Decoding qualified as Aeson
-import Internal.Wallet.DB.Sqlite (getAddresses)
+import Internal.Wallet.DB.Sqlite (getAddresses, insertUnusedAddresses)
 
 --------------------------------------------------------------------------------
 
@@ -37,7 +44,18 @@ eaGetAddresses used userid = do
   mapM (eaLiftMaybe "Decoding error" . Aeson.decode . fromStrict) addresses
 
 eaCreateAddresses :: UserId -> EAApp [GYAddress]
-eaCreateAddresses = undefined
+eaCreateAddresses userid = do
+  asks eaAppEnvSqlPool
+    >>= ( liftIO
+            . runSqlPool
+              (insertUnusedAddresses userid [toStrict $ Aeson.encode addr])
+        )
+  -- TODO: don query again
+  eaGetUnusedAddresses userid
+  where
+    -- TODO: test address
+    addr =
+      unsafeAddressFromText "addr_test1qrsuhwqdhz0zjgnf46unas27h93amfghddnff8lpc2n28rgmjv8f77ka0zshfgssqr5cnl64zdnde5f8q2xt923e7ctqu49mg5"
 
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
 eaGetCollateral = undefined
