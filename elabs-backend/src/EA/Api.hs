@@ -16,11 +16,12 @@ import EA.Api.Mint (
   handleOneShotMintByWallet,
  )
 import EA.Api.Tx (TxApi, handleTxApi)
+import EA.Api.Wallet (WalletApi, handleWalletApi)
 
 --------------------------------------------------------------------------------
 
 type Api =
-  TxApi :<|> MintApi
+  TxApi :<|> MintApi :<|> WalletApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi
@@ -33,3 +34,4 @@ apiServer env =
   runEAApp env . handleTxApi
     :<|> runEAApp env . handleOneShotMintByWallet
     :<|> runEAApp env . handleOneShotMintByUserId
+    :<|> runEAApp env . handleWalletApi

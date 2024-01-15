@@ -1,42 +1,43 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module EA.Wallet (
-  eaGetAddresses,
   eaSignGYTxBody,
   eaGetCollateral,
   eaGetUnusedAddresses,
   eaGetUsedAddresses,
+  eaCreateAddresses,
 ) where
 
 import GeniusYield.Types (GYAddress, GYTx, GYTxBody, GYTxOutRef)
 
 import Database.Persist.Sql (runSqlPool)
 
-import EA (EAApp, eaAppEnvSqlPool)
+import EA (EAApp, eaAppEnvSqlPool, eaLiftMaybe)
 import EA.Api.Types (UserId)
 
+import Data.Aeson.Decoding qualified as Aeson
 import Internal.Wallet.DB.Sqlite (getAddresses)
 
 --------------------------------------------------------------------------------
 
-eaGetAddresses :: UserId -> EAApp [GYAddress]
-eaGetAddresses = undefined
-
 eaGetUnusedAddresses :: UserId -> EAApp [GYAddress]
-eaGetUnusedAddresses userid =
-  asks eaAppEnvSqlPool
-    >>= ( liftIO
-            . runSqlPool
-              (getAddresses userid False)
-        )
+eaGetUnusedAddresses = eaGetAddresses False
 
 eaGetUsedAddresses :: UserId -> EAApp [GYAddress]
-eaGetUsedAddresses userid =
-  asks eaAppEnvSqlPool
-    >>= ( liftIO
-            . runSqlPool
-              (getAddresses userid True)
-        )
+eaGetUsedAddresses = eaGetAddresses True
+
+eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
+eaGetAddresses used userid = do
+  addresses <-
+    asks eaAppEnvSqlPool
+      >>= ( liftIO
+              . runSqlPool
+                (getAddresses userid used)
+          )
+  mapM (eaLiftMaybe "Decoding error" . Aeson.decode . fromStrict) addresses
+
+eaCreateAddresses :: UserId -> EAApp [GYAddress]
+eaCreateAddresses = undefined
 
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
 eaGetCollateral = undefined

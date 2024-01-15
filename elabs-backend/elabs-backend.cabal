@@ -108,6 +108,7 @@ library
     EA.Api.Mint
     EA.Api.Tx
     EA.Api.Types
+    EA.Api.Wallet
     EA.Internal
     EA.Script
     EA.Tx.OneShotMint

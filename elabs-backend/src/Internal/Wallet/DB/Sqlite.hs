@@ -1,15 +1,14 @@
 module Internal.Wallet.DB.Sqlite (
   getAddresses,
+  insertUnusedAddresses,
   runAutoMigration,
 ) where
 
-import Data.Aeson qualified as Aeson
-import Data.Maybe (fromJust)
+import Data.Time (getCurrentTime)
 
-import GeniusYield.Types (GYAddress)
-
-import Database.Persist.Sql (
+import Database.Persist.Sqlite (
   Entity (entityVal),
+  PersistStoreWrite (insert),
   SqlBackend,
   runMigration,
   selectList,
@@ -26,11 +25,24 @@ import Internal.Wallet.DB.Schema (
 
 --------------------------------------------------------------------------------
 
-getAddresses :: (MonadIO m) => UserId -> Bool -> ReaderT SqlBackend m [GYAddress]
+insertUnusedAddresses ::
+  (MonadIO m) =>
+  UserId ->
+  [ByteString] ->
+  ReaderT SqlBackend m ()
+insertUnusedAddresses userid addresses = do
+  time <- liftIO getCurrentTime
+  forM_ addresses (\addr -> insert $ Wallet userid addr False time)
+
+getAddresses ::
+  (MonadIO m) =>
+  UserId ->
+  Bool ->
+  ReaderT SqlBackend m [ByteString]
 getAddresses userId used = do
   addrs <- selectList [WalletUsed ==. used, WalletUser ==. userId] []
   pure $
-    map (fromJust . Aeson.decode . fromStrict . walletAddress . entityVal) addrs
+    map (walletAddress . entityVal) addrs
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll

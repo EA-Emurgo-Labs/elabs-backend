@@ -4,6 +4,7 @@ module EA.Api.Types (
   SubmitTxResponse (..),
   WalletParams (..),
   UnsignedTxResponse (..),
+  WalletResponse (..),
   txBodySubmitTxResponse,
   unSignedTxWithFee,
 ) where
@@ -104,3 +105,12 @@ instance PersistField UserId where
 
 instance PersistFieldSql UserId where
   sqlType _ = SqlInt64
+
+--------------------------------------------------------------------------------
+-- Wallet
+
+data WalletResponse = WalletResponse
+  { addresses :: [GYAddress]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)

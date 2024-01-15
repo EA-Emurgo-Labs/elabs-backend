@@ -23,7 +23,7 @@ type TxApi =
     :> ReqBody '[JSON] SubmitTxParams
     :> Post '[JSON] SubmitTxResponse
 
-handleTxApi :: SubmitTxParams -> EA.EAApp SubmitTxResponse
+handleTxApi :: SubmitTxParams -> EAApp SubmitTxResponse
 handleTxApi SubmitTxParams {..} = do
   providers <- asks eaAppEnvGYProviders
   void . liftIO $ gySubmitTx providers $ makeSignedTransaction txWit txBody
