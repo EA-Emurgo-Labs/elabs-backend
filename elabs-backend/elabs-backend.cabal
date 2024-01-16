@@ -113,8 +113,8 @@ library
     EA.Internal
     EA.Script
     EA.Tx.OneShotMint
-    EA.Utils.Wallet
     EA.Wallet
+    Internal.Wallet
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
 

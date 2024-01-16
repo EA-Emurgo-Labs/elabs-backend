@@ -1,16 +1,20 @@
 module Internal.Wallet.DB.Sqlite (
-  getAddresses,
-  insertUnusedAddresses,
+  createWalletIndexPair,
+  getWalletIndexPairs,
   runAutoMigration,
 ) where
 
+import Data.Tagged (Tagged (Tagged))
 import Data.Time (getCurrentTime)
 
 import Database.Persist.Sqlite (
-  Entity (entityVal),
+  Entity (entityKey, entityVal),
   PersistStoreWrite (insert),
+  SelectOpt (Desc),
   SqlBackend,
+  fromSqlKey,
   runMigration,
+  selectKeysList,
   selectList,
   (==.),
  )
@@ -18,31 +22,36 @@ import Database.Persist.Sqlite (
 import EA.Api.Types (UserId)
 
 import Internal.Wallet.DB.Schema (
-  EntityField (WalletUsed, WalletUser),
-  Wallet (..),
+  Address (..),
+  EntityField (..),
   migrateAll,
  )
 
 --------------------------------------------------------------------------------
 
-insertUnusedAddresses ::
-  (MonadIO m) =>
-  UserId ->
-  [ByteString] ->
-  ReaderT SqlBackend m ()
-insertUnusedAddresses userid addresses = do
+createWalletIndexPair :: (MonadIO m) => UserId -> ReaderT SqlBackend m ()
+createWalletIndexPair userId = do
   time <- liftIO getCurrentTime
-  forM_ addresses (\addr -> insert $ Wallet userid addr False time)
+  void $
+    selectKeysList [] [Desc AccountId]
+      >>= \case
+        [] -> error ""
+        (key : _) ->
+          insert $ Address key userId False time
 
-getAddresses ::
+getWalletIndexPairs ::
   (MonadIO m) =>
   UserId ->
   Bool ->
-  ReaderT SqlBackend m [ByteString]
-getAddresses userId used = do
-  addrs <- selectList [WalletUsed ==. used, WalletUser ==. userId] []
-  pure $
-    map (walletAddress . entityVal) addrs
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getWalletIndexPairs userId used = do
+  addrs <- selectList [AddressUsed ==. used, AddressUser ==. userId] []
+  return $ map getIndexPair addrs
+  where
+    getIndexPair addr =
+      ( Tagged . fromSqlKey . addressAccountId . entityVal $ addr
+      , Tagged . fromSqlKey . entityKey $ addr
+      )
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll

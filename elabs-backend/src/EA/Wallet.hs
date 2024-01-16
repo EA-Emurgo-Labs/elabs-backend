@@ -57,6 +57,17 @@ eaCreateAddresses userid = do
     addr =
       unsafeAddressFromText "addr_test1qrsuhwqdhz0zjgnf46unas27h93amfghddnff8lpc2n28rgmjv8f77ka0zshfgssqr5cnl64zdnde5f8q2xt923e7ctqu49mg5"
 
+{-
+  use esqualito
+
+   get addresses
+     -> select * from  left join, if empty, create cache
+     -> if empty creat new addresses
+     -> repeat until we have all addresses
+
+-}
+
+-- TODO:
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
 eaGetCollateral = undefined
 

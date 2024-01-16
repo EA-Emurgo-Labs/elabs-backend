@@ -3,8 +3,10 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Internal.Wallet.DB.Schema (
-  EntityField (WalletUsed, WalletUser),
-  Wallet (..),
+  EntityField (..),
+  Account (..),
+  Address (..),
+  AddressCache (..),
   migrateAll,
 ) where
 
@@ -41,10 +43,22 @@ import EA.Api.Types (UserId (..))
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
-Wallet
+
+Account
+  created UTCTime default=CURRENT_TIME
+  deriving Show
+
+Address
+  accountId AccountId
   user UserId
-  address ByteString
   used Bool default=False
   created UTCTime default=CURRENT_TIME
   deriving Show
+
+AddressCache
+  addressId AddressId
+  address ByteString
+  created UTCTime default=CURRENT_TIME
+  deriving Show
+
 |]
