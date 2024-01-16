@@ -18,6 +18,7 @@ common deps
     , atlas-cardano
     , base
     , bytestring
+    , cardano-addresses
     , cardano-api
     , containers
     , http-types
@@ -115,6 +116,7 @@ library
     EA.Wallet
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
+    EA.Utils.Wallet
 
 executable app
   import:         lang, deps, opts
