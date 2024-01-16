@@ -8,22 +8,21 @@ module EA.Wallet (
   eaCreateAddresses,
 ) where
 
-import Data.Aeson qualified as Aeson
-
+import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.Types (
   GYAddress,
   GYTx,
   GYTxBody,
   GYTxOutRef,
-  unsafeAddressFromText,
  )
 
 import Database.Persist.Sql (runSqlPool)
 
-import EA (EAApp, eaAppEnvSqlPool, eaLiftMaybe)
+import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaLiftMaybe, unRootKey)
 import EA.Api.Types (UserId)
 
-import Internal.Wallet.DB.Sqlite (getAddresses, insertUnusedAddresses)
+import Internal.Wallet (deriveAddress)
+import Internal.Wallet.DB.Sqlite (createWalletIndexPair, getWalletIndexPairs)
 
 --------------------------------------------------------------------------------
 
@@ -35,39 +34,27 @@ eaGetUsedAddresses = eaGetAddresses True
 
 eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
 eaGetAddresses used userid = do
-  addresses <-
+  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  rootK <- asks (unRootKey . eaAppEnvRootKey)
+  indexPairs <-
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                (getAddresses userid used)
+                (getWalletIndexPairs userid used)
           )
-  mapM (eaLiftMaybe "Decoding error" . Aeson.decode . fromStrict) addresses
+  eaLiftMaybe "Something went wrong with the address derivation" $
+    mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
 eaCreateAddresses :: UserId -> EAApp [GYAddress]
 eaCreateAddresses userid = do
   asks eaAppEnvSqlPool
     >>= ( liftIO
             . runSqlPool
-              (insertUnusedAddresses userid [toStrict $ Aeson.encode addr])
+              (createWalletIndexPair userid)
         )
-  -- TODO: don query again
+  -- TODO: dont query again
   eaGetUnusedAddresses userid
-  where
-    -- TODO: test address
-    addr =
-      unsafeAddressFromText "addr_test1qrsuhwqdhz0zjgnf46unas27h93amfghddnff8lpc2n28rgmjv8f77ka0zshfgssqr5cnl64zdnde5f8q2xt923e7ctqu49mg5"
 
-{-
-  use esqualito
-
-   get addresses
-     -> select * from  left join, if empty, create cache
-     -> if empty creat new addresses
-     -> repeat until we have all addresses
-
--}
-
--- TODO:
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
 eaGetCollateral = undefined
 
