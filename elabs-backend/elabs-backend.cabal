@@ -113,10 +113,10 @@ library
     EA.Internal
     EA.Script
     EA.Tx.OneShotMint
+    EA.Utils.Wallet
     EA.Wallet
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
-    EA.Utils.Wallet
 
 executable app
   import:         lang, deps, opts

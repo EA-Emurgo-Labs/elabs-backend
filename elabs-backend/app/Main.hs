@@ -26,6 +26,7 @@ import Options.Applicative (
   progDesc,
   short,
   showDefault,
+  strOption,
   subparser,
   value,
  )
@@ -37,6 +38,9 @@ import GeniusYield.GYConfig (
 import GeniusYield.Types (gyLog, gyLogInfo)
 
 import Ply (readTypedScript)
+
+import Cardano.Address.Derivation (GenMasterKey (genMasterKeyFromMnemonic))
+import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
@@ -62,6 +66,7 @@ import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
+import EA.Wallet (RootKey (..))
 
 import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
@@ -74,6 +79,7 @@ data Options = Options
 data Commands
   = RunServer ServerOptions
   | ExportSwagger SwaggerOptions
+  | GenerateRootKey RootKeyOptions
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
@@ -86,6 +92,11 @@ data SwaggerOptions = SwaggerOptions
   { swaggerOptionsFile :: !String
   }
   deriving stock (Show, Read)
+
+data RootKeyOptions = RootKeyOptions
+  { rootKeyOptionsFile :: !String
+  , rootKeyOptionsMnemonic :: !String
+  }
 
 options :: Parser Options
 options =
@@ -107,6 +118,23 @@ options =
     <*> subparser
       ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
           <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
+          <> command "genrootkey" (info (GenerateRootKey <$> rootKeyOptions) (progDesc "Root key generation"))
+      )
+
+rootKeyOptions :: Parser RootKeyOptions
+rootKeyOptions =
+  RootKeyOptions
+    <$> option
+      auto
+      ( long "outfile"
+          <> short 'f'
+          <> help "Output file"
+          <> showDefault
+          <> value "root.json"
+      )
+    <*> strOption
+      ( long "mnemonic"
+          <> help "Mnemonic (15 words)"
       )
 
 serverOptions :: Parser ServerOptions
@@ -205,6 +233,14 @@ app (Options {..}) = do
           let file = swaggerOptionsFile
           gyLogInfo providers "app" $ "Writting swagger file to " <> file
           BL8.writeFile file (encodePretty apiSwagger)
+        GenerateRootKey (RootKeyOptions {..}) -> do
+          mw <-
+            either
+              (const (error "Invalid mnemonic"))
+              return
+              (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
+          let rootKey = RootKey $ genMasterKeyFromMnemonic mw mempty
+          BL8.writeFile rootKeyOptionsFile (encodePretty rootKey)
 
 server :: EAAppEnv -> Application
 server env =
