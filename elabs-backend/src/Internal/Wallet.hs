@@ -2,18 +2,24 @@ module Internal.Wallet (
   deriveAddress,
 ) where
 
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Tagged (Tagged)
 
 import GeniusYield.Types (GYAddress, GYNetworkId (GYMainnet))
 
-import Cardano.Address.Derivation (
-  Depth(RootK),
-  XPrv, indexFromWord32, HardDerivation (deriveAccountPrivateKey, deriveAddressPrivateKey), toXPub)
-import Cardano.Address.Style.Shelley (Shelley)
 import Cardano.Address (
-  HasNetworkDiscriminant(NetworkDiscriminant), bech32)
-import qualified Cardano.Address.Style.Shelley as S
+  HasNetworkDiscriminant (NetworkDiscriminant),
+  bech32,
+ )
+import Cardano.Address.Derivation (
+  Depth (RootK),
+  HardDerivation (deriveAccountPrivateKey, deriveAddressPrivateKey),
+  XPrv,
+  indexFromWord32,
+  toXPub,
+ )
+import Cardano.Address.Style.Shelley (Shelley)
+import Cardano.Address.Style.Shelley qualified as S
 
 --------------------------------------------------------------------------------
 
