@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module EA.Wallet (
-  RootKey (..),
   eaSignGYTxBody,
   eaGetCollateral,
   eaGetUnusedAddresses,
@@ -19,39 +18,12 @@ import GeniusYield.Types (
   unsafeAddressFromText,
  )
 
-import Cardano.Address.Derivation (
-  Depth (RootK),
-  XPrv,
-  xprvFromBytes,
-  xprvToBytes,
- )
-import Cardano.Address.Style.Shelley (
-  Shelley,
-  getKey,
-  liftXPrv,
- )
-
 import Database.Persist.Sql (runSqlPool)
 
 import EA (EAApp, eaAppEnvSqlPool, eaLiftMaybe)
 import EA.Api.Types (UserId)
 
 import Internal.Wallet.DB.Sqlite (getAddresses, insertUnusedAddresses)
-
---------------------------------------------------------------------------------
-
-newtype RootKey = RootKey {unRootKey :: Shelley 'RootK XPrv}
-
-instance Aeson.ToJSON RootKey where
-  toJSON (RootKey xprv) =
-    Aeson.String . decodeUtf8 . xprvToBytes . getKey $ xprv
-
-instance Aeson.FromJSON RootKey where
-  parseJSON = Aeson.withText "RootKey" $ \t ->
-    maybe
-      (fail "Invalid XPrv")
-      (pure . RootKey . liftXPrv)
-      (xprvFromBytes . encodeUtf8 $ t)
 
 --------------------------------------------------------------------------------
 

@@ -1,8 +1,10 @@
 module Main (main) where
 
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
+import Relude.Unsafe qualified as Unsafe
 
 import Control.Exception (try)
 import Control.Monad.Logger (
@@ -62,17 +64,17 @@ import Database.Persist.Sqlite (
   runSqlPool,
  )
 
-import EA (EAAppEnv (..))
+import EA (EAAppEnv (..), RootKey (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
-import EA.Wallet (RootKey (..))
 
 import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
   , optionsScriptsFile :: !String
+  , optionsRootKeyFile :: !String
   , optionsCommand :: !Commands
   }
 
@@ -94,8 +96,7 @@ data SwaggerOptions = SwaggerOptions
   deriving stock (Show, Read)
 
 data RootKeyOptions = RootKeyOptions
-  { rootKeyOptionsFile :: !String
-  , rootKeyOptionsMnemonic :: !String
+  { rootKeyOptionsMnemonic :: !String
   }
 
 options :: Parser Options
@@ -115,6 +116,13 @@ options =
           <> showDefault
           <> value "scripts.json"
       )
+    <*> option
+      auto
+      ( long "root-key"
+          <> help "Root key file"
+          <> showDefault
+          <> value "root.json"
+      )
     <*> subparser
       ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
           <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
@@ -124,15 +132,7 @@ options =
 rootKeyOptions :: Parser RootKeyOptions
 rootKeyOptions =
   RootKeyOptions
-    <$> option
-      auto
-      ( long "outfile"
-          <> short 'f'
-          <> help "Output file"
-          <> showDefault
-          <> value "root.json"
-      )
-    <*> strOption
+    <$> strOption
       ( long "mnemonic"
           <> help "Mnemonic (15 words)"
       )
@@ -215,6 +215,10 @@ app (Options {..}) = do
           -- migrate tables
           void $ runSqlPool runAutoMigration pool
 
+          -- root key
+          rootKey <-
+            Unsafe.fromJust . Aeson.decode <$> BL8.readFile optionsRootKeyFile
+
           let
             env =
               EAAppEnv
@@ -223,6 +227,7 @@ app (Options {..}) = do
                 , eaAppEnvMetrics = metrics
                 , eaAppEnvScripts = Scripts policyTypedScript
                 , eaAppEnvSqlPool = pool
+                , eaAppEnvRootKey = rootKey
                 }
           gyLogInfo providers "app" $
             "Starting server at "
@@ -240,7 +245,7 @@ app (Options {..}) = do
               return
               (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
           let rootKey = RootKey $ genMasterKeyFromMnemonic mw mempty
-          BL8.writeFile rootKeyOptionsFile (encodePretty rootKey)
+          BL8.writeFile optionsRootKeyFile (encodePretty rootKey)
 
 server :: EAAppEnv -> Application
 server env =
