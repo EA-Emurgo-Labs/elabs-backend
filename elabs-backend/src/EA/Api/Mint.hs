@@ -1,57 +1,82 @@
-module EA.Api.Mint (MintApi, handleMintApi) where
-
-import Data.Text qualified as T
+module EA.Api.Mint (
+  MintApi,
+  handleOneShotMintByUserId,
+  handleOneShotMintByWallet,
+) where
 
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
-import GeniusYield.Imports
 import GeniusYield.TxBuilder (runGYTxMonadNode)
 import GeniusYield.Types (
-  GYAddress,
-  GYTxBody,
+  GYProviders (gySubmitTx),
   GYTxOutRefCbor (getTxOutRefHex),
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
-  txBodyFee,
-  txToHex,
-  unsignedTx,
+  signGYTxBody,
  )
 
-import Servant (JSON, Post, ReqBody, type (:>))
-
-import Data.Swagger qualified as Swagger
+import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
+import EA.Api.Types (
+  SubmitTxResponse,
+  UnsignedTxResponse,
+  UserId,
+  WalletParams (..),
+  txBodySubmitTxResponse,
+  unSignedTxWithFee,
+ )
 import EA.Tx.OneShotMint qualified as Tx
+import EA.Wallet (
+  eaGetCollateral,
+  eaGetUnusedAddresses,
+ )
 
-type MintApi =
+type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
+
+type OneShotMintByWallet =
   "one-shot-mint"
     :> ReqBody '[JSON] WalletParams
     :> Post '[JSON] UnsignedTxResponse
 
-data WalletParams = WalletParams
-  { usedAddrs :: ![GYAddress]
-  , changeAddr :: !GYAddress
-  , collateral :: !(Maybe GYTxOutRefCbor)
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (FromJSON, Swagger.ToSchema)
+type OneShotMintByUserId =
+  "one-shot-mint"
+    :> Capture "user" UserId
+    :> Post '[JSON] SubmitTxResponse
 
-data UnsignedTxResponse = UnsignedTxResponse
-  { txBodyHex :: !T.Text
-  , txFee :: !(Maybe Integer)
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (FromJSON, ToJSON, Swagger.ToSchema)
+handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
+handleOneShotMintByUserId userId = do
+  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  providers <- asks eaAppEnvGYProviders
+  (addrs, keys) <- unzip <$> eaGetUnusedAddresses userId
 
-unSignedTxWithFee :: GYTxBody -> UnsignedTxResponse
-unSignedTxWithFee txBody =
-  UnsignedTxResponse
-    { txBodyHex = T.pack $ txToHex $ unsignedTx txBody
-    , txFee = Just $ txBodyFee txBody
-    }
+  utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
 
-handleMintApi :: WalletParams -> EAApp UnsignedTxResponse
-handleMintApi WalletParams {..} = do
+  (oref, _) <-
+    liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
+
+  policy <- asks (oneShotMintingPolicy oref)
+
+  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
+  collateral <- eaGetCollateral
+
+  txBody <-
+    liftIO $
+      runGYTxMonadNode
+        nid
+        providers
+        addrs
+        addr
+        collateral
+        (return $ Tx.oneShotMint addr oref 1 policy)
+
+  let
+    signedTx = signGYTxBody txBody keys
+
+  void . liftIO $ gySubmitTx providers signedTx
+  return $ txBodySubmitTxResponse txBody
+
+handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
+handleOneShotMintByWallet WalletParams {..} = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers usedAddrs

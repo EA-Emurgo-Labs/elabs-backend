@@ -19,12 +19,16 @@ module EA (
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 
+import Data.Pool (Pool)
+
+import Database.Persist.Sql (SqlBackend)
+
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.Types (
   GYLogNamespace,
-  GYLogSeverity,
+  GYLogSeverity (..),
   GYMintingPolicy,
   GYProviders,
   GYTxOutRef,
@@ -46,7 +50,13 @@ import Ply (
  )
 import Ply.Core.Class (PlyArg (..))
 
-import EA.Helpers (mintingPolicyFromPly)
+import Cardano.Address.Derivation (
+  Depth (RootK),
+  XPrv,
+ )
+import Cardano.Address.Style.Shelley (Shelley)
+
+import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
 
 --------------------------------------------------------------------------------
@@ -71,6 +81,8 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvGYCoreConfig :: !GYCoreConfig
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
+  , eaAppEnvSqlPool :: !(Pool SqlBackend)
+  , eaAppEnvRootKey :: !(Shelley 'RootK XPrv)
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a

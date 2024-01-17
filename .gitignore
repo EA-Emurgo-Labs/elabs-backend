@@ -38,3 +38,5 @@ TAGS
 .direnv/
 haddock 
 hoo
+wallet.db*
+root.key
