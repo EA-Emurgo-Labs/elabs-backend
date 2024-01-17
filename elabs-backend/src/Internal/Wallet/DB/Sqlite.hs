@@ -2,6 +2,7 @@ module Internal.Wallet.DB.Sqlite (
   createWalletIndexPair,
   getWalletIndexPairs,
   runAutoMigration,
+  getUnusedWalletIndexPairs,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -29,15 +30,24 @@ import Internal.Wallet.DB.Schema (
 
 --------------------------------------------------------------------------------
 
-createWalletIndexPair :: (MonadIO m) => UserId -> ReaderT SqlBackend m ()
-createWalletIndexPair userId = do
+createWalletIndexPair :: (MonadIO m) => UserId -> Int -> ReaderT SqlBackend m ()
+createWalletIndexPair userId n = do
   time <- liftIO getCurrentTime
-  void $
-    selectKeysList [] [Desc AccountId]
-      >>= \case
-        [] -> error ""
-        (key : _) ->
-          insert $ Address key userId False time
+  selectKeysList [] [Desc AccountId]
+    >>= \case
+      [] -> error ""
+      (key : _) ->
+        replicateM_ n $ insert (Address key userId False time)
+
+getUnusedWalletIndexPairs ::
+  (MonadIO m) =>
+  UserId ->
+  Int ->
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getUnusedWalletIndexPairs userId n = do
+  pairs <- getWalletIndexPairs userId False
+  when (null pairs) $ createWalletIndexPair userId n
+  getWalletIndexPairs userId False
 
 getWalletIndexPairs ::
   (MonadIO m) =>

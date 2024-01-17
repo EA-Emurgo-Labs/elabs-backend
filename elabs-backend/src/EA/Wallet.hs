@@ -22,38 +22,50 @@ import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaLiftEither)
 import EA.Api.Types (UserId)
 
 import Internal.Wallet (deriveAddress)
-import Internal.Wallet.DB.Sqlite (createWalletIndexPair, getWalletIndexPairs)
+import Internal.Wallet.DB.Sqlite (
+  createWalletIndexPair,
+  getUnusedWalletIndexPairs,
+  getWalletIndexPairs,
+ )
 
 --------------------------------------------------------------------------------
 
 eaGetUnusedAddresses :: UserId -> EAApp [GYAddress]
-eaGetUnusedAddresses = eaGetAddresses False
-
-eaGetUsedAddresses :: UserId -> EAApp [GYAddress]
-eaGetUsedAddresses = eaGetAddresses True
-
-eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
-eaGetAddresses used userid = do
+eaGetUnusedAddresses userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                (getWalletIndexPairs userid used)
+                (getUnusedWalletIndexPairs userId 5)
           )
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
-eaCreateAddresses :: UserId -> EAApp [GYAddress]
-eaCreateAddresses userid = do
+eaGetUsedAddresses :: UserId -> EAApp [GYAddress]
+eaGetUsedAddresses = eaGetAddresses True
+
+eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
+eaGetAddresses used userId = do
+  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  rootK <- asks eaAppEnvRootKey
+  indexPairs <-
+    asks eaAppEnvSqlPool
+      >>= ( liftIO
+              . runSqlPool
+                (getWalletIndexPairs userId used)
+          )
+  eaLiftEither id $
+    mapM (uncurry $ deriveAddress nid rootK) indexPairs
+
+eaCreateAddresses :: UserId -> Int -> EAApp ()
+eaCreateAddresses userId n = do
   asks eaAppEnvSqlPool
     >>= ( liftIO
             . runSqlPool
-              (createWalletIndexPair userid)
+              (createWalletIndexPair userId n)
         )
-  -- TODO: dont query again
-  eaGetUnusedAddresses userid
 
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
 eaGetCollateral = undefined
