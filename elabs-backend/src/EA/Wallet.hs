@@ -18,7 +18,7 @@ import GeniusYield.Types (
 
 import Database.Persist.Sql (runSqlPool)
 
-import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaLiftMaybe, unRootKey)
+import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaLiftEither)
 import EA.Api.Types (UserId)
 
 import Internal.Wallet (deriveAddress)
@@ -35,14 +35,14 @@ eaGetUsedAddresses = eaGetAddresses True
 eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
 eaGetAddresses used userid = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
-  rootK <- asks (unRootKey . eaAppEnvRootKey)
+  rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
                 (getWalletIndexPairs userid used)
           )
-  eaLiftMaybe "Something went wrong with the address derivation" $
+  eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
 eaCreateAddresses :: UserId -> EAApp [GYAddress]

@@ -1,7 +1,6 @@
 module EA (
   EAApp (..),
   EAAppEnv (..),
-  RootKey (..),
   runEAApp,
   eaLog,
   eaLogDebug,
@@ -20,7 +19,6 @@ module EA (
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 
-import Data.Aeson qualified as Aeson
 import Data.Pool (Pool)
 
 import Database.Persist.Sql (SqlBackend)
@@ -55,10 +53,8 @@ import Ply.Core.Class (PlyArg (..))
 import Cardano.Address.Derivation (
   Depth (RootK),
   XPrv,
-  xprvFromBytes,
-  xprvToBytes,
  )
-import Cardano.Address.Style.Shelley (Shelley, getKey, liftXPrv)
+import Cardano.Address.Style.Shelley (Shelley)
 
 import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
@@ -86,21 +82,8 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
-  , eaAppEnvRootKey :: !RootKey
+  , eaAppEnvRootKey :: !(Shelley 'RootK XPrv)
   }
-
-newtype RootKey = RootKey {unRootKey :: Shelley 'RootK XPrv}
-
-instance Aeson.ToJSON RootKey where
-  toJSON (RootKey xprv) =
-    Aeson.String . decodeUtf8 . xprvToBytes . getKey $ xprv
-
-instance Aeson.FromJSON RootKey where
-  parseJSON = Aeson.withText "RootKey" $ \t ->
-    maybe
-      (fail "Invalid XPrv")
-      (pure . RootKey . liftXPrv)
-      (xprvFromBytes . encodeUtf8 $ t)
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
 runEAApp env = flip runReaderT env . unEAApp

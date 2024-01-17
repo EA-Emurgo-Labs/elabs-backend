@@ -1,7 +1,7 @@
 module Main (main) where
 
-import Data.Aeson qualified as Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
 import Relude.Unsafe qualified as Unsafe
@@ -42,6 +42,7 @@ import GeniusYield.Types (gyLog, gyLogInfo)
 import Ply (readTypedScript)
 
 import Cardano.Address.Derivation (GenMasterKey (genMasterKeyFromMnemonic))
+import Cardano.Address.Style.Shelley (Shelley)
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 
 import Network.HTTP.Types qualified as HttpTypes
@@ -64,11 +65,12 @@ import Database.Persist.Sqlite (
   runSqlPool,
  )
 
-import EA (EAAppEnv (..), RootKey (..))
+import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
 
+import Internal.Wallet (fromRootKey, toRootKey)
 import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
 data Options = Options
@@ -121,7 +123,7 @@ options =
       ( long "root-key"
           <> help "Root key file"
           <> showDefault
-          <> value "root.json"
+          <> value "root.key"
       )
     <*> subparser
       ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
@@ -215,9 +217,7 @@ app (Options {..}) = do
           -- migrate tables
           void $ runSqlPool runAutoMigration pool
 
-          -- root key
-          rootKey <-
-            Unsafe.fromJust . Aeson.decode <$> BL8.readFile optionsRootKeyFile
+          rootKey <- Unsafe.fromJust . toRootKey <$> BS.readFile optionsRootKeyFile
 
           let
             env =
@@ -244,8 +244,8 @@ app (Options {..}) = do
               (const (error "Invalid mnemonic"))
               return
               (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
-          let rootKey = RootKey $ genMasterKeyFromMnemonic mw mempty
-          BL8.writeFile optionsRootKeyFile (encodePretty rootKey)
+          let rootKey = genMasterKeyFromMnemonic @Shelley mw mempty
+          BS.writeFile optionsRootKeyFile (fromRootKey rootKey)
 
 server :: EAAppEnv -> Application
 server env =

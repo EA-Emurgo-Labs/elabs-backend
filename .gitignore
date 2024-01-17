@@ -39,4 +39,4 @@ TAGS
 haddock 
 hoo
 wallet.db*
-root.json
+root.key
