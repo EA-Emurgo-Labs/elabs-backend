@@ -18,4 +18,5 @@ type WalletApi =
 
 handleWalletApi :: UserId -> EAApp WalletResponse
 handleWalletApi userid = do
-  WalletResponse <$> eaGetUnusedAddresses userid
+  addrs <- eaGetUnusedAddresses userid
+  return $ WalletResponse $ map fst addrs

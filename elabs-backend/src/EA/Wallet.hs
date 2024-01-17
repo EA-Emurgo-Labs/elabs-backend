@@ -1,7 +1,4 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
 module EA.Wallet (
-  eaSignGYTxBody,
   eaGetCollateral,
   eaGetUnusedAddresses,
   eaGetUsedAddresses,
@@ -11,8 +8,6 @@ module EA.Wallet (
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.Types (
   GYAddress,
-  GYTx,
-  GYTxBody,
   GYTxOutRef,
  )
 
@@ -21,7 +16,7 @@ import Database.Persist.Sql (runSqlPool)
 import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaLiftEither)
 import EA.Api.Types (UserId)
 
-import Internal.Wallet (deriveAddress)
+import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sqlite (
   createWalletIndexPair,
   getUnusedWalletIndexPairs,
@@ -30,7 +25,7 @@ import Internal.Wallet.DB.Sqlite (
 
 --------------------------------------------------------------------------------
 
-eaGetUnusedAddresses :: UserId -> EAApp [GYAddress]
+eaGetUnusedAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetUnusedAddresses userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   rootK <- asks eaAppEnvRootKey
@@ -43,10 +38,10 @@ eaGetUnusedAddresses userId = do
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
-eaGetUsedAddresses :: UserId -> EAApp [GYAddress]
+eaGetUsedAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetUsedAddresses = eaGetAddresses True
 
-eaGetAddresses :: Bool -> UserId -> EAApp [GYAddress]
+eaGetAddresses :: Bool -> UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetAddresses used userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   rootK <- asks eaAppEnvRootKey
@@ -67,8 +62,6 @@ eaCreateAddresses userId n = do
               (createWalletIndexPair userId n)
         )
 
+-- TODO:
 eaGetCollateral :: EAApp (Maybe (GYTxOutRef, Bool))
-eaGetCollateral = undefined
-
-eaSignGYTxBody :: GYTxBody -> EAApp GYTx
-eaSignGYTxBody = undefined
+eaGetCollateral = return Nothing

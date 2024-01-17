@@ -11,6 +11,7 @@ import GeniusYield.Types (
   GYTxOutRefCbor (getTxOutRefHex),
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
+  signGYTxBody,
  )
 
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
@@ -28,8 +29,6 @@ import EA.Tx.OneShotMint qualified as Tx
 import EA.Wallet (
   eaGetCollateral,
   eaGetUnusedAddresses,
-  eaGetUsedAddresses,
-  eaSignGYTxBody,
  )
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
@@ -48,8 +47,8 @@ handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
 handleOneShotMintByUserId userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
-  addrs <- eaGetUsedAddresses userId
-  unusedAddrs <- eaGetUnusedAddresses userId
+  (addrs, keys) <- unzip <$> eaGetUnusedAddresses userId
+
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
 
   (oref, _) <-
@@ -57,7 +56,7 @@ handleOneShotMintByUserId userId = do
 
   policy <- asks (oneShotMintingPolicy oref)
 
-  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head unusedAddrs
+  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
   collateral <- eaGetCollateral
 
   txBody <-
@@ -65,12 +64,13 @@ handleOneShotMintByUserId userId = do
       runGYTxMonadNode
         nid
         providers
-        [addr]
+        addrs
         addr
         collateral
         (return $ Tx.oneShotMint addr oref 1 policy)
 
-  signedTx <- eaSignGYTxBody txBody
+  let
+    signedTx = signGYTxBody txBody keys
 
   void . liftIO $ gySubmitTx providers signedTx
   return $ txBodySubmitTxResponse txBody

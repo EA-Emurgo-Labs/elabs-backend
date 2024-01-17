@@ -1,4 +1,5 @@
 module Internal.Wallet (
+  PaymentKey,
   deriveAddress,
   toRootKey,
   fromRootKey,
@@ -10,6 +11,9 @@ import GeniusYield.Types (
   GYAddress,
   GYNetworkId (GYMainnet),
   addressFromTextMaybe,
+ )
+import GeniusYield.Types.Key.Class (
+  ToShelleyWitnessSigningKey (toShelleyWitnessSigningKey),
  )
 
 import Cardano.Address (
@@ -30,6 +34,11 @@ import Cardano.Address.Derivation (
 import Cardano.Address.Style.Shelley (Shelley, getKey, liftXPrv)
 import Cardano.Address.Style.Shelley qualified as S
 
+import Cardano.Api.Shelley (
+  ShelleyWitnessSigningKey (WitnessPaymentExtendedKey),
+  SigningKey (PaymentExtendedSigningKey),
+ )
+
 --------------------------------------------------------------------------------
 
 deriveAddress ::
@@ -37,7 +46,7 @@ deriveAddress ::
   Shelley 'RootK XPrv ->
   Tagged "Account" Int64 ->
   Tagged "Address" Int64 ->
-  Either String GYAddress
+  Either String (GYAddress, PaymentKey)
 deriveAddress nid rootK acc addr = do
   -- indexFrom32 will return Nothing when the index is out of range
   accI <-
@@ -68,11 +77,22 @@ deriveAddress nid rootK acc addr = do
     addr =
       S.delegationAddress (network nid) paymentCredential delegationCredential
 
-  -- TODO: Better Cardano.Address.Address to GYAddress convertion
   maybe
     (Left "Cannot decode beck to GYAddress")
     Right
-    (addressFromTextMaybe . bech32 $ addr)
+    ( do
+        gyAddr <- addressFromTextMaybe . bech32 $ addr
+        return (gyAddr, PaymentKey addrK)
+    )
+
+--------------------------------------------------------------------------------
+-- Signing key stuff
+
+newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
+
+instance ToShelleyWitnessSigningKey PaymentKey where
+  toShelleyWitnessSigningKey (PaymentKey key) =
+    WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
 
 toRootKey :: ByteString -> Maybe (Shelley 'RootK XPrv)
 toRootKey bs = liftXPrv <$> xprvFromBytes bs
