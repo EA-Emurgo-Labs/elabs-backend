@@ -35,7 +35,7 @@ createWalletIndexPair userId n = do
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
     >>= \case
-      [] -> error ""
+      [] -> error "No account record found"
       (key : _) ->
         replicateM_ n $ insert (Address key userId False time)
 
