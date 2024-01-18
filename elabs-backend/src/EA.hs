@@ -133,7 +133,9 @@ eaLiftEither' :: (Exception e) => (a -> e) -> Either a b -> EAApp b
 eaLiftEither' f = either (eaThrow . f) return
 
 eaThrow :: (Exception e) => e -> EAApp a
-eaThrow = liftIO . throwIO
+eaThrow e = do
+  eaLogError "exception" $ displayException e
+  liftIO $ throwIO e
 
 eaCatch :: (Exception e) => EAApp a -> (e -> EAApp a) -> EAApp a
 eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
