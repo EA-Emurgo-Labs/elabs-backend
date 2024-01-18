@@ -14,6 +14,7 @@ module EA (
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
+  eaSubmitTx,
 ) where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
@@ -30,7 +31,9 @@ import GeniusYield.Types (
   GYLogNamespace,
   GYLogSeverity (..),
   GYMintingPolicy,
-  GYProviders,
+  GYProviders (gySubmitTx),
+  GYTx,
+  GYTxId,
   GYTxOutRef,
   PlutusVersion (PlutusV2),
   gyLog,
@@ -169,3 +172,13 @@ applyToMintingPolicy ::
   GYMintingPolicy 'PlutusV2
 applyToMintingPolicy a f =
   mintingPolicyFromPly . applyToScript a f
+
+--------------------------------------------------------------------------------
+-- Wrappers around GeniusYield functions with logging and exception handling
+
+eaSubmitTx :: GYTx -> EAApp GYTxId
+eaSubmitTx tx = do
+  providers <- asks eaAppEnvGYProviders
+  eaHandle @SomeException
+    eaThrow
+    (liftIO $ gySubmitTx providers tx)
