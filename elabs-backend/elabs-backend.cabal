@@ -126,3 +126,15 @@ test-suite tests
     , hspec-wai
     , optparse-applicative
     , tasty
+
+
+test-suite privnet-tests
+  import:         lang, deps, opts
+  hs-source-dirs: tests-privnet
+  type:           exitcode-stdio-1.0
+  main-is:        privnet-tests.hs
+  build-depends:
+    , elabs-backend
+    , hspec
+    , tasty
+    , tasty-hunit
