@@ -41,3 +41,5 @@ hoo
 cardano-private-testnet-setup
 logs-privnet
 kupo
+wallet.db*
+root.key

@@ -22,19 +22,25 @@ common deps
     , cardano-api
     , containers
     , http-types
+    , monad-logger
     , monad-metrics
     , mtl
     , newtype
     , optics
+    , persistent
+    , persistent-sqlite
     , plutus-ledger-api
     , ply-core
     , relude
+    , resource-pool
     , serialise
     , servant-server
     , servant-swagger
     , swagger2
     , tagged
     , text
+    , text-class
+    , time
     , transformers
     , unliftio
     , vector
@@ -102,10 +108,15 @@ library
     EA.Api
     EA.Api.Mint
     EA.Api.Tx
-    EA.Helpers
+    EA.Api.Types
+    EA.Api.Wallet
+    EA.Internal
     EA.Script
     EA.Tx.OneShotMint
-    EA.Utils.Wallet
+    EA.Wallet
+    Internal.Wallet
+    Internal.Wallet.DB.Schema
+    Internal.Wallet.DB.Sqlite
 
 executable app
   import:         lang, deps, opts

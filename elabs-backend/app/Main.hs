@@ -1,43 +1,94 @@
 module Main (main) where
 
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BL8
+import Data.Text qualified as T
+import Relude.Unsafe qualified as Unsafe
 
 import Control.Exception (try)
+import Control.Monad.Logger (
+  LoggingT (runLoggingT),
+  fromLogStr,
+ )
 import Control.Monad.Metrics qualified as Metrics
 
-import Options.Applicative
+import Options.Applicative (
+  Parser,
+  auto,
+  command,
+  execParser,
+  fullDesc,
+  header,
+  help,
+  helper,
+  info,
+  long,
+  option,
+  progDesc,
+  short,
+  showDefault,
+  strOption,
+  subparser,
+  value,
+ )
 
 import GeniusYield.GYConfig (
   coreConfigIO,
   withCfgProviders,
  )
-import GeniusYield.Types (gyLogInfo)
+import GeniusYield.Types (gyLog, gyLogInfo)
+
+import Ply (readTypedScript)
+
+import Cardano.Address.Derivation (GenMasterKey (genMasterKeyFromMnemonic))
+import Cardano.Address.Style.Shelley (Shelley)
+import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
 
-import Servant
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
+
+import Database.Persist.Sqlite (
+  createSqlitePool,
+  runSqlPool,
+ )
 
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
+import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
-import Ply (readTypedScript)
+
+import Internal.Wallet (fromRootKey, toRootKey)
+import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
-  , optionsLogNameSpace :: !String
   , optionsScriptsFile :: !String
+  , optionsRootKeyFile :: !String
   , optionsCommand :: !Commands
   }
 
 data Commands
   = RunServer ServerOptions
   | ExportSwagger SwaggerOptions
+  | GenerateRootKey RootKeyOptions
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
+  , serverOptionsSqliteFile :: !String
+  , serverOptionsSqlitePoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -45,6 +96,10 @@ data SwaggerOptions = SwaggerOptions
   { swaggerOptionsFile :: !String
   }
   deriving stock (Show, Read)
+
+data RootKeyOptions = RootKeyOptions
+  { rootKeyOptionsMnemonic :: !String
+  }
 
 options :: Parser Options
 options =
@@ -58,27 +113,35 @@ options =
       )
     <*> option
       auto
-      ( long "log-namespace"
-          <> help "Log namespace"
-          <> showDefault
-          <> value "elabs-backend"
-      )
-    <*> option
-      auto
       ( long "scripts"
           <> help "Scripts file"
           <> showDefault
           <> value "scripts.json"
       )
+    <*> option
+      auto
+      ( long "root-key"
+          <> help "Root key file"
+          <> showDefault
+          <> value "root.key"
+      )
     <*> subparser
-      ( command "run" (info serverOptions (progDesc "Run backend server"))
-          <> command "swagger" (info swaggerOptions (progDesc "Export swagger api"))
+      ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
+          <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
+          <> command "genrootkey" (info (GenerateRootKey <$> rootKeyOptions) (progDesc "Root key generation"))
       )
 
-serverOptions :: Parser Commands
+rootKeyOptions :: Parser RootKeyOptions
+rootKeyOptions =
+  RootKeyOptions
+    <$> strOption
+      ( long "mnemonic"
+          <> help "Mnemonic (15 words)"
+      )
+
+serverOptions :: Parser ServerOptions
 serverOptions =
-  RunServer
-    . ServerOptions
+  ServerOptions
     <$> option
       auto
       ( long "port"
@@ -87,11 +150,24 @@ serverOptions =
           <> showDefault
           <> value 8081
       )
+    <*> option
+      auto
+      ( long "sqlite"
+          <> help "Sqlite file"
+          <> showDefault
+          <> value "wallet.db"
+      )
+    <*> option
+      auto
+      ( long "sqlite-pool-size"
+          <> help "Sqlite pool size"
+          <> showDefault
+          <> value 10
+      )
 
-swaggerOptions :: Parser Commands
+swaggerOptions :: Parser SwaggerOptions
 swaggerOptions =
-  ExportSwagger
-    . SwaggerOptions
+  SwaggerOptions
     <$> option
       auto
       ( long "outfile"
@@ -113,37 +189,63 @@ main = app =<< execParser opts
         )
 
 app :: Options -> IO ()
-app opts = do
-  metrics <- Metrics.initialize
-  conf <- coreConfigIO $ optionsCoreConfigFile opts
+app (Options {..}) = do
+  conf <- coreConfigIO optionsCoreConfigFile
 
-  withCfgProviders conf (fromString $ optionsLogNameSpace opts) $
+  withCfgProviders conf "app" $
     \providers -> do
-      case optionsCommand opts of
-        RunServer opt -> do
+      case optionsCommand of
+        RunServer (ServerOptions {..}) -> do
           -- TODO: This is one particular script
           --       -> Make FromJSON instance of Scripts
-          policyTypedScript <- readTypedScript (optionsScriptsFile opts)
+          policyTypedScript <- readTypedScript optionsScriptsFile
+          metrics <- Metrics.initialize
+
+          -- Create Sqlite pool and run migrations
+          pool <-
+            runLoggingT
+              ( createSqlitePool
+                  (T.pack serverOptionsSqliteFile)
+                  serverOptionsSqlitePoolSize
+              )
+              $ \_ _ lvl msg ->
+                gyLog
+                  providers
+                  "db"
+                  (fromLogLevel lvl)
+                  (decodeUtf8 $ fromLogStr msg)
+          -- migrate tables
+          void $ runSqlPool runAutoMigration pool
+
+          rootKey <- Unsafe.fromJust . toRootKey <$> BS.readFile optionsRootKeyFile
 
           let
-            port = serverOptionsPort opt
-            scripts = Scripts policyTypedScript
             env =
               EAAppEnv
                 { eaAppEnvGYProviders = providers
                 , eaAppEnvGYCoreConfig = conf
                 , eaAppEnvMetrics = metrics
-                , eaAppEnvScripts = scripts
+                , eaAppEnvScripts = Scripts policyTypedScript
+                , eaAppEnvSqlPool = pool
+                , eaAppEnvRootKey = rootKey
                 }
           gyLogInfo providers "app" $
             "Starting server at "
               <> "http://localhost:"
-              <> show port
-          run port $ server env
-        ExportSwagger opt -> do
-          let file = swaggerOptionsFile opt
+              <> show serverOptionsPort
+          run serverOptionsPort $ server env
+        ExportSwagger (SwaggerOptions {..}) -> do
+          let file = swaggerOptionsFile
           gyLogInfo providers "app" $ "Writting swagger file to " <> file
           BL8.writeFile file (encodePretty apiSwagger)
+        GenerateRootKey (RootKeyOptions {..}) -> do
+          mw <-
+            either
+              (const (error "Invalid mnemonic"))
+              return
+              (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
+          let rootKey = genMasterKeyFromMnemonic @Shelley mw mempty
+          BS.writeFile optionsRootKeyFile (fromRootKey rootKey)
 
 server :: EAAppEnv -> Application
 server env =
