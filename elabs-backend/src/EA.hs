@@ -15,23 +15,30 @@ module EA (
   eaLiftEither,
   eaLiftEither',
   eaSubmitTx,
+  eaGetAdaOnlyUTxO,
+  eaGetCollateral,
+  eaGetCollateral',
 ) where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 
-import Data.Pool (Pool)
+import Data.Foldable (minimumBy)
 
+import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
 
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 import GeniusYield.GYConfig (GYCoreConfig)
+import GeniusYield.TxBuilder (adaOnlyUTxOPure)
 import GeniusYield.Types (
+  GYAddress,
   GYLogNamespace,
   GYLogSeverity (..),
   GYMintingPolicy,
-  GYProviders (gySubmitTx),
+  GYProviders (..),
+  GYQueryUTxO (..),
   GYTx,
   GYTxId,
   GYTxOutRef,
@@ -174,11 +181,41 @@ applyToMintingPolicy a f =
   mintingPolicyFromPly . applyToScript a f
 
 --------------------------------------------------------------------------------
--- Wrappers around GeniusYield functions with logging and exception handling
+-- Provider functions
 
 eaSubmitTx :: GYTx -> EAApp GYTxId
 eaSubmitTx tx = do
-  providers <- asks eaAppEnvGYProviders
+  submitTx <- asks (gySubmitTx . eaAppEnvGYProviders)
   eaHandle @SomeException
     eaThrow
-    (liftIO $ gySubmitTx providers tx)
+    (liftIO $ submitTx tx)
+
+-- TODO: ...
+
+--------------------------------------------------------------------------------
+-- Query functions
+
+eaGetAdaOnlyUTxO :: GYAddress -> EAApp [(GYTxOutRef, Natural)]
+eaGetAdaOnlyUTxO addr = do
+  utxosAtAddress <-
+    asks
+      (gyQueryUtxosAtAddress' . gyQueryUTxO . eaAppEnvGYProviders)
+  utxos <- liftIO $ utxosAtAddress addr Nothing
+  return $ adaOnlyUTxOPure utxos
+
+eaGetCollateral ::
+  GYAddress ->
+  Natural ->
+  EAApp (Maybe (GYTxOutRef, Natural))
+eaGetCollateral addr minCollateral = do
+  xs <- filter (\(_, n) -> n >= minCollateral) <$> eaGetAdaOnlyUTxO addr
+  return $ case xs of
+    [] -> Nothing
+    ys -> Just $ minimumBy (compare `on` snd) ys
+
+eaGetCollateral' :: [GYAddress] -> Natural -> EAApp (Maybe (GYTxOutRef, Natural))
+eaGetCollateral' [] _ = return Nothing
+eaGetCollateral' (addr : addrs) n = do
+  eaGetCollateral addr n >>= \case
+    Nothing -> eaGetCollateral' addrs n
+    Just oref -> return $ Just oref
