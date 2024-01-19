@@ -5,6 +5,7 @@ module Internal.Wallet (
   readRootKey,
   writeRootKey,
   genRootKeyFromMnemonic,
+  eaSignTx,
 ) where
 
 import Data.Tagged (Tagged)
@@ -12,10 +13,11 @@ import Data.Tagged (Tagged)
 import GeniusYield.Types (
   GYAddress,
   GYNetworkId (GYMainnet),
+  GYTx,
+  GYTxBody,
   addressFromTextMaybe,
- )
-import GeniusYield.Types.Key.Class (
-  ToShelleyWitnessSigningKey (toShelleyWitnessSigningKey),
+  txBodyToApi,
+  txFromApi,
  )
 
 import Cardano.Address (
@@ -41,6 +43,7 @@ import Cardano.Api.Shelley (
   ShelleyWitnessSigningKey (WitnessPaymentExtendedKey),
   SigningKey (PaymentExtendedSigningKey),
  )
+import Cardano.Api.Shelley qualified as Api
 import Cardano.Mnemonic (SomeMnemonic)
 import Data.ByteString qualified as BS
 
@@ -98,13 +101,20 @@ network _ = S.shelleyTestnet
 -- Payment key
 --
 -- Dont expose the internals of the payment key
--- Dont implement any instances other than ToShelleyWitnessSigningKey
+-- Dont implement any instances
 
 newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
 
-instance ToShelleyWitnessSigningKey PaymentKey where
-  toShelleyWitnessSigningKey (PaymentKey key) =
-    WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
+-- internal function, dont export
+toShelleyWitnessSigningKey :: PaymentKey -> ShelleyWitnessSigningKey
+toShelleyWitnessSigningKey (PaymentKey key) =
+  WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
+
+eaSignTx :: GYTxBody -> [PaymentKey] -> GYTx
+eaSignTx txBody skeys =
+  txFromApi $
+    Api.signShelleyTransaction (txBodyToApi txBody) $
+      map toShelleyWitnessSigningKey skeys
 
 --------------------------------------------------------------------------------
 -- Root key
