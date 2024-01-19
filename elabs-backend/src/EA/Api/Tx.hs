@@ -4,14 +4,13 @@ module EA.Api.Tx (
 ) where
 
 import GeniusYield.Types (
-  GYProviders (gySubmitTx),
   getTxBody,
   makeSignedTransaction,
  )
 
 import Servant (JSON, Post, ReqBody, type (:>))
 
-import EA (EAApp, EAAppEnv (..))
+import EA (EAApp, eaSubmitTx)
 import EA.Api.Types (
   SubmitTxParams (..),
   SubmitTxResponse,
@@ -25,8 +24,7 @@ type TxApi =
 
 handleTxApi :: SubmitTxParams -> EAApp SubmitTxResponse
 handleTxApi SubmitTxParams {..} = do
-  providers <- asks eaAppEnvGYProviders
-  void . liftIO $ gySubmitTx providers $ makeSignedTransaction txWit txBody
+  void $ eaSubmitTx $ makeSignedTransaction txWit txBody
   return $ txBodySubmitTxResponse txBody
   where
     txBody = getTxBody txUnsigned

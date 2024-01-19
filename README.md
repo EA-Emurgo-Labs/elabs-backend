@@ -1,8 +1,8 @@
 # EMURGO Labs Backend
 
-Test mnemonic used:
+This will create the `root.key`
 ```
-ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal
+cabal run elabs-backend:app -- genrootkey --mnemonic "ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal"
 ```
 
 ## DB Backend

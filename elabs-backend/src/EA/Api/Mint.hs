@@ -7,7 +7,6 @@ module EA.Api.Mint (
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
 import GeniusYield.Types (
-  GYProviders (gySubmitTx),
   GYTxOutRefCbor (getTxOutRefHex),
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
@@ -16,7 +15,7 @@ import GeniusYield.Types (
 
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
-import EA (EAApp, EAAppEnv (..), eaLiftMaybe, oneShotMintingPolicy)
+import EA (EAApp, EAAppEnv (..), eaLiftMaybe, eaSubmitTx, oneShotMintingPolicy)
 import EA.Api.Types (
   SubmitTxResponse,
   UnsignedTxResponse,
@@ -72,7 +71,7 @@ handleOneShotMintByUserId userId = do
   let
     signedTx = signGYTxBody txBody keys
 
-  void . liftIO $ gySubmitTx providers signedTx
+  void $ eaSubmitTx signedTx
   return $ txBodySubmitTxResponse txBody
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
