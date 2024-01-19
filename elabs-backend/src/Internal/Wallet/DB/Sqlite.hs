@@ -3,6 +3,7 @@ module Internal.Wallet.DB.Sqlite (
   getWalletIndexPairs,
   runAutoMigration,
   getUnusedWalletIndexPairs,
+  getInternalWalletIndexPairs,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -30,7 +31,7 @@ import Internal.Wallet.DB.Schema (
 
 --------------------------------------------------------------------------------
 
-createWalletIndexPair :: (MonadIO m) => UserId -> Int -> ReaderT SqlBackend m ()
+createWalletIndexPair :: (MonadIO m) => Maybe UserId -> Int -> ReaderT SqlBackend m ()
 createWalletIndexPair userId n = do
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
@@ -46,8 +47,16 @@ getUnusedWalletIndexPairs ::
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getUnusedWalletIndexPairs userId n = do
   pairs <- getWalletIndexPairs userId False
-  when (null pairs) $ createWalletIndexPair userId n
+  when (null pairs) $ createWalletIndexPair (Just userId) n
   getWalletIndexPairs userId False
+
+getInternalWalletIndexPairs ::
+  (MonadIO m) =>
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getInternalWalletIndexPairs = do
+  pairs <- getWalletIndexPairs'
+  when (null pairs) $ createWalletIndexPair Nothing 1
+  getWalletIndexPairs'
 
 getWalletIndexPairs ::
   (MonadIO m) =>
@@ -55,13 +64,23 @@ getWalletIndexPairs ::
   Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs userId used = do
-  addrs <- selectList [AddressUsed ==. used, AddressUser ==. userId] []
+  addrs <- selectList [AddressUsed ==. used, AddressUser ==. Just userId] []
   return $ map getIndexPair addrs
-  where
-    getIndexPair addr =
-      ( Tagged . fromSqlKey . addressAccountId . entityVal $ addr
-      , Tagged . fromSqlKey . entityKey $ addr
-      )
+
+getWalletIndexPairs' ::
+  (MonadIO m) =>
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getWalletIndexPairs' = do
+  addrs <- selectList [AddressUser ==. Nothing] []
+  return $ map getIndexPair addrs
+
+getIndexPair ::
+  Entity Address ->
+  (Tagged "Account" Int64, Tagged "Address" Int64)
+getIndexPair addr =
+  ( Tagged . fromSqlKey . addressAccountId . entityVal $ addr
+  , Tagged . fromSqlKey . entityKey $ addr
+  )
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
