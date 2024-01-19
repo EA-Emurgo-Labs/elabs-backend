@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.ByteString qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
 import Relude.Unsafe qualified as Unsafe
@@ -41,8 +40,6 @@ import GeniusYield.Types (gyLog, gyLogInfo)
 
 import Ply (readTypedScript)
 
-import Cardano.Address.Derivation (GenMasterKey (genMasterKeyFromMnemonic))
-import Cardano.Address.Style.Shelley (Shelley)
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 
 import Network.HTTP.Types qualified as HttpTypes
@@ -70,7 +67,7 @@ import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (Scripts))
 
-import Internal.Wallet (fromRootKey, toRootKey)
+import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
 import Internal.Wallet.DB.Sqlite (runAutoMigration)
 
 data Options = Options
@@ -217,7 +214,7 @@ app (Options {..}) = do
           -- migrate tables
           void $ runSqlPool runAutoMigration pool
 
-          rootKey <- Unsafe.fromJust . toRootKey <$> BS.readFile optionsRootKeyFile
+          rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
 
           let
             env =
@@ -244,8 +241,7 @@ app (Options {..}) = do
               (const (error "Invalid mnemonic"))
               return
               (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
-          let rootKey = genMasterKeyFromMnemonic @Shelley mw mempty
-          BS.writeFile optionsRootKeyFile (fromRootKey rootKey)
+          writeRootKey optionsRootKeyFile $ genRootKeyFromMnemonic mw
 
 server :: EAAppEnv -> Application
 server env =

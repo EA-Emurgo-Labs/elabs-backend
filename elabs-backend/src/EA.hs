@@ -60,14 +60,10 @@ import Ply (
  )
 import Ply.Core.Class (PlyArg (..))
 
-import Cardano.Address.Derivation (
-  Depth (RootK),
-  XPrv,
- )
-import Cardano.Address.Style.Shelley (Shelley)
-
 import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
+
+import Internal.Wallet (RootKey)
 
 --------------------------------------------------------------------------------
 
@@ -92,7 +88,7 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
-  , eaAppEnvRootKey :: !(Shelley 'RootK XPrv)
+  , eaAppEnvRootKey :: !RootKey
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
@@ -189,8 +185,6 @@ eaSubmitTx tx = do
   eaHandle @SomeException
     eaThrow
     (liftIO $ submitTx tx)
-
--- TODO: ...
 
 --------------------------------------------------------------------------------
 -- Query functions
