@@ -1,10 +1,9 @@
 module EA.Wallet (
   eaGetCollateral,
-  eaGetUnusedAddresses,
-  eaGetUsedAddresses,
   eaCreateAddresses,
   eaGetInternalAddresses,
   eaGetCollateralFromInternalWallet,
+  eaGetAddresses,
 ) where
 
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
@@ -21,9 +20,8 @@ import EA.Api.Types (UserId)
 import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sqlite (
   createWalletIndexPair,
-  getInternalWalletIndexPairs,
-  getUnusedWalletIndexPairs,
-  getWalletIndexPairs,
+  getInternalWalletIndexPairs',
+  getWalletIndexPairs',
  )
 
 --------------------------------------------------------------------------------
@@ -36,36 +34,20 @@ eaGetInternalAddresses = do
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                getInternalWalletIndexPairs
+                (getInternalWalletIndexPairs' 1)
           )
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
-eaGetUnusedAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
-eaGetUnusedAddresses userId = do
+eaGetAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
+eaGetAddresses userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                (getUnusedWalletIndexPairs userId 5)
-          )
-  eaLiftEither id $
-    mapM (uncurry $ deriveAddress nid rootK) indexPairs
-
-eaGetUsedAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
-eaGetUsedAddresses = eaGetAddresses True
-
-eaGetAddresses :: Bool -> UserId -> EAApp [(GYAddress, PaymentKey)]
-eaGetAddresses used userId = do
-  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
-  rootK <- asks eaAppEnvRootKey
-  indexPairs <-
-    asks eaAppEnvSqlPool
-      >>= ( liftIO
-              . runSqlPool
-                (getWalletIndexPairs userId used)
+                (getWalletIndexPairs' userId 5)
           )
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
