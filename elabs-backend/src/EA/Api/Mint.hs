@@ -1,34 +1,33 @@
-module EA.Api.Mint (
-  MintApi,
-  handleOneShotMintByUserId,
-  handleOneShotMintByWallet,
-) where
-
-import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
-import GeniusYield.TxBuilder (runGYTxMonadNode)
-import GeniusYield.Types (
-  GYTxOutRefCbor (getTxOutRefHex),
-  gyQueryUtxosAtAddresses,
-  randomTxOutRef,
-  signGYTxBody,
- )
-
-import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
+module EA.Api.Mint
+  ( MintApi,
+    handleOneShotMintByUserId,
+    handleOneShotMintByWallet,
+  )
+where
 
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, eaSubmitTx, oneShotMintingPolicy)
-import EA.Api.Types (
-  SubmitTxResponse,
-  UnsignedTxResponse,
-  UserId,
-  WalletParams (..),
-  txBodySubmitTxResponse,
-  unSignedTxWithFee,
- )
+import EA.Api.Types
+  ( SubmitTxResponse,
+    UnsignedTxResponse,
+    UserId,
+    WalletParams (..),
+    txBodySubmitTxResponse,
+    unSignedTxWithFee,
+  )
 import EA.Tx.OneShotMint qualified as Tx
-import EA.Wallet (
-  eaGetCollateral,
-  eaGetUnusedAddresses,
- )
+import EA.Wallet
+  ( eaGetCollateral,
+    eaGetUnusedAddresses,
+  )
+import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
+import GeniusYield.TxBuilder (runGYTxMonadNode)
+import GeniusYield.Types
+  ( GYTxOutRefCbor (getTxOutRefHex),
+    gyQueryUtxosAtAddresses,
+    randomTxOutRef,
+    signGYTxBody,
+  )
+import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
 
@@ -46,6 +45,7 @@ handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
 handleOneShotMintByUserId userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
+  scripts <- asks eaAppEnvScripts
   (addrs, keys) <- unzip <$> eaGetUnusedAddresses userId
 
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
@@ -53,7 +53,7 @@ handleOneShotMintByUserId userId = do
   (oref, _) <-
     liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
 
-  policy <- asks (oneShotMintingPolicy oref)
+  let policy = oneShotMintingPolicy oref scripts
 
   addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
   collateral <- eaGetCollateral
@@ -68,8 +68,7 @@ handleOneShotMintByUserId userId = do
         collateral
         (return $ Tx.oneShotMint addr oref 1 policy)
 
-  let
-    signedTx = signGYTxBody txBody keys
+  let signedTx = signGYTxBody txBody keys
 
   void $ eaSubmitTx signedTx
   return $ txBodySubmitTxResponse txBody
@@ -78,12 +77,13 @@ handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
 handleOneShotMintByWallet WalletParams {..} = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
+  scripts <- asks eaAppEnvScripts
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers usedAddrs
 
   (oref, _) <-
     liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
 
-  policy <- asks (oneShotMintingPolicy oref)
+  let policy = oneShotMintingPolicy oref scripts
 
   addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head usedAddrs
 
@@ -97,8 +97,8 @@ handleOneShotMintByWallet WalletParams {..} = do
         ( collateral
             >>= ( \c ->
                     Just
-                      ( getTxOutRefHex c
-                      , True -- Make this as `False` to not do 5-ada-only check for value in this given UTxO to be used as collateral.
+                      ( getTxOutRefHex c,
+                        True -- Make this as `False` to not do 5-ada-only check for value in this given UTxO to be used as collateral.
                       )
                 )
         )

@@ -1,66 +1,60 @@
-module EA (
-  EAApp (..),
-  EAAppEnv (..),
-  runEAApp,
-  eaLog,
-  eaLogDebug,
-  eaLogInfo,
-  eaLogWarning,
-  eaLogError,
-  eaThrow,
-  eaCatch,
-  eaHandle,
-  oneShotMintingPolicy,
-  eaLiftMaybe,
-  eaLiftEither,
-  eaLiftEither',
-  eaSubmitTx,
-) where
+module EA
+  ( EAApp (..),
+    EAAppEnv (..),
+    runEAApp,
+    eaLog,
+    eaLogDebug,
+    eaLogInfo,
+    eaLogWarning,
+    eaLogError,
+    eaThrow,
+    eaCatch,
+    eaHandle,
+    oneShotMintingPolicy,
+    eaLiftMaybe,
+    eaLiftEither,
+    eaLiftEither',
+    eaSubmitTx,
+  )
+where
 
+import Cardano.Address.Derivation
+  ( Depth (RootK),
+    XPrv,
+  )
+import Cardano.Address.Style.Shelley (Shelley)
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
-
 import Data.Pool (Pool)
-
 import Database.Persist.Sql (SqlBackend)
-
-import UnliftIO (MonadUnliftIO (withRunInIO))
-
-import GeniusYield.GYConfig (GYCoreConfig)
-import GeniusYield.Types (
-  GYLogNamespace,
-  GYLogSeverity (..),
-  GYMintingPolicy,
-  GYProviders (gySubmitTx),
-  GYTx,
-  GYTxId,
-  GYTxOutRef,
-  PlutusVersion (PlutusV2),
-  gyLog,
-  gyLogDebug,
-  gyLogError,
-  gyLogInfo,
-  gyLogWarning,
-  txOutRefToPlutus,
- )
-
-import Ply (
-  AsData (AsData),
-  PlyArg,
-  ScriptRole (MintingPolicyRole),
-  TypedScript,
-  (#),
- )
-import Ply.Core.Class (PlyArg (..))
-
-import Cardano.Address.Derivation (
-  Depth (RootK),
-  XPrv,
- )
-import Cardano.Address.Style.Shelley (Shelley)
-
 import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
+import GeniusYield.GYConfig (GYCoreConfig)
+import GeniusYield.Types
+  ( GYLogNamespace,
+    GYLogSeverity (..),
+    GYMintingPolicy,
+    GYProviders (gySubmitTx),
+    GYTx,
+    GYTxId,
+    GYTxOutRef,
+    PlutusVersion (PlutusV2),
+    gyLog,
+    gyLogDebug,
+    gyLogError,
+    gyLogInfo,
+    gyLogWarning,
+    txOutRefToPlutus,
+  )
+import Ply
+  ( AsData (AsData),
+    PlyArg,
+    ScriptRole (MintingPolicyRole),
+    TypedScript,
+    (#),
+  )
+import Ply.Core.Class (PlyArg (..))
+import UnliftIO (MonadUnliftIO (withRunInIO))
 
 --------------------------------------------------------------------------------
 
@@ -68,24 +62,24 @@ newtype EAApp a = EAApp
   { unEAApp :: ReaderT EAAppEnv IO a
   }
   deriving newtype
-    ( Functor
-    , Applicative
-    , Monad
-    , MonadIO
-    , MonadReader EAAppEnv
-    , MonadUnliftIO
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadIO,
+      MonadReader EAAppEnv,
+      MonadUnliftIO
     )
 
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
 
 data EAAppEnv = EAAppEnv
-  { eaAppEnvGYProviders :: !GYProviders
-  , eaAppEnvGYCoreConfig :: !GYCoreConfig
-  , eaAppEnvMetrics :: !Metrics
-  , eaAppEnvScripts :: !Scripts
-  , eaAppEnvSqlPool :: !(Pool SqlBackend)
-  , eaAppEnvRootKey :: !(Shelley 'RootK XPrv)
+  { eaAppEnvGYProviders :: !GYProviders,
+    eaAppEnvGYCoreConfig :: !GYCoreConfig,
+    eaAppEnvMetrics :: !Metrics,
+    eaAppEnvScripts :: !Scripts,
+    eaAppEnvSqlPool :: !(Pool SqlBackend),
+    eaAppEnvRootKey :: !(Shelley 'RootK XPrv)
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
@@ -149,7 +143,7 @@ eaHandle = flip eaCatch
 --------------------------------------------------------------------------------
 -- Reader helpers
 
-oneShotMintingPolicy :: GYTxOutRef -> EAAppEnv -> GYMintingPolicy 'PlutusV2
+oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
 oneShotMintingPolicy oref =
   applyToMintingPolicy (AsData . txOutRefToPlutus $ oref) scriptsOneShotPolicy
 
@@ -158,17 +152,17 @@ applyToScript ::
   (PlyArg a, ToDataConstraint a) =>
   AsData a ->
   (Scripts -> TypedScript r '[AsData a]) ->
-  EAAppEnv ->
+  Scripts ->
   TypedScript r '[]
 applyToScript a f =
-  (# a) . f . eaAppEnvScripts
+  (# a) . f
 
 applyToMintingPolicy ::
   forall a.
   (PlyArg a, ToDataConstraint a) =>
   AsData a ->
   (Scripts -> TypedScript 'MintingPolicyRole '[AsData a]) ->
-  EAAppEnv ->
+  Scripts ->
   GYMintingPolicy 'PlutusV2
 applyToMintingPolicy a f =
   mintingPolicyFromPly . applyToScript a f
