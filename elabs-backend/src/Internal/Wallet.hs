@@ -5,9 +5,12 @@ module Internal.Wallet (
   readRootKey,
   writeRootKey,
   genRootKeyFromMnemonic,
-  eaSignTx,
+  signTx,
 ) where
 
+import GHC.Show (Show (show))
+
+import Data.ByteString qualified as BS
 import Data.Tagged (Tagged)
 
 import GeniusYield.Types (
@@ -45,7 +48,6 @@ import Cardano.Api.Shelley (
  )
 import Cardano.Api.Shelley qualified as Api
 import Cardano.Mnemonic (SomeMnemonic)
-import Data.ByteString qualified as BS
 
 --------------------------------------------------------------------------------
 
@@ -105,13 +107,16 @@ network _ = S.shelleyTestnet
 
 newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
 
+instance Show PaymentKey where
+  show _ = "PaymentKey"
+
 -- internal function, dont export
 toShelleyWitnessSigningKey :: PaymentKey -> ShelleyWitnessSigningKey
 toShelleyWitnessSigningKey (PaymentKey key) =
   WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
 
-eaSignTx :: GYTxBody -> [PaymentKey] -> GYTx
-eaSignTx txBody skeys =
+signTx :: GYTxBody -> [PaymentKey] -> GYTx
+signTx txBody skeys =
   txFromApi $
     Api.signShelleyTransaction (txBodyToApi txBody) $
       map toShelleyWitnessSigningKey skeys
@@ -123,6 +128,9 @@ eaSignTx txBody skeys =
 -- Dont implement any instances
 
 newtype RootKey = RootKey {_unRootKey :: Shelley 'RootK XPrv}
+
+instance Show RootKey where
+  show _ = "RootKey"
 
 readRootKey :: FilePath -> IO (Maybe RootKey)
 readRootKey fp = do
