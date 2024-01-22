@@ -1,15 +1,14 @@
 module EA.Internal.WalletSpec (spec) where
 
-import Data.Tagged (Tagged(..))
-import GeniusYield.Types (GYNetworkId(GYMainnet))
 import Cardano.Mnemonic (mkSomeMnemonic)
-import Test.Hspec (describe, it, shouldSatisfy, Spec)
-import Internal.Wallet (genRootKeyFromMnemonic, deriveAddress)
+import Data.Tagged (Tagged (..))
+import GeniusYield.Types (GYNetworkId (GYMainnet))
+import Internal.Wallet (deriveAddress, genRootKeyFromMnemonic)
+import Test.Hspec (Spec, describe, it, shouldSatisfy)
 
 spec :: Spec
 spec = do
   describe "deriveAddress" $ do
-
     it "should return an error when the account index is out of range" $ do
       rootKey <-
         either
@@ -31,7 +30,6 @@ spec = do
 
       let account = Tagged 0
       let address = Tagged 2147483648 -- out of range value
-
       deriveAddress GYMainnet rootKey account address `shouldSatisfy` isLeft
 
 mnemonic :: [Text]
