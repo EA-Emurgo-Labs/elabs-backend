@@ -7,6 +7,9 @@ module EA.Api.Mint (
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
 import GeniusYield.Types (
+  GYAddress,
+  GYProviders,
+  GYTxOutRef,
   GYTxOutRefCbor (getTxOutRefHex),
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
@@ -14,7 +17,13 @@ import GeniusYield.Types (
 
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
-import EA (EAApp, EAAppEnv (..), eaLiftMaybe, eaSubmitTx, oneShotMintingPolicy)
+import EA (
+  EAApp,
+  EAAppEnv (..),
+  eaLiftMaybe,
+  eaSubmitTx,
+  oneShotMintingPolicy,
+ )
 import EA.Api.Types (
   SubmitTxResponse,
   UnsignedTxResponse,
@@ -28,7 +37,8 @@ import EA.Wallet (
   eaGetCollateralFromInternalWallet,
   eaGetUnusedAddresses,
  )
-import Internal.Wallet (eaSignTx)
+
+import Internal.Wallet (PaymentKey, eaSignTx)
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
 
@@ -42,34 +52,42 @@ type OneShotMintByUserId =
     :> Capture "user" UserId
     :> Post '[JSON] SubmitTxResponse
 
+selectOref ::
+  GYProviders ->
+  [(GYAddress, PaymentKey)] ->
+  IO (Maybe (GYAddress, PaymentKey, GYTxOutRef))
+selectOref _ [] = return Nothing
+selectOref providers ((addr, key) : pairs) = do
+  utxos <- gyQueryUtxosAtAddresses providers [addr]
+  moref <- randomTxOutRef utxos
+  case moref of
+    Nothing -> selectOref providers pairs
+    Just (oref, _) -> return $ Just (addr, key, oref)
+
 handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
 handleOneShotMintByUserId userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
-  (addrs, keys) <- unzip <$> eaGetUnusedAddresses userId
 
-  utxos <- liftIO $ gyQueryUtxosAtAddresses providers addrs
-
-  (oref, _) <-
-    liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
+  pairs <- eaGetUnusedAddresses userId
+  (addr, key, oref) <-
+    liftIO (selectOref providers pairs) >>= eaLiftMaybe "No UTxO found"
 
   policy <- asks (oneShotMintingPolicy oref)
 
-  addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
-
   eaGetCollateralFromInternalWallet >>= \case
     Nothing -> eaLiftMaybe "No collateral found" Nothing
-    Just (collateral, key) -> do
+    Just (collateral, colKey) -> do
       txBody <-
         liftIO $
           runGYTxMonadNode
             nid
             providers
-            addrs
+            [addr]
             addr
             collateral
             (return $ Tx.oneShotMint addr oref 1 policy)
-      void $ eaSubmitTx $ eaSignTx txBody (key : keys)
+      void $ eaSubmitTx $ eaSignTx txBody [colKey, key]
       return $ txBodySubmitTxResponse txBody
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
