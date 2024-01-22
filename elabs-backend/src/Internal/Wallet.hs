@@ -1,8 +1,11 @@
 module Internal.Wallet (
+  RootKey,
   PaymentKey,
   deriveAddress,
-  toRootKey,
-  fromRootKey,
+  readRootKey,
+  writeRootKey,
+  genRootKeyFromMnemonic,
+  eaSignTx,
 ) where
 
 import Data.Tagged (Tagged)
@@ -10,10 +13,11 @@ import Data.Tagged (Tagged)
 import GeniusYield.Types (
   GYAddress,
   GYNetworkId (GYMainnet),
+  GYTx,
+  GYTxBody,
   addressFromTextMaybe,
- )
-import GeniusYield.Types.Key.Class (
-  ToShelleyWitnessSigningKey (toShelleyWitnessSigningKey),
+  txBodyToApi,
+  txFromApi,
  )
 
 import Cardano.Address (
@@ -23,6 +27,7 @@ import Cardano.Address (
 import Cardano.Address.Derivation (
   Depth (AccountK, PaymentK, RootK),
   DerivationType (Hardened, Soft),
+  GenMasterKey (genMasterKeyFromMnemonic),
   HardDerivation (deriveAccountPrivateKey, deriveAddressPrivateKey),
   Index (indexToWord32),
   XPrv,
@@ -38,16 +43,19 @@ import Cardano.Api.Shelley (
   ShelleyWitnessSigningKey (WitnessPaymentExtendedKey),
   SigningKey (PaymentExtendedSigningKey),
  )
+import Cardano.Api.Shelley qualified as Api
+import Cardano.Mnemonic (SomeMnemonic)
+import Data.ByteString qualified as BS
 
 --------------------------------------------------------------------------------
 
 deriveAddress ::
   GYNetworkId ->
-  Shelley 'RootK XPrv ->
+  RootKey ->
   Tagged "Account" Int64 ->
   Tagged "Address" Int64 ->
   Either String (GYAddress, PaymentKey)
-deriveAddress nid rootK acc addr = do
+deriveAddress nid (RootKey rootK) acc addr = do
   -- indexFrom32 will return Nothing when the index is out of range
   accI <-
     maybe
@@ -85,21 +93,47 @@ deriveAddress nid rootK acc addr = do
         return (gyAddr, PaymentKey addrK)
     )
 
---------------------------------------------------------------------------------
--- Signing key stuff
-
-newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
-
-instance ToShelleyWitnessSigningKey PaymentKey where
-  toShelleyWitnessSigningKey (PaymentKey key) =
-    WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
-
-toRootKey :: ByteString -> Maybe (Shelley 'RootK XPrv)
-toRootKey bs = liftXPrv <$> xprvFromBytes bs
-
-fromRootKey :: Shelley 'RootK XPrv -> ByteString
-fromRootKey = xprvToBytes . getKey
-
 network :: GYNetworkId -> NetworkDiscriminant Shelley
 network GYMainnet = S.shelleyMainnet
 network _ = S.shelleyTestnet
+
+--------------------------------------------------------------------------------
+-- Payment key
+--
+-- Dont expose the internals of the payment key
+-- Dont implement any instances
+
+newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
+
+-- internal function, dont export
+toShelleyWitnessSigningKey :: PaymentKey -> ShelleyWitnessSigningKey
+toShelleyWitnessSigningKey (PaymentKey key) =
+  WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
+
+eaSignTx :: GYTxBody -> [PaymentKey] -> GYTx
+eaSignTx txBody skeys =
+  txFromApi $
+    Api.signShelleyTransaction (txBodyToApi txBody) $
+      map toShelleyWitnessSigningKey skeys
+
+--------------------------------------------------------------------------------
+-- Root key
+--
+-- Dont expose the internals of the root key
+-- Dont implement any instances
+
+newtype RootKey = RootKey {_unRootKey :: Shelley 'RootK XPrv}
+
+readRootKey :: FilePath -> IO (Maybe RootKey)
+readRootKey fp = do
+  bs <- BS.readFile fp
+  return $ do
+    key <- liftXPrv <$> xprvFromBytes bs
+    return $ RootKey key
+
+writeRootKey :: FilePath -> RootKey -> IO ()
+writeRootKey fp (RootKey key) = BS.writeFile fp (xprvToBytes . getKey $ key)
+
+genRootKeyFromMnemonic :: SomeMnemonic -> RootKey
+genRootKeyFromMnemonic mw =
+  RootKey $ genMasterKeyFromMnemonic @Shelley mw mempty

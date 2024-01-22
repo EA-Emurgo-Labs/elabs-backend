@@ -16,7 +16,7 @@ import EA.Api.Types
   )
 import EA.Tx.OneShotMint qualified as Tx
 import EA.Wallet
-  ( eaGetCollateral,
+  ( eaGetCollateralFromInternalWallet,
     eaGetUnusedAddresses,
   )
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
@@ -25,8 +25,8 @@ import GeniusYield.Types
   ( GYTxOutRefCbor (getTxOutRefHex),
     gyQueryUtxosAtAddresses,
     randomTxOutRef,
-    signGYTxBody,
   )
+import Internal.Wallet (eaSignTx)
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
@@ -56,22 +56,21 @@ handleOneShotMintByUserId userId = do
   let policy = oneShotMintingPolicy oref scripts
 
   addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head addrs
-  collateral <- eaGetCollateral
 
-  txBody <-
-    liftIO $
-      runGYTxMonadNode
-        nid
-        providers
-        addrs
-        addr
-        collateral
-        (return $ Tx.oneShotMint addr oref 1 policy)
-
-  let signedTx = signGYTxBody txBody keys
-
-  void $ eaSubmitTx signedTx
-  return $ txBodySubmitTxResponse txBody
+  eaGetCollateralFromInternalWallet >>= \case
+    Nothing -> eaLiftMaybe "No collateral found" Nothing
+    Just (collateral, key) -> do
+      txBody <-
+        liftIO $
+          runGYTxMonadNode
+            nid
+            providers
+            addrs
+            addr
+            collateral
+            (return $ Tx.oneShotMint addr oref 1 policy)
+      void $ eaSubmitTx $ eaSignTx txBody (key : keys)
+      return $ txBodySubmitTxResponse txBody
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
 handleOneShotMintByWallet WalletParams {..} = do
@@ -97,9 +96,7 @@ handleOneShotMintByWallet WalletParams {..} = do
         ( collateral
             >>= ( \c ->
                     Just
-                      ( getTxOutRefHex c,
-                        True -- Make this as `False` to not do 5-ada-only check for value in this given UTxO to be used as collateral.
-                      )
+                      (getTxOutRefHex c, True)
                 )
         )
         (return $ Tx.oneShotMint addr oref 1 policy)
