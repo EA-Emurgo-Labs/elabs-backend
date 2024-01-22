@@ -34,8 +34,8 @@ import EA.Api.Types (
  )
 import EA.Tx.OneShotMint qualified as Tx
 import EA.Wallet (
+  eaGetAddresses,
   eaGetCollateralFromInternalWallet,
-  eaGetUnusedAddresses,
  )
 
 import Internal.Wallet (PaymentKey, eaSignTx)
@@ -69,7 +69,7 @@ handleOneShotMintByUserId userId = do
   nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
   providers <- asks eaAppEnvGYProviders
 
-  pairs <- eaGetUnusedAddresses userId
+  pairs <- eaGetAddresses userId
   (addr, key, oref) <-
     liftIO (selectOref providers pairs) >>= eaLiftMaybe "No UTxO found"
 

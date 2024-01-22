@@ -51,7 +51,6 @@ Account
 Address
   accountId AccountId
   user UserId Maybe
-  used Bool default=False
   created UTCTime default=CURRENT_TIME
   deriving Show
 
