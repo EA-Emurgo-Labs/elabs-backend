@@ -35,7 +35,7 @@ import GeniusYield.Types (
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
  )
-import Internal.Wallet (PaymentKey, eaSignTx)
+import Internal.Wallet (PaymentKey, signTx)
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
@@ -85,7 +85,7 @@ handleOneShotMintByUserId userId = do
             addr
             collateral
             (return $ Tx.oneShotMint addr oref 1 policy)
-      void $ eaSubmitTx $ eaSignTx txBody [colKey, key]
+      void $ eaSubmitTx $ signTx txBody [colKey, key]
       return $ txBodySubmitTxResponse txBody
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse

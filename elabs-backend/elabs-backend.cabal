@@ -22,6 +22,7 @@ common deps
     , cardano-api
     , containers
     , http-types
+    , memory
     , monad-logger
     , monad-metrics
     , mtl
@@ -126,18 +127,19 @@ executable app
     , elabs-backend
     , optparse-applicative
 
-test-suite tests
-  import:         lang, deps, opts
-  hs-source-dirs: test
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
+test-suite spec
+  import:             lang, deps, opts
+  hs-source-dirs:     test
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
   build-depends:
     , elabs-backend
     , hspec
-    , hspec-wai
-    , optparse-applicative
-    , tasty
+    , QuickCheck
 
+  other-modules:      EA.Internal.WalletSpec
+  build-tool-depends: hspec-discover:hspec-discover >=2 && <3
+  
 test-suite privnet-tests
   import:         lang, deps, opts
   hs-source-dirs: tests-privnet

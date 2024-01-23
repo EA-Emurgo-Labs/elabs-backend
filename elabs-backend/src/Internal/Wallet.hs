@@ -5,9 +5,12 @@ module Internal.Wallet (
   readRootKey,
   writeRootKey,
   genRootKeyFromMnemonic,
-  eaSignTx,
+  signTx,
 ) where
 
+import GHC.Show (Show (show))
+
+import Data.ByteString qualified as BS
 import Data.Tagged (Tagged)
 
 import GeniusYield.Types (
@@ -45,7 +48,6 @@ import Cardano.Api.Shelley (
  )
 import Cardano.Api.Shelley qualified as Api
 import Cardano.Mnemonic (SomeMnemonic)
-import Data.ByteString qualified as BS
 
 --------------------------------------------------------------------------------
 
@@ -56,25 +58,28 @@ deriveAddress ::
   Tagged "Address" Int64 ->
   Either String (GYAddress, PaymentKey)
 deriveAddress nid (RootKey rootK) acc addr = do
-  -- indexFrom32 will return Nothing when the index is out of range
   accI <-
-    maybe
-      (Left "Cannot create account index")
-      Right
-      ( indexFromWord32
-          ( fromIntegral acc
-              + indexToWord32 (minBound @(Index 'Hardened 'AccountK))
+    fromIntegralIndex acc
+      >>= \index ->
+        maybe
+          (Left "Cannot create account index")
+          Right
+          ( indexFromWord32
+              ( index
+                  + indexToWord32 (minBound @(Index 'Hardened 'AccountK))
+              )
           )
-      )
   addrI <-
-    maybe
-      (Left "Cannot create address index")
-      Right
-      ( indexFromWord32
-          ( fromIntegral addr
-              + indexToWord32 (minBound @(Index 'Soft 'PaymentK))
+    fromIntegralIndex addr
+      >>= \index ->
+        maybe
+          (Left "Cannot create address index")
+          Right
+          ( indexFromWord32
+              ( index
+                  + indexToWord32 (minBound @(Index 'Soft 'PaymentK))
+              )
           )
-      )
 
   let
     acctK = deriveAccountPrivateKey rootK accI
@@ -93,6 +98,12 @@ deriveAddress nid (RootKey rootK) acc addr = do
         return (gyAddr, PaymentKey addrK)
     )
 
+fromIntegralIndex :: (Integral a) => a -> Either String Word32
+fromIntegralIndex a
+  | a < 0 = Left "fromIntegralIndex: negative"
+  | a > 2147483647 = Left "fromIntegralIndex: too large"
+  | otherwise = Right $ fromIntegral a
+
 network :: GYNetworkId -> NetworkDiscriminant Shelley
 network GYMainnet = S.shelleyMainnet
 network _ = S.shelleyTestnet
@@ -105,13 +116,16 @@ network _ = S.shelleyTestnet
 
 newtype PaymentKey = PaymentKey {_unPaymentKey :: Shelley 'PaymentK XPrv}
 
+instance Show PaymentKey where
+  show _ = "PaymentKey"
+
 -- internal function, dont export
 toShelleyWitnessSigningKey :: PaymentKey -> ShelleyWitnessSigningKey
 toShelleyWitnessSigningKey (PaymentKey key) =
   WitnessPaymentExtendedKey (PaymentExtendedSigningKey (getKey key))
 
-eaSignTx :: GYTxBody -> [PaymentKey] -> GYTx
-eaSignTx txBody skeys =
+signTx :: GYTxBody -> [PaymentKey] -> GYTx
+signTx txBody skeys =
   txFromApi $
     Api.signShelleyTransaction (txBodyToApi txBody) $
       map toShelleyWitnessSigningKey skeys
@@ -123,6 +137,9 @@ eaSignTx txBody skeys =
 -- Dont implement any instances
 
 newtype RootKey = RootKey {_unRootKey :: Shelley 'RootK XPrv}
+
+instance Show RootKey where
+  show _ = "RootKey"
 
 readRootKey :: FilePath -> IO (Maybe RootKey)
 readRootKey fp = do
