@@ -58,25 +58,28 @@ deriveAddress ::
   Tagged "Address" Int64 ->
   Either String (GYAddress, PaymentKey)
 deriveAddress nid (RootKey rootK) acc addr = do
-  -- indexFrom32 will return Nothing when the index is out of range
   accI <-
-    maybe
-      (Left "Cannot create account index")
-      Right
-      ( indexFromWord32
-          ( fromIntegral acc
-              + indexToWord32 (minBound @(Index 'Hardened 'AccountK))
+    fromIntegralIndex acc
+      >>= \index ->
+        maybe
+          (Left "Cannot create account index")
+          Right
+          ( indexFromWord32
+              ( index
+                  + indexToWord32 (minBound @(Index 'Hardened 'AccountK))
+              )
           )
-      )
   addrI <-
-    maybe
-      (Left "Cannot create address index")
-      Right
-      ( indexFromWord32
-          ( fromIntegral addr
-              + indexToWord32 (minBound @(Index 'Soft 'PaymentK))
+    fromIntegralIndex addr
+      >>= \index ->
+        maybe
+          (Left "Cannot create address index")
+          Right
+          ( indexFromWord32
+              ( index
+                  + indexToWord32 (minBound @(Index 'Soft 'PaymentK))
+              )
           )
-      )
 
   let
     acctK = deriveAccountPrivateKey rootK accI
@@ -94,6 +97,12 @@ deriveAddress nid (RootKey rootK) acc addr = do
         gyAddr <- addressFromTextMaybe . bech32 $ addr
         return (gyAddr, PaymentKey addrK)
     )
+
+fromIntegralIndex :: (Integral a) => a -> Either String Word32
+fromIntegralIndex a
+  | a < 0 = Left "fromIntegralIndex: negative"
+  | a > 2147483647 = Left "fromIntegralIndex: too large"
+  | otherwise = Right $ fromIntegral a
 
 network :: GYNetworkId -> NetworkDiscriminant Shelley
 network GYMainnet = S.shelleyMainnet

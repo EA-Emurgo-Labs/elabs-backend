@@ -1,36 +1,49 @@
 module EA.Internal.WalletSpec (spec) where
 
-import Cardano.Mnemonic (mkSomeMnemonic)
 import Data.Tagged (Tagged (..))
+
+import Cardano.Mnemonic (mkSomeMnemonic)
 import GeniusYield.Types (GYNetworkId (GYMainnet))
-import Internal.Wallet (deriveAddress, genRootKeyFromMnemonic)
-import Test.Hspec (Spec, describe, it, shouldSatisfy)
+
+import Test.Hspec (Spec, describe, shouldSatisfy)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (Arbitrary (arbitrary), forAll)
+
+import Internal.Wallet (RootKey, deriveAddress, genRootKeyFromMnemonic)
+
+--------------------------------------------------------------------------------
 
 spec :: Spec
 spec = do
   describe "deriveAddress" $ do
-    it "should return an error when the account index is out of range" $ do
-      rootKey <-
-        either
-          (const (error "Invalid mnemonic"))
-          (return . genRootKeyFromMnemonic)
-          (mkSomeMnemonic @'[15] mnemonic)
+    prop
+      ( "Should return Right when account and address indices are within "
+          <> "[0, 2147483647], and Left otherwise"
+      )
+      $ forAll arbitrary
+      $ \account ->
+        forAll arbitrary $ \address ->
+          let
+            result =
+              deriveAddress
+                GYMainnet
+                createRootKey
+                (Tagged account)
+                (Tagged address)
+           in
+            if account >= 0
+              && account <= 2147483647
+              && address >= 0
+              && address <= 2147483647
+              then result `shouldSatisfy` isRight
+              else result `shouldSatisfy` isLeft
 
-      let account = Tagged 2147483648 -- out of range value
-      let address = Tagged 0
-
-      deriveAddress GYMainnet rootKey account address `shouldSatisfy` isLeft
-
-    it "should return an error when the address index is out of range" $ do
-      rootKey <-
-        either
-          (const (error "Invalid mnemonic"))
-          (return . genRootKeyFromMnemonic)
-          (mkSomeMnemonic @'[15] mnemonic)
-
-      let account = Tagged 0
-      let address = Tagged 2147483648 -- out of range value
-      deriveAddress GYMainnet rootKey account address `shouldSatisfy` isLeft
+createRootKey :: RootKey
+createRootKey =
+  either
+    (const (error "Something went wrong with the RootKey creation"))
+    genRootKeyFromMnemonic
+    (mkSomeMnemonic @'[15] mnemonic)
 
 mnemonic :: [Text]
 mnemonic =
