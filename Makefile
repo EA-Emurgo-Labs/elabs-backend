@@ -39,7 +39,7 @@ haddock:
 	cabal haddock --haddock-html --haddock-hoogle --builddir=haddock
 
 test:
-	cabal test elabs-backend --test-options="--hide-successes -t $(TEST_CASE_TIMEOUT) -j$(THREADS)"
+	cabal test elabs-backend -j$(THREADS)
 
 build:
 	cabal build elabs-backend -j$(THREADS)
