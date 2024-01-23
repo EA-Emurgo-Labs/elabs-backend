@@ -10,7 +10,7 @@ module EA (
   eaThrow,
   eaCatch,
   eaHandle,
-  oneShotMintingPolicy,
+  getOneShotMintingPolicy,
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
@@ -26,8 +26,7 @@ import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
-import EA.Internal (mintingPolicyFromPly)
-import EA.Script (Scripts (..))
+import EA.Script (Scripts (..), oneShotMintingPolicy)
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure)
 import GeniusYield.Types (
@@ -46,17 +45,8 @@ import GeniusYield.Types (
   gyLogError,
   gyLogInfo,
   gyLogWarning,
-  txOutRefToPlutus,
  )
 import Internal.Wallet (RootKey)
-import Ply (
-  AsData (AsData),
-  PlyArg,
-  ScriptRole (MintingPolicyRole),
-  TypedScript,
-  (#),
- )
-import Ply.Core.Class (PlyArg (..))
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 --------------------------------------------------------------------------------
@@ -145,30 +135,8 @@ eaHandle = flip eaCatch
 
 --------------------------------------------------------------------------------
 -- Reader helpers
-
-oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
-oneShotMintingPolicy oref =
-  applyToMintingPolicy (AsData . txOutRefToPlutus $ oref) scriptsOneShotPolicy
-
-applyToScript ::
-  forall r a.
-  (PlyArg a, ToDataConstraint a) =>
-  AsData a ->
-  (Scripts -> TypedScript r '[AsData a]) ->
-  Scripts ->
-  TypedScript r '[]
-applyToScript a f =
-  (# a) . f
-
-applyToMintingPolicy ::
-  forall a.
-  (PlyArg a, ToDataConstraint a) =>
-  AsData a ->
-  (Scripts -> TypedScript 'MintingPolicyRole '[AsData a]) ->
-  Scripts ->
-  GYMintingPolicy 'PlutusV2
-applyToMintingPolicy a f =
-  mintingPolicyFromPly . applyToScript a f
+getOneShotMintingPolicy :: GYTxOutRef -> EAApp (GYMintingPolicy 'PlutusV2)
+getOneShotMintingPolicy oref = asks (oneShotMintingPolicy oref . eaAppEnvScripts)
 
 --------------------------------------------------------------------------------
 -- Provider functions

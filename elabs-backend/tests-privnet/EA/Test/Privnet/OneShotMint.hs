@@ -1,7 +1,7 @@
 module EA.Test.Privnet.OneShotMint (tests) where
 
 import Data.List.NonEmpty qualified as NE
-import EA (oneShotMintingPolicy)
+import EA.Script (oneShotMintingPolicy)
 import EA.Test.Privnet.Helpers (getEaScripts)
 import EA.Tx.OneShotMint qualified as Tx
 import GeniusYield.Test.Privnet.Ctx

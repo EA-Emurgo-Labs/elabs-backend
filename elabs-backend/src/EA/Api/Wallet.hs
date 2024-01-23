@@ -7,7 +7,7 @@ import Servant (Capture, Get, JSON, type (:>))
 
 import EA (EAApp)
 import EA.Api.Types (UserId, WalletResponse (WalletResponse))
-import EA.Wallet (eaGetUnusedAddresses)
+import EA.Wallet (eaGetAddresses)
 
 --------------------------------------------------------------------------------
 
@@ -18,5 +18,5 @@ type WalletApi =
 
 handleWalletApi :: UserId -> EAApp WalletResponse
 handleWalletApi userid = do
-  addrs <- eaGetUnusedAddresses userid
+  addrs <- eaGetAddresses userid
   return $ WalletResponse $ map fst addrs

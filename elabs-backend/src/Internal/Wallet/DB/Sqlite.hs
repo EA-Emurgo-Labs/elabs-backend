@@ -1,9 +1,10 @@
 module Internal.Wallet.DB.Sqlite (
   createWalletIndexPair,
   getWalletIndexPairs,
-  runAutoMigration,
-  getUnusedWalletIndexPairs,
+  getWalletIndexPairs',
   getInternalWalletIndexPairs,
+  getInternalWalletIndexPairs',
+  runAutoMigration,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -38,41 +39,41 @@ createWalletIndexPair userId n = do
     >>= \case
       [] -> error "No account record found"
       (key : _) ->
-        replicateM_ n $ insert (Address key userId False time)
+        replicateM_ n $ insert (Address key userId time)
 
-getUnusedWalletIndexPairs ::
+getWalletIndexPairs ::
+  (MonadIO m) =>
+  UserId ->
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getWalletIndexPairs userId = do
+  addrs <- selectList [AddressUser ==. Just userId] []
+  return $ map getIndexPair addrs
+
+getWalletIndexPairs' ::
   (MonadIO m) =>
   UserId ->
   Int ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
-getUnusedWalletIndexPairs userId n = do
-  pairs <- getWalletIndexPairs userId False
+getWalletIndexPairs' userId n = do
+  pairs <- getWalletIndexPairs userId
   when (null pairs) $ createWalletIndexPair (Just userId) n
-  getWalletIndexPairs userId False
+  getWalletIndexPairs userId
 
 getInternalWalletIndexPairs ::
   (MonadIO m) =>
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs = do
-  pairs <- getWalletIndexPairs'
-  when (null pairs) $ createWalletIndexPair Nothing 1
-  getWalletIndexPairs'
-
-getWalletIndexPairs ::
-  (MonadIO m) =>
-  UserId ->
-  Bool ->
-  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
-getWalletIndexPairs userId used = do
-  addrs <- selectList [AddressUsed ==. used, AddressUser ==. Just userId] []
-  return $ map getIndexPair addrs
-
-getWalletIndexPairs' ::
-  (MonadIO m) =>
-  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
-getWalletIndexPairs' = do
   addrs <- selectList [AddressUser ==. Nothing] []
   return $ map getIndexPair addrs
+
+getInternalWalletIndexPairs' ::
+  (MonadIO m) =>
+  Int ->
+  ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
+getInternalWalletIndexPairs' n = do
+  pairs <- getInternalWalletIndexPairs
+  when (null pairs) $ createWalletIndexPair Nothing n
+  getInternalWalletIndexPairs
 
 getIndexPair ::
   Entity Address ->
