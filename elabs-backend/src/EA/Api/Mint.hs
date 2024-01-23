@@ -2,27 +2,15 @@ module EA.Api.Mint (
   MintApi,
   handleOneShotMintByUserId,
   handleOneShotMintByWallet,
-) where
-
-import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
-import GeniusYield.TxBuilder (runGYTxMonadNode)
-import GeniusYield.Types (
-  GYAddress,
-  GYProviders,
-  GYTxOutRef,
-  GYTxOutRefCbor (getTxOutRefHex),
-  gyQueryUtxosAtAddresses,
-  randomTxOutRef,
- )
-
-import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
+)
+where
 
 import EA (
   EAApp,
   EAAppEnv (..),
   eaLiftMaybe,
   eaSubmitTx,
-  oneShotMintingPolicy,
+  getOneShotMintingPolicy,
  )
 import EA.Api.Types (
   SubmitTxResponse,
@@ -37,8 +25,18 @@ import EA.Wallet (
   eaGetAddresses,
   eaGetCollateralFromInternalWallet,
  )
-
+import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
+import GeniusYield.TxBuilder (runGYTxMonadNode)
+import GeniusYield.Types (
+  GYAddress,
+  GYProviders,
+  GYTxOutRef,
+  GYTxOutRefCbor (getTxOutRefHex),
+  gyQueryUtxosAtAddresses,
+  randomTxOutRef,
+ )
 import Internal.Wallet (PaymentKey, signTx)
+import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
 type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
 
@@ -73,7 +71,7 @@ handleOneShotMintByUserId userId = do
   (addr, key, oref) <-
     liftIO (selectOref providers pairs) >>= eaLiftMaybe "No UTxO found"
 
-  policy <- asks (oneShotMintingPolicy oref)
+  policy <- getOneShotMintingPolicy oref
 
   eaGetCollateralFromInternalWallet >>= \case
     Nothing -> eaLiftMaybe "No collateral found" Nothing
@@ -99,7 +97,7 @@ handleOneShotMintByWallet WalletParams {..} = do
   (oref, _) <-
     liftIO (randomTxOutRef utxos) >>= eaLiftMaybe "No UTxO found"
 
-  policy <- asks (oneShotMintingPolicy oref)
+  policy <- getOneShotMintingPolicy oref
 
   addr <- eaLiftMaybe "No address provided" $ viaNonEmpty head usedAddrs
 

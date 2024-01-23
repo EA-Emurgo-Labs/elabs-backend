@@ -139,3 +139,18 @@ test-suite spec
 
   other-modules:      EA.Internal.WalletSpec
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
+  
+test-suite privnet-tests
+  import:         lang, deps, opts
+  hs-source-dirs: tests-privnet
+  type:           exitcode-stdio-1.0
+  main-is:        privnet-tests.hs
+  other-modules:
+    EA.Test.Privnet.Helpers
+    EA.Test.Privnet.OneShotMint
+
+  build-depends:
+    , elabs-backend
+    , hspec
+    , tasty
+    , tasty-hunit

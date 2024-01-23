@@ -41,6 +41,10 @@ haddock:
 test:
 	cabal test elabs-backend -j$(THREADS)
 
+privnet-test:
+	sh ./scripts/cleanup-node.sh
+	sh ./scripts/run-privnet-test.sh
+
 build:
 	cabal build elabs-backend -j$(THREADS)
 
