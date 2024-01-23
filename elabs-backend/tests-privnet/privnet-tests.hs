@@ -1,6 +1,6 @@
 module Main (main) where
 
-import qualified EA.Test.Privnet.OneShotMint
+import EA.Test.Privnet.OneShotMint qualified
 import GeniusYield.Test.Privnet.Setup
 import Test.Tasty (defaultMain, testGroup, withResource)
 

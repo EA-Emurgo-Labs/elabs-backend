@@ -138,15 +138,14 @@ test-suite tests
     , optparse-applicative
     , tasty
 
-
 test-suite privnet-tests
   import:         lang, deps, opts
   hs-source-dirs: tests-privnet
   type:           exitcode-stdio-1.0
   main-is:        privnet-tests.hs
   other-modules:
-    EA.Test.Privnet.OneShotMint
     EA.Test.Privnet.Helpers
+    EA.Test.Privnet.OneShotMint
 
   build-depends:
     , elabs-backend

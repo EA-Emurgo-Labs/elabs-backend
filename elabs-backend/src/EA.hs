@@ -1,24 +1,24 @@
-module EA
-  ( EAApp (..),
-    EAAppEnv (..),
-    runEAApp,
-    eaLog,
-    eaLogDebug,
-    eaLogInfo,
-    eaLogWarning,
-    eaLogError,
-    eaThrow,
-    eaCatch,
-    eaHandle,
-    oneShotMintingPolicy,
-    eaLiftMaybe,
-    eaLiftEither,
-    eaLiftEither',
-    eaSubmitTx,
-    eaGetAdaOnlyUTxO,
-    eaGetCollateral,
-    eaGetCollateral',
-  )
+module EA (
+  EAApp (..),
+  EAAppEnv (..),
+  runEAApp,
+  eaLog,
+  eaLogDebug,
+  eaLogInfo,
+  eaLogWarning,
+  eaLogError,
+  eaThrow,
+  eaCatch,
+  eaHandle,
+  oneShotMintingPolicy,
+  eaLiftMaybe,
+  eaLiftEither,
+  eaLiftEither',
+  eaSubmitTx,
+  eaGetAdaOnlyUTxO,
+  eaGetCollateral,
+  eaGetCollateral',
+)
 where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
@@ -30,32 +30,32 @@ import EA.Internal (mintingPolicyFromPly)
 import EA.Script (Scripts (..))
 import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure)
-import GeniusYield.Types
-  ( GYAddress,
-    GYLogNamespace,
-    GYLogSeverity (..),
-    GYMintingPolicy,
-    GYProviders (..),
-    GYQueryUTxO (..),
-    GYTx,
-    GYTxId,
-    GYTxOutRef,
-    PlutusVersion (PlutusV2),
-    gyLog,
-    gyLogDebug,
-    gyLogError,
-    gyLogInfo,
-    gyLogWarning,
-    txOutRefToPlutus,
-  )
+import GeniusYield.Types (
+  GYAddress,
+  GYLogNamespace,
+  GYLogSeverity (..),
+  GYMintingPolicy,
+  GYProviders (..),
+  GYQueryUTxO (..),
+  GYTx,
+  GYTxId,
+  GYTxOutRef,
+  PlutusVersion (PlutusV2),
+  gyLog,
+  gyLogDebug,
+  gyLogError,
+  gyLogInfo,
+  gyLogWarning,
+  txOutRefToPlutus,
+ )
 import Internal.Wallet (RootKey)
-import Ply
-  ( AsData (AsData),
-    PlyArg,
-    ScriptRole (MintingPolicyRole),
-    TypedScript,
-    (#),
-  )
+import Ply (
+  AsData (AsData),
+  PlyArg,
+  ScriptRole (MintingPolicyRole),
+  TypedScript,
+  (#),
+ )
 import Ply.Core.Class (PlyArg (..))
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
@@ -65,24 +65,24 @@ newtype EAApp a = EAApp
   { unEAApp :: ReaderT EAAppEnv IO a
   }
   deriving newtype
-    ( Functor,
-      Applicative,
-      Monad,
-      MonadIO,
-      MonadReader EAAppEnv,
-      MonadUnliftIO
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadReader EAAppEnv
+    , MonadUnliftIO
     )
 
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
 
 data EAAppEnv = EAAppEnv
-  { eaAppEnvGYProviders :: !GYProviders,
-    eaAppEnvGYCoreConfig :: !GYCoreConfig,
-    eaAppEnvMetrics :: !Metrics,
-    eaAppEnvScripts :: !Scripts,
-    eaAppEnvSqlPool :: !(Pool SqlBackend),
-    eaAppEnvRootKey :: !RootKey
+  { eaAppEnvGYProviders :: !GYProviders
+  , eaAppEnvGYCoreConfig :: !GYCoreConfig
+  , eaAppEnvMetrics :: !Metrics
+  , eaAppEnvScripts :: !Scripts
+  , eaAppEnvSqlPool :: !(Pool SqlBackend)
+  , eaAppEnvRootKey :: !RootKey
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a

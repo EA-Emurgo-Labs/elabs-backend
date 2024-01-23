@@ -14,7 +14,7 @@ echo " CI RUN : ${CI:=false}"
 echo "========================[START PRIVNET]======================="
 mkdir -p logs-privnet
 touch $LOGFILE
-((cd $TESTNET && ./scripts/automate.sh) | tee $LOGFILE) &
+(cd $TESTNET && ./scripts/automate.sh) | tee $LOGFILE &
 
 until [[ $(tail -n 1 $LOGFILE) =~ "Congrats! Your network is ready for use!" ]]
 do
@@ -50,7 +50,6 @@ then
   echo "===================[KILL PRIVNET AND KUPO]===================="
   echo "[INFO] Local, Non-CI run -> Kill the private testnet."
   set -x
-  trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
   set +x
   rm -rf ./cardano-private-testnet-setup/ ./kupo ./logs-privnet
 fi

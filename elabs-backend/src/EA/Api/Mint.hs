@@ -1,31 +1,31 @@
-module EA.Api.Mint
-  ( MintApi,
-    handleOneShotMintByUserId,
-    handleOneShotMintByWallet,
-  )
+module EA.Api.Mint (
+  MintApi,
+  handleOneShotMintByUserId,
+  handleOneShotMintByWallet,
+)
 where
 
 import EA (EAApp, EAAppEnv (..), eaLiftMaybe, eaSubmitTx, oneShotMintingPolicy)
-import EA.Api.Types
-  ( SubmitTxResponse,
-    UnsignedTxResponse,
-    UserId,
-    WalletParams (..),
-    txBodySubmitTxResponse,
-    unSignedTxWithFee,
-  )
+import EA.Api.Types (
+  SubmitTxResponse,
+  UnsignedTxResponse,
+  UserId,
+  WalletParams (..),
+  txBodySubmitTxResponse,
+  unSignedTxWithFee,
+ )
 import EA.Tx.OneShotMint qualified as Tx
-import EA.Wallet
-  ( eaGetCollateralFromInternalWallet,
-    eaGetUnusedAddresses,
-  )
+import EA.Wallet (
+  eaGetCollateralFromInternalWallet,
+  eaGetUnusedAddresses,
+ )
 import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
-import GeniusYield.Types
-  ( GYTxOutRefCbor (getTxOutRefHex),
-    gyQueryUtxosAtAddresses,
-    randomTxOutRef,
-  )
+import GeniusYield.Types (
+  GYTxOutRefCbor (getTxOutRefHex),
+  gyQueryUtxosAtAddresses,
+  randomTxOutRef,
+ )
 import Internal.Wallet (eaSignTx)
 import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
 
