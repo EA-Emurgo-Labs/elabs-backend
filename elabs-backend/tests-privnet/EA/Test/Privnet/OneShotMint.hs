@@ -18,10 +18,9 @@ tests setup =
         let user = ctxUser2 ctx
         utxoRefs <- gyQueryUtxoRefsAtAddress (ctxProviders ctx) (userAddr user)
         scripts <- getEaScripts
-
         let policy = oneShotMintingPolicy (head $ NE.fromList utxoRefs) scripts
         let skeleton = Tx.oneShotMint (userAddr user) (head $ NE.fromList utxoRefs) 1 policy
         txBody <- ctxRunI ctx user $ return skeleton
-        _ <- submitTx ctx user txBody
-        info "Submitted minting transaction"
+        gyTxId <- submitTx ctx user txBody
+        info $ "Submitted minting transaction" ++ show gyTxId
     ]

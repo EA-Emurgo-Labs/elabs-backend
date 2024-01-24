@@ -42,7 +42,7 @@ echo " -> Starting privnet-tests..."
 echo "=====================[RUN PRIVNET TESTS]========================"
 echo
 set -x
-KUPO_URL=http://localhost:1442 PRIVNET_DIR=$TESTNET/private-testnet cabal run elabs-backend:privnet-tests -- --color always --hide-successes
+KUPO_URL=http://localhost:1442 GENIUSYIELD_PRIVNET_DIR=$TESTNET/private-testnet cabal run elabs-backend:privnet-tests -- --color always --hide-successes
 set +x
 echo
 if [ "$CI" = false ]
@@ -50,6 +50,7 @@ then
   echo "===================[KILL PRIVNET AND KUPO]===================="
   echo "[INFO] Local, Non-CI run -> Kill the private testnet."
   set -x
+  trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM EXIT
   set +x
   rm -rf ./cardano-private-testnet-setup/ ./kupo ./logs-privnet
 fi
