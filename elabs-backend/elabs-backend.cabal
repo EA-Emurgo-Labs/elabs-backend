@@ -139,7 +139,7 @@ test-suite spec
 
   other-modules:      EA.Internal.WalletSpec
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
-  
+
 test-suite privnet-tests
   import:         lang, deps, opts
   hs-source-dirs: tests-privnet
