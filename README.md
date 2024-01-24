@@ -20,5 +20,5 @@ After cardano-cli is available in our environment we can just run `make privnet-
 > After cardano-cli is available through flake manual setup of cardano-cli is not needed, appropriate version of cardano-cli will be automatically available.
 
 
-## Internal documents
-- [Dev guide](https://docs.google.com/document/d/17RLFFwrUUNT9wpokySslVNvu_6SYQGhDZ6SThfRgI5Q)
+## Other documents
+- [Backend developer guide](docs/dev-guide.md)
