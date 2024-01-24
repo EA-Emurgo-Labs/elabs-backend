@@ -29,10 +29,8 @@ oneShotMint ::
   GYMintingPolicy 'PlutusV2 ->
   GYTxSkeleton 'PlutusV2
 oneShotMint out oref n policy =
-  let
-    ac = GYToken (mintingPolicyId policy) (unsafeTokenNameFromHex "")
-    value = valueSingleton ac n
-   in
-    mustMint (GYMintScript policy) unitRedeemer (unsafeTokenNameFromHex "") n
-      <> mustHaveInput (GYTxIn oref GYTxInWitnessKey)
-      <> mustHaveOutput (GYTxOut out value Nothing Nothing)
+  let ac = GYToken (mintingPolicyId policy) (unsafeTokenNameFromHex "444149")
+      value = valueSingleton ac n
+   in mustMint (GYMintScript policy) unitRedeemer (unsafeTokenNameFromHex "444149") n
+        <> mustHaveInput (GYTxIn oref GYTxInWitnessKey)
+        <> mustHaveOutput (GYTxOut out value Nothing Nothing)
