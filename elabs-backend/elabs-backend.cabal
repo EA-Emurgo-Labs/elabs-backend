@@ -161,9 +161,8 @@ test-suite spec
 executable integration-test
   import:         lang, deps, test-deps, opts
   hs-source-dirs: integration-test
-  main-is:        privnet-tests.hs
+  main-is:        Main.hs
   other-modules:
-    EA.Test.Privnet.Helpers
     EA.Test.Privnet.OneShotMint
     Setup
 

@@ -58,4 +58,5 @@ withEASetup ioSetup putLog kont =
           , eaAppEnvSqlPool = pool
           , eaAppEnvRootKey = rootKey
           }
+    -- TODO: send 5 Ada to collaternal
     kont $ EACtx ctx env

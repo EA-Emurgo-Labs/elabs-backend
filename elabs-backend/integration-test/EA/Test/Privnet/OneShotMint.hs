@@ -1,8 +1,8 @@
 module EA.Test.Privnet.OneShotMint (tests) where
 
 import Data.List.NonEmpty qualified as NE
+import EA (EAAppEnv (..))
 import EA.Script (oneShotMintingPolicy)
-import EA.Test.Privnet.Helpers (getEaScripts)
 import EA.Tx.OneShotMint qualified as Tx
 import GeniusYield.Test.Privnet.Ctx (
   Ctx (ctxUser2),
@@ -24,7 +24,7 @@ tests setup =
     [ testCaseSteps "Minting Token" $ \info -> withEASetup setup info $ \EACtx {..} -> do
         let user = ctxUser2 eaCtxCtx
         utxoRefs <- gyQueryUtxoRefsAtAddress (ctxProviders eaCtxCtx) (userAddr user)
-        scripts <- getEaScripts
+        let scripts = eaAppEnvScripts eaCtxEnv
         let policy = oneShotMintingPolicy (head $ NE.fromList utxoRefs) scripts
         let skeleton = Tx.oneShotMint (userAddr user) (head $ NE.fromList utxoRefs) 1 policy
         txBody <- ctxRunI eaCtxCtx user $ return skeleton
