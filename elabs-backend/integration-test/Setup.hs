@@ -54,6 +54,7 @@ withEASetup ioSetup putLog kont =
     -- Delete test wallet db
     fileExists <- doesFileExist optionsSqliteFile
     when fileExists $ removeFile optionsSqliteFile
+
     -- Create Sqlite pool and run migrations
     pool <-
       runStderrLoggingT
