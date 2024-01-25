@@ -1,17 +1,17 @@
 module EA.Api.MintTests (tests) where
 
+import EA (eaLiftMaybe, runEAApp)
+import EA.Api.Types (UserId (UserId))
+import EA.Wallet (eaGetAddresses)
+import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2), ctxRunI, submitTx)
 import GeniusYield.Test.Privnet.Setup (Setup)
-import Setup (EACtx (..), withEASetup, server)
+import GeniusYield.TxBuilder (mustHaveOutput)
+import GeniusYield.Types (GYTxOut (GYTxOut), valueFromLovelace)
+import Setup (EACtx (..), server, withEASetup)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCaseSteps)
-import Test.Tasty.Wai (runSession, assertStatus)
+import Test.Tasty.Wai (assertStatus, runSession)
 import Test.Tasty.Wai qualified as Wai
-import EA (runEAApp, eaLiftMaybe)
-import EA.Wallet (eaGetAddresses)
-import EA.Api.Types (UserId(UserId))
-import GeniusYield.Test.Privnet.Ctx (Ctx(ctxUser2), ctxRunI, submitTx)
-import GeniusYield.TxBuilder (mustHaveOutput)
-import GeniusYield.Types (GYTxOut(GYTxOut), valueFromLovelace)
 
 tests :: IO Setup -> TestTree
 tests setup =
@@ -24,8 +24,9 @@ tests setup =
             flip runSession (server eaCtxEnv) $ do
               void . liftIO $ runEAApp eaCtxEnv $ do
                 addrs <- eaGetAddresses $ UserId 1
-                (addr, _) <- eaLiftMaybe "No addresses found" $
-                  viaNonEmpty head addrs
+                (addr, _) <-
+                  eaLiftMaybe "No addresses found" $
+                    viaNonEmpty head addrs
                 let
                   user = ctxUser2 eaCtxCtx
                   tx =
