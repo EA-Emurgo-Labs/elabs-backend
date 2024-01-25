@@ -6,7 +6,6 @@ module EA.Wallet (
   eaGetAddresses,
 ) where
 
-import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.Types (
   GYAddress,
   GYTxOutRef,
@@ -28,7 +27,7 @@ import Internal.Wallet.DB.Sqlite (
 
 eaGetInternalAddresses :: EAApp [(GYAddress, PaymentKey)]
 eaGetInternalAddresses = do
-  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  nid <- asks eaAppEnvGYNetworkId
   rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool
@@ -41,7 +40,7 @@ eaGetInternalAddresses = do
 
 eaGetAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetAddresses userId = do
-  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  nid <- asks eaAppEnvGYNetworkId
   rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool

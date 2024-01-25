@@ -1,4 +1,4 @@
-cabal-version:   3.4
+cabal-version:   3.0
 name:            elabs-backend
 version:         0.1.0.0
 copyright:       2023 EMURGO Africa
@@ -6,10 +6,22 @@ maintainer:      eduardo@emurgo.africa
 extra-doc-files: CHANGELOG.md
 
 common opts
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -eventlog -O2
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O0
 
 common profiling
   ghc-options: -prof -fprof-auto -O2
+
+common test-deps
+  build-depends:
+    , hspec
+    , pretty
+    , pretty-show
+    , QuickCheck
+    , tasty
+    , tasty-hspec
+    , tasty-hunit
+    , tasty-quickcheck
+    , tasty-wai
 
 common deps
   build-depends:
@@ -21,6 +33,7 @@ common deps
     , cardano-addresses
     , cardano-api
     , containers
+    , directory
     , http-types
     , memory
     , monad-logger
@@ -102,7 +115,7 @@ common lang
   default-language:   Haskell2010
 
 library
-  import:          lang, deps, opts
+  import:          lang, deps
   hs-source-dirs:  src
   exposed-modules:
     EA
@@ -119,6 +132,13 @@ library
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
 
+library elabs-backend-testlib
+  import:          lang, deps, test-deps
+  hs-source-dirs:  testlib
+  exposed-modules: EA.Test.Helpers
+  build-depends:   elabs-backend
+  visibility:      private
+
 executable app
   import:         lang, deps, opts
   hs-source-dirs: app
@@ -128,29 +148,26 @@ executable app
     , optparse-applicative
 
 test-suite spec
-  import:             lang, deps, opts
+  import:             lang, deps, test-deps, opts
   hs-source-dirs:     test
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
   build-depends:
     , elabs-backend
-    , hspec
-    , QuickCheck
+    , elabs-backend-testlib
 
   other-modules:      EA.Internal.WalletSpec
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
 
 executable integration-test
-  import:         lang, deps, opts
-  hs-source-dirs: tests-privnet
-  type:           exitcode-stdio-1.0
-  main-is:        privnet-tests.hs
+  import:         lang, deps, test-deps, opts
+  hs-source-dirs: integration-test
+  main-is:        Main.hs
   other-modules:
-    EA.Test.Privnet.Helpers
-    EA.Test.Privnet.OneShotMint
+    EA.Api.MintTests
+    EA.Api.WalletTests
+    Setup
 
   build-depends:
     , elabs-backend
-    , hspec
-    , tasty
-    , tasty-hunit
+    , elabs-backend-testlib

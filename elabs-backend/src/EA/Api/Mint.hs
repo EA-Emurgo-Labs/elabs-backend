@@ -25,7 +25,6 @@ import EA.Wallet (
   eaGetAddresses,
   eaGetCollateralFromInternalWallet,
  )
-import GeniusYield.GYConfig (GYCoreConfig (cfgNetworkId))
 import GeniusYield.TxBuilder (runGYTxMonadNode)
 import GeniusYield.Types (
   GYAddress,
@@ -64,7 +63,7 @@ selectOref providers ((addr, key) : pairs) = do
 
 handleOneShotMintByUserId :: UserId -> EAApp SubmitTxResponse
 handleOneShotMintByUserId userId = do
-  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  nid <- asks eaAppEnvGYNetworkId
   providers <- asks eaAppEnvGYProviders
 
   pairs <- eaGetAddresses userId
@@ -90,7 +89,7 @@ handleOneShotMintByUserId userId = do
 
 handleOneShotMintByWallet :: WalletParams -> EAApp UnsignedTxResponse
 handleOneShotMintByWallet WalletParams {..} = do
-  nid <- asks (cfgNetworkId . eaAppEnvGYCoreConfig)
+  nid <- asks eaAppEnvGYNetworkId
   providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers usedAddrs
 
