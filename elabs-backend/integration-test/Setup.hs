@@ -14,34 +14,37 @@ import GeniusYield.Test.Privnet.Ctx (Ctx (..), ctxProviders)
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.Types (GYNetworkId (GYPrivnet))
 import Ply (readTypedScript)
-import System.Directory
+import System.Directory (doesFileExist, removeFile)
 
 data EACtx = EACtx
-  { ctx :: Ctx
-  , env :: EAAppEnv
+  { eaCtxCtx :: Ctx
+  , eaCtxEnv :: EAAppEnv
   }
 
 withEASetup ::
-  FilePath ->
-  FilePath ->
   IO Setup ->
   (String -> IO ()) ->
   (EACtx -> IO ()) ->
   IO ()
-withEASetup scriptsFilePath sqliteFilePath ioSetup putLog kont =
+withEASetup ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
+    let
+      -- TODO: load this dynamically
+      optionsScriptsFile = "scripts.debug.json"
+      optionsSqliteFile = "wallet.test.db"
+
     metrics <- Metrics.initialize
-    policyTypedScript <- readTypedScript scriptsFilePath
+    policyTypedScript <- readTypedScript optionsScriptsFile
     rootKey <- createRootKey
 
     -- Delete test wallet db
-    fileExists <- doesFileExist sqliteFilePath
-    when fileExists $ removeFile sqliteFilePath
+    fileExists <- doesFileExist optionsSqliteFile
+    when fileExists $ removeFile optionsSqliteFile
     -- Create Sqlite pool and run migrations
     pool <-
       runStderrLoggingT
         ( createSqlitePool
-            (T.pack sqliteFilePath)
+            (T.pack optionsSqliteFile)
             1
         )
 
