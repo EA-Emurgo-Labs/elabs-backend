@@ -11,6 +11,17 @@ common opts
 common profiling
   ghc-options: -prof -fprof-auto -O2
 
+common test-deps
+  build-depends:
+    , pretty
+    , pretty-show
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-hspec
+    , tasty-quickcheck
+    , hspec
+
 common deps
   build-depends:
     , aeson
@@ -48,6 +59,7 @@ common deps
     , wai
     , wai-cors
     , warp
+    , directory
 
   mixins:
     base hiding (Prelude),
@@ -119,6 +131,15 @@ library
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite
 
+library elabs-backend-testlib
+  import:          lang, deps, test-deps, opts
+  build-depends:
+    , elabs-backend
+
+  hs-source-dirs:  testlib
+  exposed-modules:
+    Test.EA.Helpers
+
 executable app
   import:         lang, deps, opts
   hs-source-dirs: app
@@ -128,29 +149,27 @@ executable app
     , optparse-applicative
 
 test-suite spec
-  import:             lang, deps, opts
+  import:             lang, deps, test-deps, opts
   hs-source-dirs:     test
   type:               exitcode-stdio-1.0
   main-is:            Spec.hs
   build-depends:
+    , elabs-backend-testlib
     , elabs-backend
-    , hspec
-    , QuickCheck
 
   other-modules:      EA.Internal.WalletSpec
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
 
 executable integration-test
-  import:         lang, deps, opts
-  hs-source-dirs: tests-privnet
+  import:         lang, deps, test-deps, opts
+  hs-source-dirs: integration-test
   type:           exitcode-stdio-1.0
   main-is:        privnet-tests.hs
   other-modules:
     EA.Test.Privnet.Helpers
     EA.Test.Privnet.OneShotMint
+    Setup
 
   build-depends:
+    , elabs-backend-testlib
     , elabs-backend
-    , hspec
-    , tasty
-    , tasty-hunit

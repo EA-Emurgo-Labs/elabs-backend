@@ -1,7 +1,7 @@
 module Main (main) where
 
 import EA.Test.Privnet.OneShotMint qualified
-import GeniusYield.Test.Privnet.Setup
+import GeniusYield.Test.Privnet.Setup (makeSetup)
 import Test.Tasty (defaultMain, testGroup, withResource)
 
 main :: IO ()
