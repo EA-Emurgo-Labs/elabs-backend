@@ -1,13 +1,16 @@
 module Setup (
   EACtx (..),
   withEASetup,
+  server,
 ) where
 
+import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
 import Data.Text qualified as T
 import Database.Persist.Sqlite (createSqlitePool, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
+import EA.Api (apiServer, appApi)
 import EA.Script (Scripts (Scripts))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
@@ -26,6 +29,12 @@ import GeniusYield.Types (
  )
 import Internal.Wallet.DB.Sqlite
 import Ply (readTypedScript)
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
 import System.Directory (doesFileExist, removeFile)
 
 --------------------------------------------------------------------------------
@@ -60,7 +69,7 @@ withEASetup ioSetup putLog kont =
       runStderrLoggingT
         ( createSqlitePool
             (T.pack optionsSqliteFile)
-            1
+            20
         )
 
     let
@@ -94,3 +103,9 @@ withEASetup ioSetup putLog kont =
     putLog $ "Send 5 Ada to the collateral address: " <> show txId
 
     kont $ EACtx ctx env
+
+server :: EAAppEnv -> Application
+server env =
+  serve appApi $
+    hoistServer appApi (Handler . ExceptT . try) $
+      apiServer env
