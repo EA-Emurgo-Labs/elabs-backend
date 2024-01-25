@@ -14,7 +14,7 @@ with rollback functionality.
 
     We need `cardano-cli  v8.1.1` to be available in our system for running privnet Test. Executable can be downloaded from [here](https://github.com/IntersectMBO/cardano-node/releases/download/8.1.1/cardano-node-8.1.1-linux.tar.gz)
 
-After cardano-cli is available in our environment we can just run `make privnet-test`  to start Test.
+After cardano-cli is available in our environment we can just run `make integration-test`  to start Test.
 
 > [!NOTE]
 > After cardano-cli is available through flake manual setup of cardano-cli is not needed, appropriate version of cardano-cli will be automatically available.
