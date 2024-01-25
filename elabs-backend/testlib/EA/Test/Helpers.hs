@@ -1,16 +1,16 @@
-module Test.EA.Helpers (
+module EA.Test.Helpers (
   createRootKey,
   mnemonic,
 ) where
 
+import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 import Internal.Wallet (RootKey, genRootKeyFromMnemonic)
-import Cardano.Mnemonic (MkSomeMnemonic(mkSomeMnemonic))
 
-createRootKey :: RootKey
+createRootKey :: IO RootKey
 createRootKey =
   either
     (const (error "Something went wrong with the RootKey creation"))
-    genRootKeyFromMnemonic
+    (return . genRootKeyFromMnemonic)
     (mkSomeMnemonic @'[15] mnemonic)
 
 mnemonic :: [Text]

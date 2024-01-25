@@ -1,16 +1,12 @@
 module EA.Internal.WalletSpec (spec) where
 
 import Data.Tagged (Tagged (..))
-
-import Cardano.Mnemonic (mkSomeMnemonic)
+import EA.Test.Helpers (createRootKey)
 import GeniusYield.Types (GYNetworkId (GYMainnet))
-
+import Internal.Wallet (deriveAddress)
 import Test.Hspec (Spec, describe, shouldSatisfy)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary (arbitrary), forAll)
-import Test.EA.Helpers (createRootKey)
-
-import Internal.Wallet (RootKey, deriveAddress, genRootKeyFromMnemonic)
 
 --------------------------------------------------------------------------------
 
@@ -23,12 +19,13 @@ spec = do
       )
       $ forAll arbitrary
       $ \account ->
-        forAll arbitrary $ \address ->
+        forAll arbitrary $ \address -> do
+          rootKey <- createRootKey
           let
             result =
               deriveAddress
                 GYMainnet
-                createRootKey
+                rootKey
                 (Tagged account)
                 (Tagged address)
            in

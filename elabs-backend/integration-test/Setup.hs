@@ -1,21 +1,20 @@
 module Setup (
   EACtx (..),
-  withEASetup
+  withEASetup,
 ) where
 
+import Control.Monad.Logger (runStderrLoggingT)
+import Control.Monad.Metrics qualified as Metrics
+import Data.Text qualified as T
+import Database.Persist.Sqlite (createSqlitePool)
+import EA (EAAppEnv (..))
+import EA.Script (Scripts (Scripts))
+import EA.Test.Helpers (createRootKey)
 import GeniusYield.Test.Privnet.Ctx (Ctx (..), ctxProviders)
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
-import EA (EAAppEnv (..))
-import qualified Control.Monad.Metrics as Metrics
-import Internal.Wallet (RootKey, genRootKeyFromMnemonic)
-import Cardano.Mnemonic (MkSomeMnemonic(mkSomeMnemonic))
-import GeniusYield.Types (GYNetworkId(GYPrivnet))
+import GeniusYield.Types (GYNetworkId (GYPrivnet))
 import Ply (readTypedScript)
-import EA.Script (Scripts(Scripts))
 import System.Directory
-import qualified Data.Text as T
-import Control.Monad.Logger (runStderrLoggingT)
-import Database.Persist.Sqlite (createSqlitePool)
 
 data EACtx = EACtx
   { ctx :: Ctx
@@ -33,6 +32,7 @@ withEASetup scriptsFilePath sqliteFilePath ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
     metrics <- Metrics.initialize
     policyTypedScript <- readTypedScript scriptsFilePath
+    rootKey <- createRootKey
 
     -- Delete test wallet db
     fileExists <- doesFileExist sqliteFilePath
@@ -53,6 +53,6 @@ withEASetup scriptsFilePath sqliteFilePath ioSetup putLog kont =
           , eaAppEnvMetrics = metrics
           , eaAppEnvScripts = Scripts policyTypedScript
           , eaAppEnvSqlPool = pool
-          , eaAppEnvRootKey = createRootKey
+          , eaAppEnvRootKey = rootKey
           }
     kont $ EACtx ctx env
