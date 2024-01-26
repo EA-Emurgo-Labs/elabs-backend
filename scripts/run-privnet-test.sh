@@ -50,7 +50,7 @@ then
   echo "===================[KILL PRIVNET AND KUPO]===================="
   echo "[INFO] Local, Non-CI run -> Kill the private testnet."
   set -x
-  trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM EXIT
+  trap 'trap - SIGTERM && kill -- $$' SIGINT SIGTERM EXIT
   set +x
   rm -rf ./cardano-private-testnet-setup/ ./kupo ./logs-privnet
 fi
