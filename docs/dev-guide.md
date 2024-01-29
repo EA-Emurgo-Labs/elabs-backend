@@ -6,9 +6,9 @@ I will explain it by going through all the layers.
 
 
 ## IO layer - Main function
-You find the IO Monad in the main function in `elabs-backend/app/Main.hs`.
+You find the `IO` monad in the main function in `elabs-backend/app/Main.hs`.
 
-The usual pattern with the main is to call all IO functions here, like reading config files, initializing the DB, etc. Then, we create the app environment (`EAppEnv`) with all the information needed to run the backend and store it in the EApp reader monad.
+The usual pattern with the main is to call all IO functions here, like reading config files, initializing the DB, etc. Then, we create the app environment (`EAppEnv`) with all the information needed to run the backend and store it in the `EApp` reader monad.
 This will allow us to ask for any configuration information within the app.
 
 This layer uses the `optparsec` library for the command-line interface.
@@ -41,6 +41,18 @@ The `EAApp` is a reader monad that passes shared configuration or environment in
 The application defines a core data type, the `EAAppEnv` (see `EA.hs`).
 We can ask for all the information stored in the `EAAppEnv` with the `asks` function.
 
+The `EAAppEnv` type:
+```haskell
+data EAAppEnv = EAAppEnv
+  { eaAppEnvGYProviders :: !GYProviders
+  , eaAppEnvGYNetworkId :: !GYNetworkId
+  , eaAppEnvMetrics :: !Metrics
+  , eaAppEnvScripts :: !Scripts
+  , eaAppEnvSqlPool :: !(Pool SqlBackend)
+  , eaAppEnvRootKey :: !RootKey
+  }
+```
+
 For example, we need the `GYProviders` to call the `gyLogInfo` function. We use the `asks` function to get the providers:
 
 ```haskell
@@ -62,8 +74,8 @@ eaLogWarning :: GYLogNamespace -> String -> EAApp ()
 eaLogError :: GYLogNamespace -> String -> EAApp ()
 ```
 
-### IO Monad
-The `EAApp` is also an `IO Monad`, meaning we can call `IO` functions within this monad. For example, we wish to call the `gyQueryUtxosAtAddresses` function from the Atlas framework.
+### `MonadIO`
+The `EAApp` is also an `MonadIO`, meaning we can call `IO` functions within this monad. For example, we wish to call the `gyQueryUtxosAtAddresses` function from the Atlas framework.
 This function is an `IO` function, and to run it within our `EAApp` function, we use the `liftIO` function:
 
 ```haskell
@@ -97,7 +109,7 @@ Because of this property, we don't mix logic within the transaction logic and ar
 
 For our backend application, we only write `IO` exceptions from within the `IO` monad (during the initialization phase), the `EAApp`, and the DB atomic transaction (to trigger the rollback).
 
-We apply good functional programming practice for all other functions, which means we do not allow partial functions (errors, exceptions).
+We apply good functional programming practice for all other functions, which means we do not allow partial functions and exceptions.
 
 From within `EApp` (see `EA.hs`), use the following exception functions:
 ```haskell
@@ -113,7 +125,7 @@ eaHandle :: (Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 These functions will log the exception to the Atlas logging system.
 
 ## Writing test
-For testing, we are using the Hspec, and at the moment, we are using the automatic spec discovery, which means that when you write a test, you only need to create the spec file.
+For testing, we are using the `hspec`, and at the moment, we are using the automatic spec discovery, which means that when you write a test, you only need to create the spec file.
 
 Suppose you want to test the `Script.hs` module. You would place the `ScriptSpec.hs` file like this:
 
@@ -126,7 +138,7 @@ test/
 │   └── ScriptSpec.hs
 ```
 
-Hspec is similar to unit testing, but it's more declarative.
+`hspec` is similar to unit testing, but it's more declarative.
 
 ## Writing new endpoints
 
