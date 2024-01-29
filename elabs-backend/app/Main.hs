@@ -33,6 +33,7 @@ import Options.Applicative (
  )
 
 import GeniusYield.GYConfig (
+  GYCoreConfig (cfgNetworkId),
   coreConfigIO,
   withCfgProviders,
  )
@@ -220,7 +221,7 @@ app (Options {..}) = do
             env =
               EAAppEnv
                 { eaAppEnvGYProviders = providers
-                , eaAppEnvGYCoreConfig = conf
+                , eaAppEnvGYNetworkId = cfgNetworkId conf
                 , eaAppEnvMetrics = metrics
                 , eaAppEnvScripts = Scripts policyTypedScript
                 , eaAppEnvSqlPool = pool

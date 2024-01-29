@@ -41,7 +41,8 @@ haddock:
 test:
 	cabal test elabs-backend -j$(THREADS)
 
-privnet-test:
+integration-test:
+	pkill cardano-node	|| true
 	sh ./scripts/cleanup-node.sh
 	sh ./scripts/run-privnet-test.sh
 

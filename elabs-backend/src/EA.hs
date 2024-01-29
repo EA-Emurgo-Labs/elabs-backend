@@ -27,13 +27,13 @@ import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
 import EA.Script (Scripts (..), oneShotMintingPolicy)
-import GeniusYield.GYConfig (GYCoreConfig)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure)
 import GeniusYield.Types (
   GYAddress,
   GYLogNamespace,
   GYLogSeverity (..),
   GYMintingPolicy,
+  GYNetworkId,
   GYProviders (..),
   GYQueryUTxO (..),
   GYTx,
@@ -68,7 +68,7 @@ instance MonadMetrics EAApp where
 
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
-  , eaAppEnvGYCoreConfig :: !GYCoreConfig
+  , eaAppEnvGYNetworkId :: !GYNetworkId
   , eaAppEnvMetrics :: !Metrics
   , eaAppEnvScripts :: !Scripts
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
@@ -135,6 +135,7 @@ eaHandle = flip eaCatch
 
 --------------------------------------------------------------------------------
 -- Reader helpers
+
 getOneShotMintingPolicy :: GYTxOutRef -> EAApp (GYMintingPolicy 'PlutusV2)
 getOneShotMintingPolicy oref = asks (oneShotMintingPolicy oref . eaAppEnvScripts)
 

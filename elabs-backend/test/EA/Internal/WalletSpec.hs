@@ -1,15 +1,12 @@
 module EA.Internal.WalletSpec (spec) where
 
 import Data.Tagged (Tagged (..))
-
-import Cardano.Mnemonic (mkSomeMnemonic)
+import EA.Test.Helpers (createRootKey)
 import GeniusYield.Types (GYNetworkId (GYMainnet))
-
+import Internal.Wallet (deriveAddress)
 import Test.Hspec (Spec, describe, shouldSatisfy)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary (arbitrary), forAll)
-
-import Internal.Wallet (RootKey, deriveAddress, genRootKeyFromMnemonic)
 
 --------------------------------------------------------------------------------
 
@@ -22,12 +19,13 @@ spec = do
       )
       $ forAll arbitrary
       $ \account ->
-        forAll arbitrary $ \address ->
+        forAll arbitrary $ \address -> do
+          rootKey <- createRootKey
           let
             result =
               deriveAddress
                 GYMainnet
-                createRootKey
+                rootKey
                 (Tagged account)
                 (Tagged address)
            in
@@ -37,29 +35,3 @@ spec = do
               && address <= 2147483647
               then result `shouldSatisfy` isRight
               else result `shouldSatisfy` isLeft
-
-createRootKey :: RootKey
-createRootKey =
-  either
-    (const (error "Something went wrong with the RootKey creation"))
-    genRootKeyFromMnemonic
-    (mkSomeMnemonic @'[15] mnemonic)
-
-mnemonic :: [Text]
-mnemonic =
-  [ "ripple"
-  , "scissors"
-  , "kick"
-  , "mammal"
-  , "hire"
-  , "column"
-  , "oak"
-  , "again"
-  , "sun"
-  , "offer"
-  , "wealth"
-  , "tomorrow"
-  , "wagon"
-  , "turn"
-  , "fatal"
-  ]
