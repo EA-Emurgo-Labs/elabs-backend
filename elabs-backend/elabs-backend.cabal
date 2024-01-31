@@ -46,6 +46,7 @@ common deps
     , persistent-sqlite
     , plutus-ledger-api
     , ply-core
+    , random
     , relude
     , resource-pool
     , serialise

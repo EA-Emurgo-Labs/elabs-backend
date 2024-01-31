@@ -2,11 +2,13 @@ module Setup (
   EACtx (..),
   withEASetup,
   server,
+  cleanupSetup,
 ) where
 
 import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
+import Data.List ((!!))
 import Data.Text qualified as T
 import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
@@ -27,7 +29,10 @@ import GeniusYield.Types (
   GYTxOut (GYTxOut),
   valueFromLovelace,
  )
-import Internal.Wallet.DB.Sqlite
+import Internal.Wallet.DB.Sqlite (
+  createAccount,
+  runAutoMigration,
+ )
 import Ply (readTypedScript)
 import Servant (
   Application,
@@ -37,6 +42,7 @@ import Servant (
  )
 import System.Directory (doesFileExist, removeFile)
 import System.FilePath.Glob (glob)
+import System.Random (randomRIO)
 
 --------------------------------------------------------------------------------
 
@@ -52,18 +58,15 @@ withEASetup ::
   IO ()
 withEASetup ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
+    id <- randomString 10
     let
-      -- TODO: load this dynamically
+      -- TODO: load this dynamically, also check cleanupSetup function
       optionsScriptsFile = "scripts.debug.json"
-      optionsSqliteFile = "wallet.test.db"
+      optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
     policyTypedScript <- readTypedScript optionsScriptsFile
     rootKey <- createRootKey
-
-    -- Delete test wallet db
-    files <- glob $ optionsSqliteFile <> "*"
-    mapM_ (\file -> doesFileExist file >>= flip when (removeFile file)) files
 
     -- Create Sqlite pool and run migrations
     pool <-
@@ -116,3 +119,16 @@ server env =
   serve appApi $
     hoistServer appApi (Handler . ExceptT . try) $
       apiServer env
+
+randomString :: Int -> IO String
+randomString len = replicateM len randomChar
+  where
+    randomChar :: IO Char
+    randomChar = do
+      let chars = ['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0' .. '9']
+      randomRIO (0, length chars - 1) <&> (chars !!)
+
+cleanupSetup :: Setup -> IO ()
+cleanupSetup _ = do
+  files <- glob "wallet.test.*.db*" -- FIXME: check optionsSqliteFile
+  mapM_ (\file -> doesFileExist file >>= flip when (removeFile file)) files
