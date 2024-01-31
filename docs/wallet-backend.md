@@ -1,6 +1,6 @@
 # Wallet backend
 This documentation should help developers to understand how the internal wallet works.
-Current design
+
 In the current design, the root key is stored on disk and read into the program when started.
 The root key is used to create new addresses and signing keys.
 
