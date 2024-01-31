@@ -6,7 +6,6 @@ module Internal.Wallet.DB.Schema (
   EntityField (..),
   Account (..),
   Address (..),
-  AddressCache (..),
   migrateAll,
 ) where
 
@@ -51,12 +50,6 @@ Account
 Address
   accountId AccountId
   user UserId Maybe
-  created UTCTime default=CURRENT_TIME
-  deriving Show
-
-AddressCache
-  addressId AddressId
-  address ByteString
   created UTCTime default=CURRENT_TIME
   deriving Show
 
