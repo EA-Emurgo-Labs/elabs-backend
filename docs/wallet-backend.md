@@ -19,9 +19,9 @@ Current services, like Hardware Security Modules (HSM) or Key Management Service
 
 I could not find any trustful cloud-based HSM that supports our needed algorithms. An HSM solution would also require more research and time on our site.
 
-A compromise would be using a key vault service to store the root key and an access token to access the service. This compromise would give a bit more security in that the vault service could be restricted to who has access to the service, for example, restricted by IP; the service has a logging system so we know when and who is accessing the service; this would prevent us from saving the root key on the hard disc.
+A compromise would be using a key vault service to store the root key and an access token to access the service. This compromise gives more security in that the vault service could be restricted to who has access to the service, for example, restricted by IP. Also, such a service would offer a logging system, so we know when and who is accessing the service. Such a solution would also prevent us from saving the root key on the hard disc.
 
-However, if the access token is stolen, the attacker has only limited options. They could still access the service from within the server and get the root key.
+However, if the access token is stolen, the attacker could still access the service from within the server and get the root key.
 
 Another attack vector is from within the application if the attacker has access to the memory space. In this case, the root key could be read from the memory.
 
