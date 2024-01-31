@@ -34,6 +34,7 @@ common deps
     , cardano-api
     , containers
     , directory
+    , Glob
     , http-types
     , memory
     , monad-logger
@@ -45,6 +46,7 @@ common deps
     , persistent-sqlite
     , plutus-ledger-api
     , ply-core
+    , random
     , relude
     , resource-pool
     , serialise
