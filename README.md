@@ -22,3 +22,4 @@ To run the integration test, please ensure that `cardano-cli` and `cardano-node`
 
 ## Other documents
 - [Backend developer guide](docs/dev-guide.md)
+- [Wallet backend](docs/wallet-backend.md)
