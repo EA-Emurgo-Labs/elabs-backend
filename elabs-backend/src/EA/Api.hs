@@ -6,7 +6,7 @@ module EA.Api (
 
 import Data.Swagger (Swagger)
 
-import Servant (HasServer (ServerT), type (:<|>) (..))
+import Servant (HasServer (ServerT), (:>), type (:<|>) (..))
 import Servant.Swagger (toSwagger)
 
 import EA (EAAppEnv, runEAApp)
@@ -22,6 +22,10 @@ import EA.Api.Wallet (WalletApi, handleWalletApi)
 
 type Api =
   TxApi :<|> MintApi :<|> WalletApi
+
+-- TODO:
+-- type ChangeblockApi =
+--   "api" :> "v0" :> CarbonApi :<|> OrderApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi

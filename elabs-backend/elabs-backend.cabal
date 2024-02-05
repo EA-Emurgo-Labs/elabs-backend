@@ -129,7 +129,9 @@ library
   exposed-modules:
     EA
     EA.Api
+    EA.Api.Carbon
     EA.Api.Mint
+    EA.Api.Order
     EA.Api.Tx
     EA.Api.Types
     EA.Api.Wallet
