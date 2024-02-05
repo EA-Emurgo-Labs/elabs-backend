@@ -6,6 +6,7 @@ module Setup (
 )
 where
 
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
@@ -42,6 +43,7 @@ import Servant (
   serve,
  )
 import System.Directory (doesFileExist, removeFile)
+import System.Environment (getEnv)
 import System.FilePath.Glob (glob)
 import System.Random (randomRIO)
 
@@ -59,6 +61,9 @@ withEASetup ::
   IO ()
 withEASetup ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
+    -- read .env file
+    loadFile defaultConfig
+
     id <- randomString 10
     let
       -- TODO: load this dynamically, also check cleanupSetup function
@@ -91,15 +96,19 @@ withEASetup ioSetup putLog kont =
             20
         )
 
-    let env =
-          EAAppEnv
-            { eaAppEnvGYProviders = ctxProviders ctx
-            , eaAppEnvGYNetworkId = GYPrivnet
-            , eaAppEnvMetrics = metrics
-            , eaAppEnvScripts = scripts
-            , eaAppEnvSqlPool = pool
-            , eaAppEnvRootKey = rootKey
-            }
+    bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+
+    let
+      env =
+        EAAppEnv
+          { eaAppEnvGYProviders = ctxProviders ctx
+          , eaAppEnvGYNetworkId = GYPrivnet
+          , eaAppEnvMetrics = metrics
+          , eaAppEnvScripts = scripts
+          , eaAppEnvSqlPool = pool
+          , eaAppEnvRootKey = rootKey
+          , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+          }
 
     -- DB migrations
     void $

@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (
   LoggingT (runLoggingT),
@@ -60,6 +61,9 @@ import Servant (
   hoistServer,
   serve,
  )
+import System.Environment (getEnv)
+
+--------------------------------------------------------------------------------
 
 data Options = Options
   { optionsCoreConfigFile :: !String
@@ -183,44 +187,51 @@ app (Options {..}) = do
   withCfgProviders conf "app" $
     \providers -> do
       case optionsCommand of
-        RunServer (ServerOptions {..}) -> do
-          -- TODO: This is one particular script
-          --       -> Make FromJSON instance of Scripts
-          policyTypedScript <- readTypedScript optionsScriptsFile
-          carbonTypedScript <- readTypedScript "contracts/carbon.json"
-          marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
-          oracleTypedScript <- readTypedScript "contracts/oracle.json"
-          mintingNftTypedScript <- readTypedScript "contracts/nft.json"
-          let scripts =
-                Scripts
-                  { scriptsOneShotPolicy = policyTypedScript
-                  , scriptCarbonPolicy = carbonTypedScript
-                  , scriptMintingNftPolicy = mintingNftTypedScript
-                  , scriptMarketplaceValidator = marketplaceTypedScript
-                  , scriptOracleMintingPolicy = oracleTypedScript
-                  }
+        RunServer (ServerOptions {..}) ->
+          do
+            -- read .env in the environment
+            loadFile defaultConfig
 
-          metrics <- Metrics.initialize
+            -- TODO: This is one particular script
+            --       -> Make FromJSON instance of Scripts
+            policyTypedScript <- readTypedScript optionsScriptsFile
+            carbonTypedScript <- readTypedScript "contracts/carbon.json"
+            marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
+            oracleTypedScript <- readTypedScript "contracts/oracle.json"
+            mintingNftTypedScript <- readTypedScript "contracts/nft.json"
+            let scripts =
+                  Scripts
+                    { scriptsOneShotPolicy = policyTypedScript
+                    , scriptCarbonPolicy = carbonTypedScript
+                    , scriptMintingNftPolicy = mintingNftTypedScript
+                    , scriptMarketplaceValidator = marketplaceTypedScript
+                    , scriptOracleMintingPolicy = oracleTypedScript
+                    }
 
-          -- Create Sqlite pool and run migrations
-          pool <-
-            runLoggingT
-              ( createSqlitePool
-                  (T.pack serverOptionsSqliteFile)
-                  serverOptionsSqlitePoolSize
-              )
-              $ \_ _ lvl msg ->
-                gyLog
-                  providers
-                  "db"
-                  (fromLogLevel lvl)
-                  (decodeUtf8 $ fromLogStr msg)
-          -- migrate tables
-          void $ runSqlPool runAutoMigration pool
+            metrics <- Metrics.initialize
 
-          rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
+            -- Create Sqlite pool and run migrations
+            pool <-
+              runLoggingT
+                ( createSqlitePool
+                    (T.pack serverOptionsSqliteFile)
+                    serverOptionsSqlitePoolSize
+                )
+                $ \_ _ lvl msg ->
+                  gyLog
+                    providers
+                    "db"
+                    (fromLogLevel lvl)
+                    (decodeUtf8 $ fromLogStr msg)
+            -- migrate tables
+            void $ runSqlPool runAutoMigration pool
 
-          let env =
+            rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
+
+            bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+
+            let
+              env =
                 EAAppEnv
                   { eaAppEnvGYProviders = providers
                   , eaAppEnvGYNetworkId = cfgNetworkId conf
@@ -228,12 +239,13 @@ app (Options {..}) = do
                   , eaAppEnvScripts = scripts
                   , eaAppEnvSqlPool = pool
                   , eaAppEnvRootKey = rootKey
+                  , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
                   }
-          gyLogInfo providers "app" $
-            "Starting server at "
-              <> "http://localhost:"
-              <> show serverOptionsPort
-          run serverOptionsPort $ server env
+            gyLogInfo providers "app" $
+              "Starting server at "
+                <> "http://localhost:"
+                <> show serverOptionsPort
+            run serverOptionsPort $ server env
         ExportSwagger (SwaggerOptions {..}) -> do
           let file = swaggerOptionsFile
           gyLogInfo providers "app" $ "Writting swagger file to " <> file
