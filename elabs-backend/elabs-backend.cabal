@@ -34,7 +34,11 @@ common deps
     , cardano-api
     , containers
     , directory
+    , dotenv
+    , filepath
     , Glob
+    , http-client
+    , http-client-tls
     , http-types
     , memory
     , monad-logger
@@ -50,6 +54,9 @@ common deps
     , relude
     , resource-pool
     , serialise
+    , servant-client
+    , servant-multipart
+    , servant-multipart-client
     , servant-server
     , servant-swagger
     , swagger2
@@ -130,6 +137,8 @@ library
     EA.Script
     EA.Tx.OneShotMint
     EA.Wallet
+    Internal.Ipfs
+    Internal.Ipfs.Types
     Internal.Wallet
     Internal.Wallet.DB.Schema
     Internal.Wallet.DB.Sqlite

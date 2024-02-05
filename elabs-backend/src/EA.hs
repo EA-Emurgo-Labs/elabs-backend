@@ -73,6 +73,7 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvScripts :: !Scripts
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
   , eaAppEnvRootKey :: !RootKey
+  , eaAppEnvBlockfrostIpfsProjectId :: !String
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
