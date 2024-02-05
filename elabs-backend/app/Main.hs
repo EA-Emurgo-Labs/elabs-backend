@@ -1,17 +1,39 @@
 module Main (main) where
 
-import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.ByteString.Lazy.Char8 qualified as BL8
-import Data.Text qualified as T
-import Relude.Unsafe qualified as Unsafe
-
+import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (
   LoggingT (runLoggingT),
   fromLogStr,
  )
 import Control.Monad.Metrics qualified as Metrics
-
+import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.ByteString.Lazy.Char8 qualified as BL8
+import Data.Text qualified as T
+import Database.Persist.Sqlite (
+  createSqlitePool,
+  runSqlPool,
+ )
+import EA (EAAppEnv (..))
+import EA.Api (apiServer, apiSwagger, appApi)
+import EA.Internal (fromLogLevel)
+import EA.Script (Scripts (Scripts))
+import GeniusYield.GYConfig (
+  GYCoreConfig (cfgNetworkId),
+  coreConfigIO,
+  withCfgProviders,
+ )
+import GeniusYield.Types (gyLog, gyLogInfo)
+import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
+import Internal.Wallet.DB.Sqlite (runAutoMigration)
+import Network.HTTP.Types qualified as HttpTypes
+import Network.Wai.Handler.Warp (run)
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
 import Options.Applicative (
   Parser,
   auto,
@@ -31,45 +53,17 @@ import Options.Applicative (
   subparser,
   value,
  )
-
-import GeniusYield.GYConfig (
-  GYCoreConfig (cfgNetworkId),
-  coreConfigIO,
-  withCfgProviders,
- )
-import GeniusYield.Types (gyLog, gyLogInfo)
-
 import Ply (readTypedScript)
-
-import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
-
-import Network.HTTP.Types qualified as HttpTypes
-import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors (
-  CorsResourcePolicy (corsRequestHeaders),
-  cors,
-  simpleCorsResourcePolicy,
- )
-
+import Relude.Unsafe qualified as Unsafe
 import Servant (
   Application,
   Handler (Handler),
   hoistServer,
   serve,
  )
+import System.Environment (getEnv)
 
-import Database.Persist.Sqlite (
-  createSqlitePool,
-  runSqlPool,
- )
-
-import EA (EAAppEnv (..))
-import EA.Api (apiServer, apiSwagger, appApi)
-import EA.Internal (fromLogLevel)
-import EA.Script (Scripts (Scripts))
-
-import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
-import Internal.Wallet.DB.Sqlite (runAutoMigration)
+--------------------------------------------------------------------------------
 
 data Options = Options
   { optionsCoreConfigFile :: !String
@@ -193,45 +187,52 @@ app (Options {..}) = do
   withCfgProviders conf "app" $
     \providers -> do
       case optionsCommand of
-        RunServer (ServerOptions {..}) -> do
-          -- TODO: This is one particular script
-          --       -> Make FromJSON instance of Scripts
-          policyTypedScript <- readTypedScript optionsScriptsFile
-          metrics <- Metrics.initialize
+        RunServer (ServerOptions {..}) ->
+          do
+            -- read .env in the environment
+            loadFile defaultConfig
 
-          -- Create Sqlite pool and run migrations
-          pool <-
-            runLoggingT
-              ( createSqlitePool
-                  (T.pack serverOptionsSqliteFile)
-                  serverOptionsSqlitePoolSize
-              )
-              $ \_ _ lvl msg ->
-                gyLog
-                  providers
-                  "db"
-                  (fromLogLevel lvl)
-                  (decodeUtf8 $ fromLogStr msg)
-          -- migrate tables
-          void $ runSqlPool runAutoMigration pool
+            -- TODO: This is one particular script
+            --       -> Make FromJSON instance of Scripts
+            policyTypedScript <- readTypedScript optionsScriptsFile
+            metrics <- Metrics.initialize
 
-          rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
+            -- Create Sqlite pool and run migrations
+            pool <-
+              runLoggingT
+                ( createSqlitePool
+                    (T.pack serverOptionsSqliteFile)
+                    serverOptionsSqlitePoolSize
+                )
+                $ \_ _ lvl msg ->
+                  gyLog
+                    providers
+                    "db"
+                    (fromLogLevel lvl)
+                    (decodeUtf8 $ fromLogStr msg)
+            -- migrate tables
+            void $ runSqlPool runAutoMigration pool
 
-          let
-            env =
-              EAAppEnv
-                { eaAppEnvGYProviders = providers
-                , eaAppEnvGYNetworkId = cfgNetworkId conf
-                , eaAppEnvMetrics = metrics
-                , eaAppEnvScripts = Scripts policyTypedScript
-                , eaAppEnvSqlPool = pool
-                , eaAppEnvRootKey = rootKey
-                }
-          gyLogInfo providers "app" $
-            "Starting server at "
-              <> "http://localhost:"
-              <> show serverOptionsPort
-          run serverOptionsPort $ server env
+            rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
+
+            bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+
+            let
+              env =
+                EAAppEnv
+                  { eaAppEnvGYProviders = providers
+                  , eaAppEnvGYNetworkId = cfgNetworkId conf
+                  , eaAppEnvMetrics = metrics
+                  , eaAppEnvScripts = Scripts policyTypedScript
+                  , eaAppEnvSqlPool = pool
+                  , eaAppEnvRootKey = rootKey
+                  , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+                  }
+            gyLogInfo providers "app" $
+              "Starting server at "
+                <> "http://localhost:"
+                <> show serverOptionsPort
+            run serverOptionsPort $ server env
         ExportSwagger (SwaggerOptions {..}) -> do
           let file = swaggerOptionsFile
           gyLogInfo providers "app" $ "Writting swagger file to " <> file
