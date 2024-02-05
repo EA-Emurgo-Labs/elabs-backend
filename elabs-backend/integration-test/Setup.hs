@@ -1,9 +1,9 @@
-module Setup
-  ( EACtx (..),
-    withEASetup,
-    server,
-    cleanupSetup,
-  )
+module Setup (
+  EACtx (..),
+  withEASetup,
+  server,
+  cleanupSetup,
+)
 where
 
 import Control.Exception (try)
@@ -17,30 +17,30 @@ import EA.Api (apiServer, appApi)
 import EA.Script (Scripts (..))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
-import GeniusYield.Test.Privnet.Ctx
-  ( Ctx (..),
-    ctxProviders,
-    ctxRunI,
-    submitTx,
-  )
+import GeniusYield.Test.Privnet.Ctx (
+  Ctx (..),
+  ctxProviders,
+  ctxRunI,
+  submitTx,
+ )
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (mustHaveOutput)
-import GeniusYield.Types
-  ( GYNetworkId (GYPrivnet),
-    GYTxOut (GYTxOut),
-    valueFromLovelace,
-  )
-import Internal.Wallet.DB.Sqlite
-  ( createAccount,
-    runAutoMigration,
-  )
+import GeniusYield.Types (
+  GYNetworkId (GYPrivnet),
+  GYTxOut (GYTxOut),
+  valueFromLovelace,
+ )
+import Internal.Wallet.DB.Sqlite (
+  createAccount,
+  runAutoMigration,
+ )
 import Ply (readTypedScript)
-import Servant
-  ( Application,
-    Handler (Handler),
-    hoistServer,
-    serve,
-  )
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
 import System.Directory (doesFileExist, removeFile)
 import System.FilePath.Glob (glob)
 import System.Random (randomRIO)
@@ -48,8 +48,8 @@ import System.Random (randomRIO)
 --------------------------------------------------------------------------------
 
 data EACtx = EACtx
-  { eaCtxCtx :: Ctx,
-    eaCtxEnv :: EAAppEnv
+  { eaCtxCtx :: Ctx
+  , eaCtxEnv :: EAAppEnv
   }
 
 withEASetup ::
@@ -60,9 +60,10 @@ withEASetup ::
 withEASetup ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
     id <- randomString 10
-    let -- TODO: load this dynamically, also check cleanupSetup function
-        optionsScriptsFile = "scripts.debug.json"
-        optionsSqliteFile = "wallet.test." <> id <> ".db"
+    let
+      -- TODO: load this dynamically, also check cleanupSetup function
+      optionsScriptsFile = "scripts.debug.json"
+      optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
     rootKey <- createRootKey
@@ -75,11 +76,11 @@ withEASetup ioSetup putLog kont =
     mintingNftTypedScript <- readTypedScript "contracts/nft.json"
     let scripts =
           Scripts
-            { scriptsOneShotPolicy = policyTypedScript,
-              scriptCarbonPolicy = carbonTypedScript,
-              scriptMintingNftPolicy = mintingNftTypedScript,
-              scriptMarketplaceValidator = marketplaceTypedScript,
-              scriptOracleMintingPolicy = oracleTypedScript
+            { scriptsOneShotPolicy = policyTypedScript
+            , scriptCarbonPolicy = carbonTypedScript
+            , scriptMintingNftPolicy = mintingNftTypedScript
+            , scriptMarketplaceValidator = marketplaceTypedScript
+            , scriptOracleMintingPolicy = oracleTypedScript
             }
 
     -- Create Sqlite pool and run migrations
@@ -92,12 +93,12 @@ withEASetup ioSetup putLog kont =
 
     let env =
           EAAppEnv
-            { eaAppEnvGYProviders = ctxProviders ctx,
-              eaAppEnvGYNetworkId = GYPrivnet,
-              eaAppEnvMetrics = metrics,
-              eaAppEnvScripts = scripts,
-              eaAppEnvSqlPool = pool,
-              eaAppEnvRootKey = rootKey
+            { eaAppEnvGYProviders = ctxProviders ctx
+            , eaAppEnvGYNetworkId = GYPrivnet
+            , eaAppEnvMetrics = metrics
+            , eaAppEnvScripts = scripts
+            , eaAppEnvSqlPool = pool
+            , eaAppEnvRootKey = rootKey
             }
 
     -- DB migrations

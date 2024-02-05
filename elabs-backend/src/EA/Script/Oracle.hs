@@ -14,8 +14,8 @@ data OracleDatum = OracleDatum
 PlutusTx.unstableMakeIsData ''OracleDatum
 
 data OracleParams = OracleParams
-  { orcPrmNft :: AssetClass,
-    orcPrmOperator :: PubKeyHash
+  { orcPrmNft :: AssetClass
+  , orcPrmOperator :: PubKeyHash
   }
 
 PlutusTx.unstableMakeIsData ''OracleParams

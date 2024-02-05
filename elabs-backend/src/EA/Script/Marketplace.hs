@@ -2,9 +2,9 @@
 
 module EA.Script.Marketplace (MarketplaceAction (..), MarketplaceParams (..), MarketplaceDatum (..)) where
 
+import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
-import  PlutusLedgerApi.V1 (ScriptHash, CurrencySymbol, TokenName, PubKeyHash)
 
 data MarketplaceAction
   = BUY
@@ -15,17 +15,17 @@ data MarketplaceAction
 
 PlutusTx.makeIsDataIndexed ''MarketplaceAction [('BUY, 0), ('WITHDRAW, 1), ('SELL, 2), ('CANCELL, 3), ('BUY_PARTIAL, 4)]
 
-data MarketplaceParams = MarketplaceParams {
-    mktpOracleValidator :: ScriptHash,
-    mktpEscrowValidator :: ScriptHash
-}
+data MarketplaceParams = MarketplaceParams
+  { mktpOracleValidator :: ScriptHash
+  , mktpEscrowValidator :: ScriptHash
+  }
 
 PlutusTx.unstableMakeIsData ''MarketplaceParams
 
-data MarketplaceDatum = MarketplaceDatum {
-    mktDtmOwner :: PubKeyHash,
-    mktDtmSalePrice :: PlutusTx.Integer,
-    mktDtmAssetSymbol :: CurrencySymbol,
-    mktDtmAssetName :: TokenName,
-    mktDtmAmount :: PlutusTx.Integer
-}
+data MarketplaceDatum = MarketplaceDatum
+  { mktDtmOwner :: PubKeyHash
+  , mktDtmSalePrice :: PlutusTx.Integer
+  , mktDtmAssetSymbol :: CurrencySymbol
+  , mktDtmAssetName :: TokenName
+  , mktDtmAmount :: PlutusTx.Integer
+  }

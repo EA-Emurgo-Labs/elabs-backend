@@ -2,70 +2,70 @@ module Main (main) where
 
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 import Control.Exception (try)
-import Control.Monad.Logger
-  ( LoggingT (runLoggingT),
-    fromLogStr,
-  )
+import Control.Monad.Logger (
+  LoggingT (runLoggingT),
+  fromLogStr,
+ )
 import Control.Monad.Metrics qualified as Metrics
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
-import Database.Persist.Sqlite
-  ( createSqlitePool,
-    runSqlPool,
-  )
+import Database.Persist.Sqlite (
+  createSqlitePool,
+  runSqlPool,
+ )
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (..))
-import GeniusYield.GYConfig
-  ( GYCoreConfig (cfgNetworkId),
-    coreConfigIO,
-    withCfgProviders,
-  )
+import GeniusYield.GYConfig (
+  GYCoreConfig (cfgNetworkId),
+  coreConfigIO,
+  withCfgProviders,
+ )
 import GeniusYield.Types (gyLog, gyLogInfo)
 import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
 import Internal.Wallet.DB.Sqlite (runAutoMigration)
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors
-  ( CorsResourcePolicy (corsRequestHeaders),
-    cors,
-    simpleCorsResourcePolicy,
-  )
-import Options.Applicative
-  ( Parser,
-    auto,
-    command,
-    execParser,
-    fullDesc,
-    header,
-    help,
-    helper,
-    info,
-    long,
-    option,
-    progDesc,
-    short,
-    showDefault,
-    strOption,
-    subparser,
-    value,
-  )
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
+import Options.Applicative (
+  Parser,
+  auto,
+  command,
+  execParser,
+  fullDesc,
+  header,
+  help,
+  helper,
+  info,
+  long,
+  option,
+  progDesc,
+  short,
+  showDefault,
+  strOption,
+  subparser,
+  value,
+ )
 import Ply (readTypedScript)
 import Relude.Unsafe qualified as Unsafe
-import Servant
-  ( Application,
-    Handler (Handler),
-    hoistServer,
-    serve,
-  )
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
 
 data Options = Options
-  { optionsCoreConfigFile :: !String,
-    optionsScriptsFile :: !String,
-    optionsRootKeyFile :: !String,
-    optionsCommand :: !Commands
+  { optionsCoreConfigFile :: !String
+  , optionsScriptsFile :: !String
+  , optionsRootKeyFile :: !String
+  , optionsCommand :: !Commands
   }
 
 data Commands
@@ -74,9 +74,9 @@ data Commands
   | GenerateRootKey RootKeyOptions
 
 data ServerOptions = ServerOptions
-  { serverOptionsPort :: !Int,
-    serverOptionsSqliteFile :: !String,
-    serverOptionsSqlitePoolSize :: !Int
+  { serverOptionsPort :: !Int
+  , serverOptionsSqliteFile :: !String
+  , serverOptionsSqlitePoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -193,11 +193,11 @@ app (Options {..}) = do
           mintingNftTypedScript <- readTypedScript "contracts/nft.json"
           let scripts =
                 Scripts
-                  { scriptsOneShotPolicy = policyTypedScript,
-                    scriptCarbonPolicy = carbonTypedScript,
-                    scriptMintingNftPolicy = mintingNftTypedScript,
-                    scriptMarketplaceValidator = marketplaceTypedScript,
-                    scriptOracleMintingPolicy = oracleTypedScript
+                  { scriptsOneShotPolicy = policyTypedScript
+                  , scriptCarbonPolicy = carbonTypedScript
+                  , scriptMintingNftPolicy = mintingNftTypedScript
+                  , scriptMarketplaceValidator = marketplaceTypedScript
+                  , scriptOracleMintingPolicy = oracleTypedScript
                   }
 
           metrics <- Metrics.initialize
@@ -222,12 +222,12 @@ app (Options {..}) = do
 
           let env =
                 EAAppEnv
-                  { eaAppEnvGYProviders = providers,
-                    eaAppEnvGYNetworkId = cfgNetworkId conf,
-                    eaAppEnvMetrics = metrics,
-                    eaAppEnvScripts = scripts,
-                    eaAppEnvSqlPool = pool,
-                    eaAppEnvRootKey = rootKey
+                  { eaAppEnvGYProviders = providers
+                  , eaAppEnvGYNetworkId = cfgNetworkId conf
+                  , eaAppEnvMetrics = metrics
+                  , eaAppEnvScripts = scripts
+                  , eaAppEnvSqlPool = pool
+                  , eaAppEnvRootKey = rootKey
                   }
           gyLogInfo providers "app" $
             "Starting server at "
