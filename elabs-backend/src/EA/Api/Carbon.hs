@@ -3,11 +3,11 @@ module EA.Api.Carbon (
   CarbonMintRequest (..),
 ) where
 
-import Servant (JSON, type (:>), Post, Header, ReqBody)
-import qualified Data.Aeson as Aeson
-import qualified Data.Swagger as Swagger
-import Servant.Multipart (MultipartForm, Tmp, MultipartData)
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
 import EA.Api.Types (SubmitTxResponse)
+import Servant (Header, JSON, Post, ReqBody, type (:>))
+import Servant.Multipart (MultipartData, MultipartForm, Tmp)
 
 --------------------------------------------------------------------------------
 

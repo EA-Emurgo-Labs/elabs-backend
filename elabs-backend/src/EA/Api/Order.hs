@@ -1,9 +1,9 @@
 module EA.Api.Order (OrderApi) where
 
-import Servant (JSON, type (:<|>), type (:>), Post, Capture, Header, ReqBody)
-import qualified Data.Aeson as Aeson
-import qualified Data.Swagger as Swagger
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
 import EA.Api.Types (SubmitTxResponse)
+import Servant (Capture, Header, JSON, Post, ReqBody, type (:<|>), type (:>))
 
 --------------------------------------------------------------------------------
 
