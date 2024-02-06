@@ -3,7 +3,8 @@ module Setup (
   withEASetup,
   server,
   cleanupSetup,
-) where
+)
+where
 
 import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
@@ -14,7 +15,7 @@ import Data.Text qualified as T
 import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
 import EA.Api (apiServer, appApi)
-import EA.Script (Scripts (Scripts))
+import EA.Script (Scripts (..))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
 import GeniusYield.Test.Privnet.Ctx (
@@ -70,8 +71,22 @@ withEASetup ioSetup putLog kont =
       optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
-    policyTypedScript <- readTypedScript optionsScriptsFile
     rootKey <- createRootKey
+
+    -- TODO: PIYUSH => Load script better
+    policyTypedScript <- readTypedScript optionsScriptsFile
+    carbonTypedScript <- readTypedScript "contracts/carbon.json"
+    marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
+    oracleTypedScript <- readTypedScript "contracts/oracle.json"
+    mintingNftTypedScript <- readTypedScript "contracts/nft.json"
+    let scripts =
+          Scripts
+            { scriptsOneShotPolicy = policyTypedScript
+            , scriptCarbonPolicy = carbonTypedScript
+            , scriptMintingNftPolicy = mintingNftTypedScript
+            , scriptMarketplaceValidator = marketplaceTypedScript
+            , scriptOracleMintingPolicy = oracleTypedScript
+            }
 
     -- Create Sqlite pool and run migrations
     pool <-
@@ -89,7 +104,7 @@ withEASetup ioSetup putLog kont =
           { eaAppEnvGYProviders = ctxProviders ctx
           , eaAppEnvGYNetworkId = GYPrivnet
           , eaAppEnvMetrics = metrics
-          , eaAppEnvScripts = Scripts policyTypedScript
+          , eaAppEnvScripts = scripts
           , eaAppEnvSqlPool = pool
           , eaAppEnvRootKey = rootKey
           , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
@@ -110,11 +125,10 @@ withEASetup ioSetup putLog kont =
       (addr, _) <-
         eaLiftMaybe "No internal address found" $
           viaNonEmpty head addrs
-      let
-        user = ctxUser2 ctx
-        tx =
-          mustHaveOutput
-            (GYTxOut addr (valueFromLovelace 5_000_000) Nothing Nothing)
+      let user = ctxUser2 ctx
+          tx =
+            mustHaveOutput
+              (GYTxOut addr (valueFromLovelace 5_000_000) Nothing Nothing)
       txBody <- liftIO $ ctxRunI ctx user $ return tx
       liftIO $ submitTx ctx user txBody
 

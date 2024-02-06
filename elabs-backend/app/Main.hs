@@ -18,7 +18,7 @@ import Database.Persist.Sqlite (
 import EA (EAAppEnv (..))
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
-import EA.Script (Scripts (Scripts))
+import EA.Script (Scripts (..))
 import GeniusYield.GYConfig (
   GYCoreConfig (cfgNetworkId),
   coreConfigIO,
@@ -195,6 +195,19 @@ app (Options {..}) = do
             -- TODO: This is one particular script
             --       -> Make FromJSON instance of Scripts
             policyTypedScript <- readTypedScript optionsScriptsFile
+            carbonTypedScript <- readTypedScript "contracts/carbon.json"
+            marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
+            oracleTypedScript <- readTypedScript "contracts/oracle.json"
+            mintingNftTypedScript <- readTypedScript "contracts/nft.json"
+            let scripts =
+                  Scripts
+                    { scriptsOneShotPolicy = policyTypedScript
+                    , scriptCarbonPolicy = carbonTypedScript
+                    , scriptMintingNftPolicy = mintingNftTypedScript
+                    , scriptMarketplaceValidator = marketplaceTypedScript
+                    , scriptOracleMintingPolicy = oracleTypedScript
+                    }
+
             metrics <- Metrics.initialize
 
             -- Create Sqlite pool and run migrations
@@ -223,7 +236,7 @@ app (Options {..}) = do
                   { eaAppEnvGYProviders = providers
                   , eaAppEnvGYNetworkId = cfgNetworkId conf
                   , eaAppEnvMetrics = metrics
-                  , eaAppEnvScripts = Scripts policyTypedScript
+                  , eaAppEnvScripts = scripts
                   , eaAppEnvSqlPool = pool
                   , eaAppEnvRootKey = rootKey
                   , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
