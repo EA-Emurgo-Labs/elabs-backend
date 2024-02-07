@@ -5,7 +5,7 @@ module EA.Api (
 ) where
 
 import Data.Swagger (Swagger)
-import EA (EAAppEnv, runEAApp)
+import EA (EAApp)
 import EA.Api.Carbon (CarbonApi, handleCarbonMint)
 import EA.Api.Mint (
   MintApi,
@@ -15,7 +15,7 @@ import EA.Api.Mint (
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
 import Servant (HasServer (ServerT), type (:<|>) (..))
-import Servant.Swagger (HasSwagger (toSwagger))
+import Servant.Swagger (toSwagger)
 
 --------------------------------------------------------------------------------
 
@@ -28,11 +28,11 @@ apiSwagger = toSwagger appApi
 appApi :: Proxy Api
 appApi = Proxy
 
-apiServer :: EAAppEnv -> ServerT Api IO
-apiServer env =
-  runEAApp env . handleTxApi
-    :<|> ( runEAApp env . handleOneShotMintByWallet
-            :<|> runEAApp env . handleOneShotMintByUserId
+apiServer :: ServerT Api EAApp
+apiServer =
+  handleTxApi
+    :<|> ( handleOneShotMintByWallet
+            :<|> handleOneShotMintByUserId
          )
-    :<|> runEAApp env . handleWalletApi
-    :<|> \x y -> runEAApp env $ handleCarbonMint x y
+    :<|> handleWalletApi
+    :<|> handleCarbonMint

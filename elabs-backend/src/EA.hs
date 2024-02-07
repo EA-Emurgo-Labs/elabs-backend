@@ -57,6 +57,7 @@ newtype EAApp a = EAApp
   deriving newtype
     ( Functor
     , Applicative
+    , Alternative
     , Monad
     , MonadIO
     , MonadReader EAAppEnv

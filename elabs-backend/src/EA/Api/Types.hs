@@ -87,7 +87,10 @@ unSignedTxWithFee txBody =
 
 newtype UserId = UserId {unUserId :: Natural}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Aeson.FromJSON, Swagger.ToParamSchema)
+  deriving anyclass (Swagger.ToSchema, Swagger.ToParamSchema)
+
+instance Aeson.FromJSON UserId where
+  parseJSON = fmap UserId . Aeson.parseJSON
 
 instance FromHttpApiData UserId where
   parseUrlPiece = bimap (T.pack . TC.getTextDecodingError) UserId . TC.fromText

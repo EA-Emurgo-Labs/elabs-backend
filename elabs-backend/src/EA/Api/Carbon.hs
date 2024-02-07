@@ -4,10 +4,9 @@ module EA.Api.Carbon (
   handleCarbonMint,
 ) where
 
-import Control.Exception (ErrorCall (ErrorCall))
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
-import EA (EAApp, eaLiftEither, eaLiftMaybe, eaLogInfo, eaThrow)
+import EA (EAApp, eaLiftEither, eaLiftMaybe, eaLogInfo)
 import EA.Api.Types (UserId)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
@@ -27,7 +26,6 @@ type CarbonApi = CarbonMint
 
 type CarbonMint =
   "carbon"
-    :> Header "user_id" UserId
     :> MultipartForm Tmp (MultipartData Tmp)
     :> "mint"
     :> Post '[JSON] CarbonMintResponse
@@ -47,7 +45,9 @@ instance {-# OVERLAPPING #-} HasSwagger CarbonApi where
 --------------------------------------------------------------------------------
 
 data CarbonMintRequest = CarbonMintRequest
-  { amount :: !Int
+  { userId :: !UserId
+  -- ^ The user ID.
+  , amount :: !Int
   -- ^ The amount of carbon to mint.
   , sell :: !Int
   -- ^ The sell price per unit of carbon.
@@ -72,11 +72,9 @@ data CarbonMintResponse = CarbonMintResponse
 --------------------------------------------------------------------------------
 
 handleCarbonMint ::
-  Maybe UserId ->
   MultipartData Tmp ->
   EAApp CarbonMintResponse
-handleCarbonMint Nothing _ = eaThrow . ErrorCall $ "No UserId found in header"
-handleCarbonMint (Just _usedId) multipartData = do
+handleCarbonMint multipartData = do
   filePart <- eaLiftEither id $ lookupFile "file" multipartData
   dataPart <- eaLiftEither id $ lookupInput "data" multipartData
 
