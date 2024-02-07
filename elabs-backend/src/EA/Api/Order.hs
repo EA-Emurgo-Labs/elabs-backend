@@ -2,8 +2,8 @@ module EA.Api.Order (OrderApi) where
 
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
-import EA.Api.Types (SubmitTxResponse)
-import Servant (Capture, Header, JSON, Post, ReqBody, type (:<|>), type (:>))
+import EA.Api.Types (SubmitTxResponse, UserId)
+import Servant (Capture, JSON, Post, ReqBody, type (:<|>), type (:>))
 
 --------------------------------------------------------------------------------
 
@@ -11,14 +11,12 @@ type OrderApi = OrderCreate :<|> OrderBuy :<|> OrderCancel :<|> OrderUpdate
 
 type OrderCreate =
   "order"
-    :> Header "user_id" Text
     :> ReqBody '[JSON] OrderRequest
     :> "create"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderBuy =
   "order"
-    :> Header "user_id" Text
     :> ReqBody '[JSON] OrderBuyRequest
     :> Capture "id" Int
     :> "buy"
@@ -26,14 +24,12 @@ type OrderBuy =
 
 type OrderCancel =
   "order"
-    :> Header "user_id" Text
     :> Capture "id" Int
     :> "cancel"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderUpdate =
   "order"
-    :> Header "user_id" Text
     :> ReqBody '[JSON] OrderRequest
     :> Capture "id" Int
     :> "update"
@@ -42,7 +38,9 @@ type OrderUpdate =
 --------------------------------------------------------------------------------
 
 data OrderRequest = OrderRequest
-  { amount :: !Int
+  { userId :: !UserId
+  -- ^ The user ID.
+  , amount :: !Int
   -- ^ The amount of carbon to mint.
   , sell :: !Int
   -- ^ The sell price per unit of carbon.
@@ -51,7 +49,9 @@ data OrderRequest = OrderRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderBuyRequest = OrderBuyRequest
-  { amount :: !Int
+  { userId :: !UserId
+  -- ^ The user ID.
+  , amount :: !Int
   -- ^ The amount of carbon to buy.
   }
   deriving stock (Show, Generic)
