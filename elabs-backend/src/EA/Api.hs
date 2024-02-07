@@ -5,11 +5,8 @@ module EA.Api (
 ) where
 
 import Data.Swagger (Swagger)
-
-import Servant (HasServer (ServerT), (:>), type (:<|>) (..))
-import Servant.Swagger (toSwagger)
-
 import EA (EAAppEnv, runEAApp)
+import EA.Api.Carbon (CarbonApi, handleCarbonMint)
 import EA.Api.Mint (
   MintApi,
   handleOneShotMintByUserId,
@@ -17,15 +14,13 @@ import EA.Api.Mint (
  )
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import Servant (HasServer (ServerT), type (:<|>) (..))
+import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
 
 type Api =
-  TxApi :<|> MintApi :<|> WalletApi
-
--- TODO:
--- type ChangeblockApi =
---   "api" :> "v0" :> CarbonApi :<|> OrderApi
+  TxApi :<|> MintApi :<|> WalletApi :<|> CarbonApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi
@@ -40,3 +35,4 @@ apiServer env =
             :<|> runEAApp env . handleOneShotMintByUserId
          )
     :<|> runEAApp env . handleWalletApi
+    :<|> \x y -> runEAApp env $ handleCarbonMint x y
