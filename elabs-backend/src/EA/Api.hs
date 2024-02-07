@@ -5,11 +5,7 @@ module EA.Api (
 ) where
 
 import Data.Swagger (Swagger)
-
-import Servant (HasServer (ServerT), (:>), type (:<|>) (..))
-import Servant.Swagger (toSwagger)
-
-import EA (EAAppEnv, runEAApp)
+import EA (EAApp)
 import EA.Api.Mint (
   MintApi,
   handleOneShotMintByUserId,
@@ -17,6 +13,8 @@ import EA.Api.Mint (
  )
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import Servant (HasServer (ServerT), type (:<|>) (..))
+import Servant.Swagger (toSwagger)
 
 --------------------------------------------------------------------------------
 
@@ -33,10 +31,10 @@ apiSwagger = toSwagger appApi
 appApi :: Proxy Api
 appApi = Proxy
 
-apiServer :: EAAppEnv -> ServerT Api IO
-apiServer env =
-  runEAApp env . handleTxApi
-    :<|> ( runEAApp env . handleOneShotMintByWallet
-            :<|> runEAApp env . handleOneShotMintByUserId
+apiServer :: ServerT Api EAApp
+apiServer =
+  handleTxApi
+    :<|> ( handleOneShotMintByWallet
+            :<|> handleOneShotMintByUserId
          )
-    :<|> runEAApp env . handleWalletApi
+    :<|> handleWalletApi

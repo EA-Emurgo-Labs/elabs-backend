@@ -139,8 +139,7 @@ withEASetup ioSetup putLog kont =
 server :: EAAppEnv -> Application
 server env =
   serve appApi $
-    hoistServer appApi (Handler . ExceptT . try) $
-      apiServer env
+    hoistServer appApi (Handler . ExceptT . try . runEAApp env) apiServer
 
 randomString :: Int -> IO String
 randomString len = replicateM len randomChar

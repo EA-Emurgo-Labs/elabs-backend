@@ -15,7 +15,7 @@ import Database.Persist.Sqlite (
   createSqlitePool,
   runSqlPool,
  )
-import EA (EAAppEnv (..))
+import EA (EAAppEnv (..), runEAApp)
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (..))
@@ -268,5 +268,4 @@ server env =
             }
     )
     $ serve appApi
-    $ hoistServer appApi (Handler . ExceptT . try)
-    $ apiServer env
+    $ hoistServer appApi (Handler . ExceptT . try . runEAApp env) apiServer
