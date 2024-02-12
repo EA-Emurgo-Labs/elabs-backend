@@ -1,7 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module EA.Script.Oracle (OracleDatum (..), OracleParams (..), OracleAction (..)) where
+module EA.Script.Oracle (OracleDatum (..), OracleScriptParams (..), OracleAction (..), oracleMintingPolicy) where
 
+import EA.Script (Scripts (..))
+import GeniusYield.Types
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusLedgerApi.V1.Value (AssetClass)
 import PlutusTx qualified
@@ -13,9 +15,9 @@ data OracleDatum = OracleDatum
 
 PlutusTx.unstableMakeIsData ''OracleDatum
 
-data OracleParams = OracleParams
-  { orcPrmNft :: AssetClass
-  , orcPrmOperator :: PubKeyHash
+data OracleScriptParams = OracleScriptParams
+  { orcScriptPrmNft :: AssetClass
+  , orcScriptPrmOperator :: PubKeyHash
   }
 
 PlutusTx.unstableMakeIsData ''OracleParams

@@ -2,13 +2,10 @@ module EA.Api (
   appApi,
   apiServer,
   apiSwagger,
-) where
+)
+where
 
 import Data.Swagger (Swagger)
-
-import Servant (HasServer (ServerT), (:>), type (:<|>) (..))
-import Servant.Swagger (toSwagger)
-
 import EA (EAAppEnv, runEAApp)
 import EA.Api.Mint (
   MintApi,
@@ -17,6 +14,8 @@ import EA.Api.Mint (
  )
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import Servant (HasServer (ServerT), type (:<|>) (..))
+import Servant.Swagger (toSwagger)
 
 --------------------------------------------------------------------------------
 

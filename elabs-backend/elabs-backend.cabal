@@ -49,6 +49,7 @@ common deps
     , persistent
     , persistent-sqlite
     , plutus-ledger-api
+    , plutus-tx
     , ply-core
     , random
     , relude
@@ -137,6 +138,9 @@ library
     EA.Api.Wallet
     EA.Internal
     EA.Script
+    EA.Script.Marketplace
+    EA.Tx.Changeblock.IO
+    EA.Tx.Changeblock.Operation
     EA.Tx.OneShotMint
     EA.Wallet
     Internal.Ipfs
