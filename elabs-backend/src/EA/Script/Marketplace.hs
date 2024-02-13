@@ -9,12 +9,13 @@ import PlutusTx.Prelude qualified as PlutusTx
 
 data MarketplaceAction
   = BUY
-  | WITHDRAW
+  | MERGE
   | SELL {newPrice :: Integer}
-  | CANCELL
+  | CANCEL
   | BUY_PARTIAL {amt :: Integer}
+  deriving stock (Show)
 
-PlutusTx.makeIsDataIndexed ''MarketplaceAction [('BUY, 0), ('WITHDRAW, 1), ('SELL, 2), ('CANCELL, 3), ('BUY_PARTIAL, 4)]
+PlutusTx.makeIsDataIndexed ''MarketplaceAction [('BUY, 0), ('MERGE, 1), ('SELL, 2), ('CANCEL, 3), ('BUY_PARTIAL, 4)]
 
 data MarketplaceScriptParams = MarketplaceScriptParams
   { mktSpOracleValidator :: ScriptHash
@@ -23,6 +24,7 @@ data MarketplaceScriptParams = MarketplaceScriptParams
   , mktSpOracleSymbol :: CurrencySymbol
   , mktSpOracleTokenName :: TokenName
   }
+  deriving stock (Show)
 
 PlutusTx.unstableMakeIsData ''MarketplaceScriptParams
 
@@ -35,6 +37,7 @@ data MarketplaceDatum = MarketplaceDatum
   , mktDtmIssuer :: PubKeyHash
   , mktDtmIsSell :: PlutusTx.Integer
   }
+  deriving stock (Show)
 
 PlutusTx.unstableMakeIsData ''MarketplaceDatum
 
@@ -45,6 +48,7 @@ data MarketplaceParams = MarketplaceParams
   , mktPrmOracleSymbol :: GYMintingPolicyId
   , mktPrmOracleTokenName :: GYTokenName
   }
+  deriving stock (Show)
 
 marketPlaceParamsToScriptParams :: MarketplaceParams -> MarketplaceScriptParams
 marketPlaceParamsToScriptParams MarketplaceParams {..} =

@@ -1,4 +1,4 @@
-module EA.Script (Scripts (..), oneShotMintingPolicy, carbonMintingPolicy, nftPolicy, marketplaceValidator, oracleMintingPolicy) where
+module EA.Script (Scripts (..), oneShotMintingPolicy, carbonMintingPolicy, nftMintingPolicy, marketplaceValidator, oracleMintingPolicy) where
 
 import EA.Internal (mintingPolicyFromPly, validatorFromPly)
 import EA.Script.Marketplace (MarketplaceParams, MarketplaceScriptParams (..), marketPlaceParamsToScriptParams)
@@ -38,8 +38,8 @@ carbonMintingPolicy oref tn scripts =
     txId = show . fst . txOutRefToTuple $ oref
     txIndx = fromIntegral . snd . txOutRefToTuple $ oref
 
-nftPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
-nftPolicy oref scripts =
+nftMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
+nftMintingPolicy oref scripts =
   mintingPolicyFromPly $
     scriptMintingNftPolicy scripts
       # txOutRefToPlutus oref
