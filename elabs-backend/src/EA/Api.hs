@@ -6,7 +6,8 @@ module EA.Api (
 where
 
 import Data.Swagger (Swagger)
-import EA (EAAppEnv, runEAApp)
+import EA (EAApp)
+import EA.Api.Carbon (CarbonApi, handleCarbonMint)
 import EA.Api.Mint (
   MintApi,
   handleOneShotMintByUserId,
@@ -20,11 +21,7 @@ import Servant.Swagger (toSwagger)
 --------------------------------------------------------------------------------
 
 type Api =
-  TxApi :<|> MintApi :<|> WalletApi
-
--- TODO:
--- type ChangeblockApi =
---   "api" :> "v0" :> CarbonApi :<|> OrderApi
+  TxApi :<|> MintApi :<|> WalletApi :<|> CarbonApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi
@@ -32,10 +29,11 @@ apiSwagger = toSwagger appApi
 appApi :: Proxy Api
 appApi = Proxy
 
-apiServer :: EAAppEnv -> ServerT Api IO
-apiServer env =
-  runEAApp env . handleTxApi
-    :<|> ( runEAApp env . handleOneShotMintByWallet
-            :<|> runEAApp env . handleOneShotMintByUserId
+apiServer :: ServerT Api EAApp
+apiServer =
+  handleTxApi
+    :<|> ( handleOneShotMintByWallet
+            :<|> handleOneShotMintByUserId
          )
-    :<|> runEAApp env . handleWalletApi
+    :<|> handleWalletApi
+    :<|> handleCarbonMint
