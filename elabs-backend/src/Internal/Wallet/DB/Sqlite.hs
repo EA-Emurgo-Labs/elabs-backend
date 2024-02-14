@@ -85,10 +85,19 @@ getIndexPair addr =
   , Tagged . fromSqlKey . entityKey $ addr
   )
 
+getAccounts ::
+  (MonadIO m) =>
+  ReaderT SqlBackend m [Entity Account]
+getAccounts = do
+  selectList [] []
+
+-- | Create an account if it does not exist
 createAccount :: (MonadIO m) => ReaderT SqlBackend m ()
 createAccount = do
-  time <- liftIO getCurrentTime
-  void $ insert (Account time)
+  accs <- getAccounts
+  when (null accs) $ do
+    time <- liftIO getCurrentTime
+    void $ insert (Account time)
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
