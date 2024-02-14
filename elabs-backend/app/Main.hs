@@ -205,7 +205,7 @@ app (Options {..}) = do
                     , scriptCarbonPolicy = carbonTypedScript
                     , scriptMintingNftPolicy = mintingNftTypedScript
                     , scriptMarketplaceValidator = marketplaceTypedScript
-                    , scriptOracleMintingPolicy = oracleTypedScript
+                    , scriptOracleValidator = oracleTypedScript
                     }
 
             metrics <- Metrics.initialize
@@ -230,17 +230,16 @@ app (Options {..}) = do
 
             bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
 
-            let
-              env =
-                EAAppEnv
-                  { eaAppEnvGYProviders = providers
-                  , eaAppEnvGYNetworkId = cfgNetworkId conf
-                  , eaAppEnvMetrics = metrics
-                  , eaAppEnvScripts = scripts
-                  , eaAppEnvSqlPool = pool
-                  , eaAppEnvRootKey = rootKey
-                  , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-                  }
+            let env =
+                  EAAppEnv
+                    { eaAppEnvGYProviders = providers
+                    , eaAppEnvGYNetworkId = cfgNetworkId conf
+                    , eaAppEnvMetrics = metrics
+                    , eaAppEnvScripts = scripts
+                    , eaAppEnvSqlPool = pool
+                    , eaAppEnvRootKey = rootKey
+                    , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+                    }
             gyLogInfo providers "app" $
               "Starting server at "
                 <> "http://localhost:"

@@ -85,7 +85,7 @@ withEASetup ioSetup putLog kont =
             , scriptCarbonPolicy = carbonTypedScript
             , scriptMintingNftPolicy = mintingNftTypedScript
             , scriptMarketplaceValidator = marketplaceTypedScript
-            , scriptOracleMintingPolicy = oracleTypedScript
+            , scriptOracleValidator = oracleTypedScript
             }
 
     -- Create Sqlite pool and run migrations
@@ -98,17 +98,16 @@ withEASetup ioSetup putLog kont =
 
     bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
 
-    let
-      env =
-        EAAppEnv
-          { eaAppEnvGYProviders = ctxProviders ctx
-          , eaAppEnvGYNetworkId = GYPrivnet
-          , eaAppEnvMetrics = metrics
-          , eaAppEnvScripts = scripts
-          , eaAppEnvSqlPool = pool
-          , eaAppEnvRootKey = rootKey
-          , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-          }
+    let env =
+          EAAppEnv
+            { eaAppEnvGYProviders = ctxProviders ctx
+            , eaAppEnvGYNetworkId = GYPrivnet
+            , eaAppEnvMetrics = metrics
+            , eaAppEnvScripts = scripts
+            , eaAppEnvSqlPool = pool
+            , eaAppEnvRootKey = rootKey
+            , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+            }
 
     -- DB migrations
     void $

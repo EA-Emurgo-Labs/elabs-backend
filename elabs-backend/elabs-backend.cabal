@@ -139,7 +139,6 @@ library
     EA.Internal
     EA.Script
     EA.Script.Marketplace
-    EA.Tx.Changeblock.IO
     EA.Tx.Changeblock.Operation
     EA.Tx.OneShotMint
     EA.Wallet
