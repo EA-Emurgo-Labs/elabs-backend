@@ -59,10 +59,12 @@ eaCreateAddresses userId n = do
               (createWalletIndexPair (Just userId) n)
         )
 
+-- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::
   EAApp (Maybe (Maybe (GYTxOutRef, Bool), PaymentKey))
 eaGetCollateralFromInternalWallet = eaGetInternalAddresses >>= getCollateral
 
+-- FIXME: Maybe Maybe??
 getCollateral ::
   [(GYAddress, PaymentKey)] ->
   EAApp (Maybe (Maybe (GYTxOutRef, Bool), PaymentKey))
