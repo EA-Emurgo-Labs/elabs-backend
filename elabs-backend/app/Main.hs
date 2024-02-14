@@ -3,84 +3,86 @@ module Main (main) where
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
-import Control.Monad.Logger (
-  LoggingT (runLoggingT),
-  fromLogStr,
- )
+import Control.Monad.Logger
+  ( LoggingT (runLoggingT),
+    fromLogStr,
+  )
 import Control.Monad.Metrics qualified as Metrics
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
-import Database.Persist.Sqlite (
-  createSqlitePool,
-  runSqlPool,
- )
+import Database.Persist.Sqlite
+  ( createSqlitePool,
+    runSqlPool,
+  )
 import EA (EAAppEnv (..), runEAApp)
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (..))
-import GeniusYield.GYConfig (
-  GYCoreConfig (cfgNetworkId),
-  coreConfigIO,
-  withCfgProviders,
- )
-import GeniusYield.Types (gyLog, gyLogInfo)
+import EA.Wallet (eaGetInternalAddresses)
+import GeniusYield.GYConfig
+  ( GYCoreConfig (cfgNetworkId),
+    coreConfigIO,
+    withCfgProviders,
+  )
+import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
 import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
-import Internal.Wallet.DB.Sqlite (runAutoMigration)
+import Internal.Wallet.DB.Sqlite (createAccount, runAutoMigration)
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors (
-  CorsResourcePolicy (corsRequestHeaders),
-  cors,
-  simpleCorsResourcePolicy,
- )
-import Options.Applicative (
-  Parser,
-  auto,
-  command,
-  execParser,
-  fullDesc,
-  header,
-  help,
-  helper,
-  info,
-  long,
-  option,
-  progDesc,
-  short,
-  showDefault,
-  strOption,
-  subparser,
-  value,
- )
+import Network.Wai.Middleware.Cors
+  ( CorsResourcePolicy (corsRequestHeaders),
+    cors,
+    simpleCorsResourcePolicy,
+  )
+import Options.Applicative
+  ( Parser,
+    auto,
+    command,
+    execParser,
+    fullDesc,
+    header,
+    help,
+    helper,
+    info,
+    long,
+    option,
+    progDesc,
+    short,
+    showDefault,
+    strOption,
+    subparser,
+    value,
+  )
 import Ply (readTypedScript)
 import Relude.Unsafe qualified as Unsafe
-import Servant (
-  Application,
-  Handler (Handler),
-  hoistServer,
-  serve,
- )
+import Servant
+  ( Application,
+    Handler (Handler),
+    hoistServer,
+    serve,
+  )
 import System.Environment (getEnv)
 
 --------------------------------------------------------------------------------
 
 data Options = Options
-  { optionsCoreConfigFile :: !String
-  , optionsScriptsFile :: !String
-  , optionsRootKeyFile :: !String
-  , optionsCommand :: !Commands
+  { optionsCoreConfigFile :: !String,
+    optionsScriptsFile :: !String,
+    optionsRootKeyFile :: !String,
+    optionsCommand :: !Commands
   }
 
 data Commands
   = RunServer ServerOptions
   | ExportSwagger SwaggerOptions
   | GenerateRootKey RootKeyOptions
+  | PrintInternalAddresses ServerOptions
 
 data ServerOptions = ServerOptions
-  { serverOptionsPort :: !Int
-  , serverOptionsSqliteFile :: !String
-  , serverOptionsSqlitePoolSize :: !Int
+  { serverOptionsPort :: !Int,
+    serverOptionsSqliteFile :: !String,
+    serverOptionsSqlitePoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -121,6 +123,7 @@ options =
       ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
           <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
           <> command "genrootkey" (info (GenerateRootKey <$> rootKeyOptions) (progDesc "Root key generation"))
+          <> command "internaladdresses" (info (PrintInternalAddresses <$> serverOptions) (progDesc "Print internal addresses"))
       )
 
 rootKeyOptions :: Parser RootKeyOptions
@@ -181,65 +184,15 @@ main = app =<< execParser opts
         )
 
 app :: Options -> IO ()
-app (Options {..}) = do
+app opts@(Options {..}) = do
   conf <- coreConfigIO optionsCoreConfigFile
 
   withCfgProviders conf "app" $
     \providers -> do
       case optionsCommand of
-        RunServer (ServerOptions {..}) ->
+        RunServer srvopts@(ServerOptions {..}) ->
           do
-            -- read .env in the environment
-            loadFile defaultConfig
-
-            -- TODO: This is one particular script
-            --       -> Make FromJSON instance of Scripts
-            policyTypedScript <- readTypedScript optionsScriptsFile
-            carbonTypedScript <- readTypedScript "contracts/carbon.json"
-            marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
-            oracleTypedScript <- readTypedScript "contracts/oracle.json"
-            mintingNftTypedScript <- readTypedScript "contracts/nft.json"
-            let scripts =
-                  Scripts
-                    { scriptsOneShotPolicy = policyTypedScript
-                    , scriptCarbonPolicy = carbonTypedScript
-                    , scriptMintingNftPolicy = mintingNftTypedScript
-                    , scriptMarketplaceValidator = marketplaceTypedScript
-                    , scriptOracleValidator = oracleTypedScript
-                    }
-
-            metrics <- Metrics.initialize
-
-            -- Create Sqlite pool and run migrations
-            pool <-
-              runLoggingT
-                ( createSqlitePool
-                    (T.pack serverOptionsSqliteFile)
-                    serverOptionsSqlitePoolSize
-                )
-                $ \_ _ lvl msg ->
-                  gyLog
-                    providers
-                    "db"
-                    (fromLogLevel lvl)
-                    (decodeUtf8 $ fromLogStr msg)
-            -- migrate tables
-            void $ runSqlPool runAutoMigration pool
-
-            rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
-
-            bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
-
-            let env =
-                  EAAppEnv
-                    { eaAppEnvGYProviders = providers
-                    , eaAppEnvGYNetworkId = cfgNetworkId conf
-                    , eaAppEnvMetrics = metrics
-                    , eaAppEnvScripts = scripts
-                    , eaAppEnvSqlPool = pool
-                    , eaAppEnvRootKey = rootKey
-                    , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-                    }
+            env <- initEAApp conf providers opts srvopts
             gyLogInfo providers "app" $
               "Starting server at "
                 <> "http://localhost:"
@@ -256,6 +209,68 @@ app (Options {..}) = do
               return
               (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
           writeRootKey optionsRootKeyFile $ genRootKeyFromMnemonic mw
+        PrintInternalAddresses srvOpts -> do
+          env <- initEAApp conf providers opts srvOpts
+          addrs <- runEAApp env eaGetInternalAddresses
+          putTextLn . show $ fst <$> addrs
+
+initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
+initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
+  -- read .env in the environment
+  loadFile defaultConfig
+
+  -- TODO: This is one particular script
+  --       -> Make FromJSON instance of Scripts
+  policyTypedScript <- readTypedScript optionsScriptsFile
+  carbonTypedScript <- readTypedScript "contracts/carbon.json"
+  marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
+  oracleTypedScript <- readTypedScript "contracts/oracle.json"
+  mintingNftTypedScript <- readTypedScript "contracts/nft.json"
+  let scripts =
+        Scripts
+          { scriptsOneShotPolicy = policyTypedScript,
+            scriptCarbonPolicy = carbonTypedScript,
+            scriptMintingNftPolicy = mintingNftTypedScript,
+            scriptMarketplaceValidator = marketplaceTypedScript,
+            scriptOracleValidator = oracleTypedScript
+          }
+
+  metrics <- Metrics.initialize
+
+  -- Create Sqlite pool and run migrations
+  pool <-
+    runLoggingT
+      ( createSqlitePool
+          (T.pack serverOptionsSqliteFile)
+          serverOptionsSqlitePoolSize
+      )
+      $ \_ _ lvl msg ->
+        gyLog
+          providers
+          "db"
+          (fromLogLevel lvl)
+          (decodeUtf8 $ fromLogStr msg)
+
+  -- migrate tables
+  void $
+    runSqlPool
+      (runAutoMigration >> createAccount)
+      pool
+
+  rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
+
+  bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+
+  return $
+    EAAppEnv
+      { eaAppEnvGYProviders = providers,
+        eaAppEnvGYNetworkId = cfgNetworkId conf,
+        eaAppEnvMetrics = metrics,
+        eaAppEnvScripts = scripts,
+        eaAppEnvSqlPool = pool,
+        eaAppEnvRootKey = rootKey,
+        eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+      }
 
 server :: EAAppEnv -> Application
 server env =

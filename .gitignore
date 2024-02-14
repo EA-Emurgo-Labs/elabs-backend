@@ -45,3 +45,4 @@ wallet.db*
 wallet.test.db*
 root.key
 .env
+sample-ipfs-file.txt
