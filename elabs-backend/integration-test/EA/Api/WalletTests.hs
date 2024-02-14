@@ -17,7 +17,7 @@ tests setup =
           \EACtx {..} -> do
             step "Sending GET request to /wallet/1"
             flip runSession (server eaCtxEnv) $ do
-              response <- Wai.get "/wallet/1"
+              response <- Wai.get "/api/v0/wallet/1"
               assertStatus 200 response
               assertBody expectedWalletResponse response
     ]

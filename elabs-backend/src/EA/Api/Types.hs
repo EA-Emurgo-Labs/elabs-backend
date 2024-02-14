@@ -1,4 +1,5 @@
 module EA.Api.Types (
+  AuthorizationHeader (..),
   UserId (..),
   SubmitTxParams (..),
   SubmitTxResponse (..),
@@ -114,6 +115,15 @@ instance PersistFieldSql UserId where
 
 data WalletResponse = WalletResponse
   { addresses :: ![GYAddress]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+--------------------------------------------------------------------------------
+-- Headers
+
+data AuthorizationHeader = AuthorizationHeader
+  { token :: T.Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)

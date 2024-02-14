@@ -37,6 +37,6 @@ tests setup =
 
             step "2. Sending GET request to /onee-shot-mint/1"
             flip runSession (server eaCtxEnv) $ do
-              response <- Wai.post "/one-shot-mint/1" ""
+              response <- Wai.post "/api/v0/one-shot-mint/1" ""
               assertStatus 200 response
     ]

@@ -1,7 +1,6 @@
 module EA.Api.Mint (
-  MintApi,
-  handleOneShotMintByUserId,
-  handleOneShotMintByWallet,
+  MintApi (..),
+  handleMintApi,
 )
 where
 
@@ -35,9 +34,35 @@ import GeniusYield.Types (
   randomTxOutRef,
  )
 import Internal.Wallet (PaymentKey, signTx)
-import Servant (Capture, JSON, Post, ReqBody, (:<|>), type (:>))
+import Servant (
+  Capture,
+  GenericMode ((:-)),
+  JSON,
+  NamedRoutes,
+  Post,
+  ReqBody,
+  ServerT,
+  type (:>), ToServantApi,
+ )
+import Servant.Swagger (HasSwagger (toSwagger))
 
-type MintApi = OneShotMintByWallet :<|> OneShotMintByUserId
+--------------------------------------------------------------------------------
+
+data MintApi mode = MintApi
+  { oneShotMintByWallet :: mode :- OneShotMintByWallet
+  , oneShotMintByUserId :: mode :- OneShotMintByUserId
+  }
+  deriving stock (Generic)
+
+instance HasSwagger (NamedRoutes MintApi) where
+  toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi MintApi))
+
+handleMintApi :: ServerT (NamedRoutes MintApi) EAApp
+handleMintApi =
+  MintApi
+    { oneShotMintByWallet = handleOneShotMintByWallet
+    , oneShotMintByUserId = handleOneShotMintByUserId
+    }
 
 type OneShotMintByWallet =
   "one-shot-mint"
