@@ -1,4 +1,4 @@
-module EA.Script (Scripts (..), oneShotMintingPolicy, carbonMintingPolicy, nftMintingPolicy, marketplaceValidator, oracleMintingPolicy) where
+module EA.Script (Scripts (..), oneShotMintingPolicy, carbonMintingPolicy, nftMintingPolicy, marketplaceValidator, oracleValidator) where
 
 import EA.Internal (mintingPolicyFromPly, validatorFromPly)
 import EA.Script.Marketplace (MarketplaceParams, MarketplaceScriptParams (..), marketPlaceParamsToScriptParams)
@@ -17,8 +17,8 @@ data Scripts = Scripts
   { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
   , scriptCarbonPolicy :: !(TypedScript 'MintingPolicyRole '[TxId, Integer, TokenName])
   , scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[TxOutRef])
-  , scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[ScriptHash, ScriptHash, TokenName, CurrencySymbol, TokenName])
-  , scriptOracleMintingPolicy :: !(TypedScript 'MintingPolicyRole '[AssetClass, PubKeyHash])
+  , scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[ScriptHash, PubKeyHash, TokenName, CurrencySymbol, TokenName])
+  , scriptOracleValidator :: !(TypedScript 'ValidatorRole '[AssetClass, PubKeyHash])
   }
 
 oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
@@ -55,9 +55,9 @@ marketplaceValidator mktParam scripts =
           # mktSpOracleSymbol
           # mktSpOracleTokenName
 
-oracleMintingPolicy :: GYAssetClass -> GYPubKeyHash -> Scripts -> GYMintingPolicy 'PlutusV2
-oracleMintingPolicy asset pHash scripts =
-  mintingPolicyFromPly $
-    scriptOracleMintingPolicy scripts
+oracleValidator :: GYAssetClass -> GYPubKeyHash -> Scripts -> GYValidator 'PlutusV2
+oracleValidator asset pHash scripts =
+  validatorFromPly $
+    scriptOracleValidator scripts
       # assetClassToPlutus asset
       # pubKeyHashToPlutus pHash
