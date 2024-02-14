@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
+
 module EA.Api (
   appApi,
   apiSwagger,
@@ -15,10 +16,12 @@ import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
 import Servant (
   GenericMode ((:-)),
+  HasServer (ServerT),
   NamedRoutes,
-  (:>), HasServer (ServerT), ToServantApi,
+  ToServantApi,
+  (:>),
  )
-import Servant.Swagger (toSwagger, HasSwagger)
+import Servant.Swagger (HasSwagger, toSwagger)
 
 --------------------------------------------------------------------------------
 
@@ -43,7 +46,7 @@ instance HasSwagger (NamedRoutes ChangeblockApi) where
 --   "api" :> "v0" :> CarbonApi :<|> OrderApi
 
 apiSwagger :: Swagger
-apiSwagger =  toSwagger appApi
+apiSwagger = toSwagger appApi
 
 appApi :: Proxy Api
 appApi = Proxy

@@ -42,7 +42,8 @@ import Servant (
   Post,
   ReqBody,
   ServerT,
-  type (:>), ToServantApi,
+  ToServantApi,
+  type (:>),
  )
 import Servant.Swagger (HasSwagger (toSwagger))
 
