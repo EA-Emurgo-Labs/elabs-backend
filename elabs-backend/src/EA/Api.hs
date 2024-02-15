@@ -4,7 +4,6 @@ module EA.Api (
   apiServer,
 ) where
 
-import Control.Exception (ErrorCall (ErrorCall))
 import Data.Swagger (Swagger)
 import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
 import EA.Api.Mint (
@@ -20,6 +19,7 @@ import Servant (
   Header,
   NamedRoutes,
   ToServantApi,
+  err401,
   hoistServer,
   (:>),
  )
@@ -77,12 +77,10 @@ changeblockServer' maybeAuthHeader =
   where
     run :: EAApp a -> EAApp a
     run action = case maybeAuthHeader of
-      -- TODO: err401
-      Nothing -> eaThrow . ErrorCall $ "No authentication header found."
+      Nothing -> eaThrow err401
       Just token -> do
         tokens <- asks eaAppEnvAuthTokens
         unless
           (unAuthorizationHeader token `elem` tokens)
-          (eaThrow . ErrorCall $ "Invalid token.")
-        -- TODO: err401
+          (eaThrow err401)
         action
