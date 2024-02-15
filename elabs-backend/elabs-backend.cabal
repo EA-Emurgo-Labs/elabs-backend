@@ -136,6 +136,7 @@ library
     EA.Api.Tx
     EA.Api.Types
     EA.Api.Wallet
+    EA.Auth
     EA.Internal
     EA.Script
     EA.Tx.OneShotMint

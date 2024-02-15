@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
 module EA.Api (
   appApi,
   apiSwagger,
@@ -14,8 +12,9 @@ import EA.Api.Mint (
   handleMintApi,
  )
 import EA.Api.Tx (TxApi, handleTxApi)
-import EA.Api.Types (AuthorizationHeader)
+import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import EA.Auth (validToken)
 import Servant (
   GenericMode ((:-)),
   HasServer (ServerT),
@@ -81,5 +80,10 @@ changeblockServer' maybeAuthHeader =
     run action = case maybeAuthHeader of
       -- TODO: err401
       Nothing -> eaThrow . ErrorCall $ "No authentication header found."
-      -- TODO: Check the token
-      Just _ -> action
+      Just token -> do
+        -- TODO: this data should be stored in the reader to prevent constant
+        -- database lookups
+        valid <- validToken . unAuthorizationHeader $ token
+        -- TODO: err401
+        unless valid (eaThrow . ErrorCall $ "Invalid token.")
+        action

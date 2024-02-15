@@ -6,6 +6,7 @@ module Internal.Wallet.DB.Sqlite (
   getInternalWalletIndexPairs',
   runAutoMigration,
   createAccount,
+  getTokens,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -28,6 +29,7 @@ import EA.Api.Types (UserId)
 import Internal.Wallet.DB.Schema (
   Account (Account),
   Address (..),
+  Auth (..),
   EntityField (..),
   migrateAll,
  )
@@ -101,3 +103,11 @@ createAccount = do
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
+
+getTokens ::
+  (MonadIO m) =>
+  ReaderT SqlBackend m [Text]
+getTokens = do
+  auths :: [Entity Auth] <- selectList [] []
+  return $
+    authToken . entityVal <$> auths
