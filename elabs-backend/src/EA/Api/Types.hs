@@ -1,4 +1,5 @@
 module EA.Api.Types (
+  AuthorizationHeader (..),
   UserId (..),
   SubmitTxParams (..),
   SubmitTxResponse (..),
@@ -117,3 +118,23 @@ data WalletResponse = WalletResponse
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+--------------------------------------------------------------------------------
+-- Headers
+
+data AuthorizationHeader = AuthorizationHeader
+  { unAuthorizationHeader :: T.Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass
+    ( Aeson.FromJSON
+    , Aeson.ToJSON
+    , Swagger.ToSchema
+    , Swagger.ToParamSchema
+    )
+
+instance FromHttpApiData AuthorizationHeader where
+  parseUrlPiece = Right . AuthorizationHeader
+
+instance ToHttpApiData AuthorizationHeader where
+  toUrlPiece = unAuthorizationHeader

@@ -1,23 +1,36 @@
 module EA.Api.WalletTests (tests) where
 
 import Data.ByteString.Lazy qualified as LB
+import Data.Maybe (fromJust)
+import EA (eaAppEnvAuthTokens)
+import EA.Test.Helpers qualified as Helpers
 import GeniusYield.Test.Privnet.Setup (Setup)
+import Network.HTTP.Types (methodGet)
 import Setup (EACtx (..), server, withEASetup)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertBody, assertStatus, runSession)
-import Test.Tasty.Wai qualified as Wai
 
 tests :: IO Setup -> TestTree
 tests setup =
   testGroup
     "Wallet tests"
-    [ testCaseSteps "Test /wallet endpoint" $
+    [ testCaseSteps "Test /api/v0/wallet endpoint" $
         \step -> withEASetup setup step $
           \EACtx {..} -> do
-            step "Sending GET request to /wallet/1"
+            step "Sending GET request to /api/v0/wallet/1"
             flip runSession (server eaCtxEnv) $ do
-              response <- Wai.get "/wallet/1"
+              let token =
+                    encodeUtf8
+                      . fromJust
+                      . viaNonEmpty head
+                      $ eaAppEnvAuthTokens eaCtxEnv
+              response <-
+                Helpers.request
+                  methodGet
+                  "/api/v0/wallet/1"
+                  ""
+                  [("Authorization", token)]
               assertStatus 200 response
               assertBody expectedWalletResponse response
     ]
