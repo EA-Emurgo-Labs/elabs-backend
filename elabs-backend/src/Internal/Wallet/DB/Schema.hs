@@ -56,6 +56,7 @@ Address
 
 Auth
   token Text
+  notes Text
   created UTCTime default=CURRENT_TIME
   deriving Show
 
