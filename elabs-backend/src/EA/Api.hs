@@ -6,19 +6,23 @@ module EA.Api (
   apiServer,
 ) where
 
+import Control.Exception (ErrorCall (ErrorCall))
 import Data.Swagger (Swagger)
-import EA (EAApp)
+import EA (EAApp, eaThrow)
 import EA.Api.Mint (
   MintApi (..),
   handleMintApi,
  )
 import EA.Api.Tx (TxApi, handleTxApi)
+import EA.Api.Types (AuthorizationHeader)
 import EA.Api.Wallet (WalletApi, handleWalletApi)
 import Servant (
   GenericMode ((:-)),
   HasServer (ServerT),
+  Header,
   NamedRoutes,
   ToServantApi,
+  hoistServer,
   (:>),
  )
 import Servant.Swagger (HasSwagger, toSwagger)
@@ -28,7 +32,7 @@ import Servant.Swagger (HasSwagger, toSwagger)
 type Api =
   "api"
     :> "v0"
-    -- :> Header "Authorization" AuthorizationHeader
+    :> Header "Authorization" AuthorizationHeader
     :> NamedRoutes ChangeblockApi
 
 data ChangeblockApi mode = ChangeblockApi
@@ -52,9 +56,30 @@ appApi :: Proxy Api
 appApi = Proxy
 
 apiServer :: ServerT Api EAApp
-apiServer =
+apiServer = changeblockServer'
+
+changeblockServer ::
+  Maybe AuthorizationHeader ->
+  ServerT (NamedRoutes ChangeblockApi) EAApp
+changeblockServer _ =
   ChangeblockApi
     { txApi = handleTxApi
     , mintApi = handleMintApi
     , walletApi = handleWalletApi
     }
+
+changeblockServer' ::
+  Maybe AuthorizationHeader ->
+  ServerT (NamedRoutes ChangeblockApi) EAApp
+changeblockServer' maybeAuthHeader =
+  hoistServer
+    (Proxy @(NamedRoutes ChangeblockApi))
+    run
+    (changeblockServer maybeAuthHeader)
+  where
+    run :: EAApp a -> EAApp a
+    run action = case maybeAuthHeader of
+      -- TODO: err401
+      Nothing -> eaThrow . ErrorCall $ "No authentication header found."
+      -- TODO: Check the token
+      Just _ -> action

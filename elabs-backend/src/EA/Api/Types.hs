@@ -123,7 +123,18 @@ data WalletResponse = WalletResponse
 -- Headers
 
 data AuthorizationHeader = AuthorizationHeader
-  { token :: T.Text
+  { unAuthorizationHeader :: T.Text
   }
   deriving stock (Show, Generic)
-  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+  deriving anyclass
+    ( Aeson.FromJSON
+    , Aeson.ToJSON
+    , Swagger.ToSchema
+    , Swagger.ToParamSchema
+    )
+
+instance FromHttpApiData AuthorizationHeader where
+  parseUrlPiece = Right . AuthorizationHeader
+
+instance ToHttpApiData AuthorizationHeader where
+  toUrlPiece = unAuthorizationHeader
