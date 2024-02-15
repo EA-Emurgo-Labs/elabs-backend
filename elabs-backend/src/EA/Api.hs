@@ -6,7 +6,7 @@ module EA.Api (
 
 import Control.Exception (ErrorCall (ErrorCall))
 import Data.Swagger (Swagger)
-import EA (EAApp, eaThrow)
+import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
 import EA.Api.Mint (
   MintApi (..),
   handleMintApi,
@@ -14,7 +14,6 @@ import EA.Api.Mint (
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
-import EA.Auth (validToken)
 import Servant (
   GenericMode ((:-)),
   HasServer (ServerT),
@@ -81,9 +80,9 @@ changeblockServer' maybeAuthHeader =
       -- TODO: err401
       Nothing -> eaThrow . ErrorCall $ "No authentication header found."
       Just token -> do
-        -- TODO: this data should be stored in the reader to prevent constant
-        -- database lookups
-        valid <- validToken . unAuthorizationHeader $ token
+        tokens <- asks eaAppEnvAuthTokens
+        unless
+          (unAuthorizationHeader token `elem` tokens)
+          (eaThrow . ErrorCall $ "Invalid token.")
         -- TODO: err401
-        unless valid (eaThrow . ErrorCall $ "Invalid token.")
         action

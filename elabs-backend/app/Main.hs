@@ -27,7 +27,7 @@ import GeniusYield.GYConfig (
  )
 import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
 import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
-import Internal.Wallet.DB.Sqlite (createAccount, runAutoMigration)
+import Internal.Wallet.DB.Sqlite (createAccount, getTokens, runAutoMigration)
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors (
@@ -252,9 +252,9 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
           (decodeUtf8 $ fromLogStr msg)
 
   -- migrate tables
-  void $
+  tokens <-
     runSqlPool
-      (runAutoMigration >> createAccount)
+      (runAutoMigration >> createAccount >> getTokens)
       pool
 
   rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
@@ -270,6 +270,7 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvSqlPool = pool
       , eaAppEnvRootKey = rootKey
       , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+      , eaAppEnvAuthTokens = tokens
       }
 
 server :: EAAppEnv -> Application

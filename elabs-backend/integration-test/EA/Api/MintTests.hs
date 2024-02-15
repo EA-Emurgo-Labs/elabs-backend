@@ -1,6 +1,7 @@
 module EA.Api.MintTests (tests) where
 
-import EA (eaLiftMaybe, runEAApp)
+import Data.Maybe (fromJust)
+import EA (eaAppEnvAuthTokens, eaLiftMaybe, runEAApp)
 import EA.Api.Types (UserId (UserId))
 import EA.Test.Helpers qualified as Helpers
 import EA.Wallet (eaGetAddresses)
@@ -39,11 +40,16 @@ tests setup =
 
             step "2. Sending GET request to /api/v0/onee-shot-mint/1"
             flip runSession (server eaCtxEnv) $ do
+              let token =
+                    encodeUtf8
+                      . fromJust
+                      . viaNonEmpty head
+                      $ eaAppEnvAuthTokens eaCtxEnv
               response <-
                 Helpers.request
                   methodPost
                   "/api/v0/one-shot-mint/1"
                   ""
-                  [("Authorization", "token")]
+                  [("Authorization", token)]
               assertStatus 200 response
     ]
