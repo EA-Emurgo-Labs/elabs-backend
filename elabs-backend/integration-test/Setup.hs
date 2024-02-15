@@ -1,9 +1,9 @@
-module Setup (
-  EACtx (..),
-  withEASetup,
-  server,
-  cleanupSetup,
-)
+module Setup
+  ( EACtx (..),
+    withEASetup,
+    server,
+    cleanupSetup,
+  )
 where
 
 import Configuration.Dotenv (defaultConfig, loadFile)
@@ -18,30 +18,30 @@ import EA.Api (apiServer, appApi)
 import EA.Script (Scripts (..))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
-import GeniusYield.Test.Privnet.Ctx (
-  Ctx (..),
-  ctxProviders,
-  ctxRunI,
-  submitTx,
- )
+import GeniusYield.Test.Privnet.Ctx
+  ( Ctx (..),
+    ctxProviders,
+    ctxRunI,
+    submitTx,
+  )
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (mustHaveOutput)
-import GeniusYield.Types (
-  GYNetworkId (GYPrivnet),
-  GYTxOut (GYTxOut),
-  valueFromLovelace,
- )
-import Internal.Wallet.DB.Sqlite (
-  createAccount,
-  runAutoMigration,
- )
+import GeniusYield.Types
+  ( GYNetworkId (GYPrivnet),
+    GYTxOut (GYTxOut),
+    valueFromLovelace,
+  )
+import Internal.Wallet.DB.Sqlite
+  ( createAccount,
+    runAutoMigration,
+  )
 import Ply (readTypedScript)
-import Servant (
-  Application,
-  Handler (Handler),
-  hoistServer,
-  serve,
- )
+import Servant
+  ( Application,
+    Handler (Handler),
+    hoistServer,
+    serve,
+  )
 import System.Directory (doesFileExist, removeFile)
 import System.Environment (getEnv)
 import System.FilePath.Glob (glob)
@@ -50,8 +50,8 @@ import System.Random (randomRIO)
 --------------------------------------------------------------------------------
 
 data EACtx = EACtx
-  { eaCtxCtx :: Ctx
-  , eaCtxEnv :: EAAppEnv
+  { eaCtxCtx :: Ctx,
+    eaCtxEnv :: EAAppEnv
   }
 
 withEASetup ::
@@ -65,27 +65,28 @@ withEASetup ioSetup putLog kont =
     loadFile defaultConfig
 
     id <- randomString 10
-    let
-      -- TODO: load this dynamically, also check cleanupSetup function
-      optionsScriptsFile = "scripts.debug.json"
-      optionsSqliteFile = "wallet.test." <> id <> ".db"
+    let -- TODO: load this dynamically, also check cleanupSetup function
+        optionsScriptsFile = "scripts.debug.json"
+        optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
     rootKey <- createRootKey
 
     -- TODO: PIYUSH => Load script better
     policyTypedScript <- readTypedScript optionsScriptsFile
-    carbonTypedScript <- readTypedScript "contracts/carbon.json"
+    carbonNftTypedScript <- readTypedScript "contracts/carbon-nft.json"
+    carbonTokenTypedScript <- readTypedScript "contracts/carbon-token.json"
     marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
     oracleTypedScript <- readTypedScript "contracts/oracle.json"
     mintingNftTypedScript <- readTypedScript "contracts/nft.json"
     let scripts =
           Scripts
-            { scriptsOneShotPolicy = policyTypedScript
-            , scriptCarbonPolicy = carbonTypedScript
-            , scriptMintingNftPolicy = mintingNftTypedScript
-            , scriptMarketplaceValidator = marketplaceTypedScript
-            , scriptOracleValidator = oracleTypedScript
+            { scriptsOneShotPolicy = policyTypedScript,
+              scriptCarbonNftPolicy = carbonNftTypedScript,
+              scriptCarbonTokenPolicy = carbonTokenTypedScript,
+              scriptMintingNftPolicy = mintingNftTypedScript,
+              scriptMarketplaceValidator = marketplaceTypedScript,
+              scriptOracleValidator = oracleTypedScript
             }
 
     -- Create Sqlite pool and run migrations
@@ -100,13 +101,13 @@ withEASetup ioSetup putLog kont =
 
     let env =
           EAAppEnv
-            { eaAppEnvGYProviders = ctxProviders ctx
-            , eaAppEnvGYNetworkId = GYPrivnet
-            , eaAppEnvMetrics = metrics
-            , eaAppEnvScripts = scripts
-            , eaAppEnvSqlPool = pool
-            , eaAppEnvRootKey = rootKey
-            , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+            { eaAppEnvGYProviders = ctxProviders ctx,
+              eaAppEnvGYNetworkId = GYPrivnet,
+              eaAppEnvMetrics = metrics,
+              eaAppEnvScripts = scripts,
+              eaAppEnvSqlPool = pool,
+              eaAppEnvRootKey = rootKey,
+              eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
             }
 
     -- DB migrations

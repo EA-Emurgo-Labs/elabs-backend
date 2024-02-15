@@ -29,6 +29,7 @@ common deps
     , aeson-pretty
     , atlas-cardano
     , base
+    , base16
     , bytestring
     , cardano-addresses
     , cardano-api
