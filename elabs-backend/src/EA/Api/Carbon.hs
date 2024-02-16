@@ -1,7 +1,7 @@
 module EA.Api.Carbon (
   CarbonApi,
   CarbonMintRequest (..),
-  handleCarbonMint,
+  handleCarbonApi,
 )
 where
 
@@ -78,10 +78,10 @@ data CarbonMintResponse = CarbonMintResponse
 
 --------------------------------------------------------------------------------
 
-handleCarbonMint ::
+handleCarbonApi ::
   MultipartData Tmp ->
   EAApp CarbonMintResponse
-handleCarbonMint multipartData = do
+handleCarbonApi multipartData = do
   filePart <- eaLiftEither id $ lookupFile "file" multipartData
   dataPart <- eaLiftEither id $ lookupInput "data" multipartData
 

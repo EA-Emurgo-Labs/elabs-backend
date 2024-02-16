@@ -182,6 +182,7 @@ executable integration-test
   hs-source-dirs: integration-test
   main-is:        Main.hs
   other-modules:
+    EA.Api.Carbon
     EA.Api.MintTests
     EA.Api.WalletTests
     Setup
