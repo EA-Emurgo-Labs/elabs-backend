@@ -35,13 +35,13 @@ mintIpfsNftCarbonToken oref marketplaceAddr ownerAddr pkh tn mktSalePrice qty sc
 
       marketPlaceDatum =
         MarketplaceDatum
-          { mktDtmOwner = pubKeyHashToPlutus pkh,
-            mktDtmIssuer = pubKeyHashToPlutus pkh,
-            mktDtmIsSell = 1,
-            mktDtmSalePrice = mktSalePrice,
-            mktDtmAssetSymbol = mintingPolicyCurrencySymbol carbonTokenPolicy,
-            mktDtmAssetName = tokenNameToPlutus tn,
-            mktDtmAmount = qty
+          { mktDtmOwner = pubKeyHashToPlutus pkh
+          , mktDtmIssuer = pubKeyHashToPlutus pkh
+          , mktDtmIsSell = 1
+          , mktDtmSalePrice = mktSalePrice
+          , mktDtmAssetSymbol = mintingPolicyCurrencySymbol carbonTokenPolicy
+          , mktDtmAssetName = tokenNameToPlutus tn
+          , mktDtmAmount = qty
           }
    in mustMint (GYMintScript carbonNftPolicy) unitRedeemer tn 1
         <> mustMint (GYMintScript carbonTokenPolicy) unitRedeemer tn qty
