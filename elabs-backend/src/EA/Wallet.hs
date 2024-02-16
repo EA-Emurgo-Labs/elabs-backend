@@ -1,31 +1,30 @@
-module EA.Wallet (
-  eaGetCollateral,
-  eaCreateAddresses,
-  eaGetInternalAddresses,
-  eaGetCollateralFromInternalWallet,
-  eaGetAddresses,
-  eaSelectOref,
-)
+module EA.Wallet
+  ( eaGetCollateral,
+    eaCreateAddresses,
+    eaGetInternalAddresses,
+    eaGetCollateralFromInternalWallet,
+    eaGetAddresses,
+    eaSelectOref,
+  )
 where
 
 import Database.Persist.Sql (runSqlPool)
 import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaGetCollateral, eaLiftEither)
 import EA.Api.Types (UserId)
-import GeniusYield.Types (
-  GYAddress,
-  GYProviders,
-  GYTxOutRef,
-  GYUTxO (utxoRef),
-  filterUTxOs,
-  gyQueryUtxosAtAddresses,
-  randomTxOutRef,
- )
+import GeniusYield.Types
+  ( GYAddress,
+    GYTxOutRef,
+    GYUTxO (utxoRef),
+    filterUTxOs,
+    gyQueryUtxosAtAddresses,
+    randomTxOutRef,
+  )
 import Internal.Wallet (PaymentKey, deriveAddress)
-import Internal.Wallet.DB.Sqlite (
-  createWalletIndexPair,
-  getInternalWalletIndexPairs',
-  getWalletIndexPairs',
- )
+import Internal.Wallet.DB.Sqlite
+  ( createWalletIndexPair,
+    getInternalWalletIndexPairs',
+    getWalletIndexPairs',
+  )
 
 --------------------------------------------------------------------------------
 
@@ -79,14 +78,14 @@ getCollateral ((addr, key) : pairs) = do
     Just (oref, _) -> return $ Just (Just (oref, True), key)
 
 eaSelectOref ::
-  GYProviders ->
   [(GYAddress, PaymentKey)] ->
   (GYTxOutRef -> Bool) ->
   EAApp (Maybe (GYAddress, PaymentKey, GYTxOutRef))
-eaSelectOref _ [] _ = return Nothing
-eaSelectOref providers ((addr, key) : pairs) checkOref = do
+eaSelectOref [] _ = return Nothing
+eaSelectOref ((addr, key) : pairs) checkOref = do
+  providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtAddresses providers [addr]
   moref <- liftIO $ randomTxOutRef $ filterUTxOs (checkOref . utxoRef) utxos
   case moref of
-    Nothing -> eaSelectOref providers pairs checkOref
+    Nothing -> eaSelectOref pairs checkOref
     Just (oref, _) -> return $ Just (addr, key, oref)

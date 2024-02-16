@@ -1,8 +1,8 @@
-module EA.Api.Carbon (
-  CarbonApi,
-  CarbonMintRequest (..),
-  handleCarbonMint,
-)
+module EA.Api.Carbon
+  ( CarbonApi,
+    CarbonMintRequest (..),
+    handleCarbonMint,
+  )
 where
 
 import Data.Aeson qualified as Aeson
@@ -22,13 +22,13 @@ import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
 import Internal.Wallet qualified as Wallet
 import Servant (Header, JSON, Post, type (:>))
-import Servant.Multipart (
-  MultipartData,
-  MultipartForm,
-  Tmp,
-  lookupFile,
-  lookupInput,
- )
+import Servant.Multipart
+  ( MultipartData,
+    MultipartForm,
+    Tmp,
+    lookupFile,
+    lookupInput,
+  )
 import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
@@ -56,22 +56,22 @@ instance {-# OVERLAPPING #-} HasSwagger CarbonApi where
 --------------------------------------------------------------------------------
 
 data CarbonMintRequest = CarbonMintRequest
-  { userId :: !UserId
-  -- ^ The user ID.
-  , amount :: !Natural
-  -- ^ The amount of carbon to mint.
-  , sell :: !Natural
-  -- ^ The sell price per unit of carbon.
+  { -- | The user ID.
+    userId :: !UserId,
+    -- | The amount of carbon to mint.
+    amount :: !Natural,
+    -- | The sell price per unit of carbon.
+    sell :: !Natural
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data CarbonMintResponse = CarbonMintResponse
-  { ipfsHash :: !Text
-  , ipfsName :: !Text
-  , ipfsSize :: !Text
-  , ipfsPinningState :: !Text
-  , submitTxInfo :: !SubmitTxResponse
+  { ipfsHash :: !Text,
+    ipfsName :: !Text,
+    ipfsSize :: !Text,
+    ipfsPinningState :: !Text,
+    submitTxInfo :: !SubmitTxResponse
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
@@ -97,7 +97,7 @@ handleCarbonMint multipartData = do
   pairs <- eaGetAddresses (userId request)
   (userAddr, _) <- eaLiftMaybe "No addresses found" (listToMaybe pairs)
   (collateral, colKey) <- eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
-  (addr, key, oref) <- eaSelectOref providers (pairs ++ internalAddrPairs) (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
+  (addr, key, oref) <- eaSelectOref (pairs ++ internalAddrPairs) (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
 
   issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash addr)
 
@@ -109,11 +109,11 @@ handleCarbonMint multipartData = do
       orcValidatorHash = validatorHash $ oracleValidator orcAssetClass issuer scripts
       marketParams =
         MarketplaceParams
-          { mktPrmOracleValidator = orcValidatorHash
-          , mktPrmEscrowValidator = issuer -- TODO: User proper pubkeyhash of escrow
-          , mktPrmVersion = unsafeTokenNameFromHex "76312e302e30" -- It can be any string for now using v1.0.0
-          , mktPrmOracleSymbol = oracleNftAsset
-          , mktPrmOracleTokenName = oracleNftAssetName
+          { mktPrmOracleValidator = orcValidatorHash,
+            mktPrmEscrowValidator = issuer, -- TODO: User proper pubkeyhash of escrow
+            mktPrmVersion = unsafeTokenNameFromHex "76312e302e30", -- It can be any string for now using v1.0.0
+            mktPrmOracleSymbol = oracleNftAsset,
+            mktPrmOracleTokenName = oracleNftAssetName
           }
 
   ipfsAddResp <- ipfsAddFile filePart
