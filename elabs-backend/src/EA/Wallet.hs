@@ -82,11 +82,11 @@ eaSelectOref ::
   GYProviders ->
   [(GYAddress, PaymentKey)] ->
   (GYTxOutRef -> Bool) ->
-  IO (Maybe (GYAddress, PaymentKey, GYTxOutRef))
+  EAApp (Maybe (GYAddress, PaymentKey, GYTxOutRef))
 eaSelectOref _ [] _ = return Nothing
 eaSelectOref providers ((addr, key) : pairs) checkOref = do
-  utxos <- gyQueryUtxosAtAddresses providers [addr]
-  moref <- randomTxOutRef $ filterUTxOs (checkOref . utxoRef) utxos
+  utxos <- liftIO $ gyQueryUtxosAtAddresses providers [addr]
+  moref <- liftIO $ randomTxOutRef $ filterUTxOs (checkOref . utxoRef) utxos
   case moref of
     Nothing -> eaSelectOref providers pairs checkOref
     Just (oref, _) -> return $ Just (addr, key, oref)
