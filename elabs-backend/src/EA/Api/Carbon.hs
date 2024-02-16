@@ -100,8 +100,6 @@ handleCarbonMint multipartData = do
   (addr, key, oref) <- eaSelectOref providers (pairs ++ internalAddrPairs) (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
 
   issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash addr)
-  putStrLn $ "collateral " <> show collateral
-  putStrLn $ "Selected Oref " <> show oref
 
   -- TODO: User proper policyId for Oracle NFT
   let oracleNftAsset = mintingPolicyId $ nftMintingPolicy oref scripts
@@ -126,7 +124,7 @@ handleCarbonMint multipartData = do
   let tokenName = unsafeTokenNameFromHex $ encodeBase16 $ T.take 10 $ T.append "CBLK" ipfsAddResp.ipfs_hash
   txBody <-
     liftIO $
-      runGYTxMonadNode nid providers [addr] userAddr Nothing $
+      runGYTxMonadNode nid providers [addr] addr collateral $
         mintIpfsNftCarbonToken oref marketParams userAddr issuer tokenName (toInteger $ sell request) (toInteger $ amount request) scripts
 
   void $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
