@@ -2,7 +2,8 @@ module EA.Api (
   appApi,
   apiServer,
   apiSwagger,
-) where
+)
+where
 
 import Data.Swagger (Swagger)
 import EA (EAApp)

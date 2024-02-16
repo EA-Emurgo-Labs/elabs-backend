@@ -222,17 +222,19 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
   -- TODO: This is one particular script
   --       -> Make FromJSON instance of Scripts
   policyTypedScript <- readTypedScript optionsScriptsFile
-  carbonTypedScript <- readTypedScript "contracts/carbon.json"
+  carbonTokenTypedScript <- readTypedScript "contracts/carbon-token.json"
+  carbonNftTypedScript <- readTypedScript "contracts/carbon-nft.json"
   marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
   oracleTypedScript <- readTypedScript "contracts/oracle.json"
   mintingNftTypedScript <- readTypedScript "contracts/nft.json"
   let scripts =
         Scripts
           { scriptsOneShotPolicy = policyTypedScript
-          , scriptCarbonPolicy = carbonTypedScript
+          , scriptCarbonNftPolicy = carbonNftTypedScript
+          , scriptCarbonTokenPolicy = carbonTokenTypedScript
           , scriptMintingNftPolicy = mintingNftTypedScript
           , scriptMarketplaceValidator = marketplaceTypedScript
-          , scriptOracleMintingPolicy = oracleTypedScript
+          , scriptOracleValidator = oracleTypedScript
           }
 
   metrics <- Metrics.initialize

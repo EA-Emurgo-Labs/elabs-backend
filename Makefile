@@ -54,3 +54,6 @@ swagger:
 
 run:
 	cabal run elabs-backend:app -j$(THREADS) -- run
+
+show-internal-address:
+	cabal run elabs-backend:app -- internaladdresses
