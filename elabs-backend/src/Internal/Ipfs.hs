@@ -6,14 +6,10 @@ module Internal.Ipfs (
   ipfsPinObject,
 ) where
 
-import Control.Exception (ErrorCall (ErrorCall))
-import Data.ByteString.Lazy qualified as LBS
-import Data.Text qualified as T
 import EA (
   EAApp,
   EAAppEnv (eaAppEnvBlockfrostIpfsProjectId),
   eaLiftEither,
-  eaThrow,
  )
 import Internal.Ipfs.Types (IpfsAddResponse, IpfsListResponse, IpfsPin)
 import Network.HTTP.Client (newManager)
@@ -37,14 +33,12 @@ import Servant.Client (
   runClientM,
  )
 import Servant.Multipart (
-  FileData (FileData),
+  FileData,
   MultipartData (MultipartData),
   MultipartForm,
   Tmp,
  )
 import Servant.Multipart.Client ()
-import System.Directory (doesFileExist)
-import System.FilePath (takeBaseName)
 
 --------------------------------------------------------------------------------
 
@@ -93,24 +87,15 @@ ipfsPinnedObjects = do
     =<< (liftIO . runClient' $ ipfsList (Just token))
 
 -- | Add a file to IPFS
-ipfsAddFile :: FilePath -> EAApp IpfsAddResponse
-ipfsAddFile fp = do
+ipfsAddFile :: FileData Tmp -> EAApp IpfsAddResponse
+ipfsAddFile fileData = do
   token <- asks eaAppEnvBlockfrostIpfsProjectId
-  hasFile <- liftIO $ doesFileExist fp
-  if hasFile
-    then do
-      _fileContents <- liftIO $ LBS.readFile fp
-      let
-        fn = T.pack $ takeBaseName fp
-        multipart =
-          MultipartData
-            []
-            [FileData "file" fn "application/octet-stream" fp]
-      eaLiftEither show
-        =<< ( liftIO . runClient' $
-                ipfsAdd (Just token) ("----EalabsBackendBoundary", multipart)
-            )
-    else eaThrow . ErrorCall $ "File not found: " ++ fp
+  eaLiftEither show
+    =<< ( liftIO . runClient' $
+            ipfsAdd (Just token) ("----EalabsBackendBoundary", multipart)
+        )
+  where
+    multipart = MultipartData [] [fileData]
 
 -- | Pin an object
 ipfsPinObject :: Text -> EAApp IpfsPin
