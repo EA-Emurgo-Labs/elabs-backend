@@ -3,74 +3,74 @@ module Main (main) where
 import Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic))
 import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
-import Control.Monad.Logger
-  ( LoggingT (runLoggingT),
-    fromLogStr,
-  )
+import Control.Monad.Logger (
+  LoggingT (runLoggingT),
+  fromLogStr,
+ )
 import Control.Monad.Metrics qualified as Metrics
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.Text qualified as T
-import Database.Persist.Sqlite
-  ( createSqlitePool,
-    runSqlPool,
-  )
+import Database.Persist.Sqlite (
+  createSqlitePool,
+  runSqlPool,
+ )
 import EA (EAAppEnv (..), runEAApp)
 import EA.Api (apiServer, apiSwagger, appApi)
 import EA.Internal (fromLogLevel)
 import EA.Script (Scripts (..))
 import EA.Wallet (eaGetInternalAddresses)
-import GeniusYield.GYConfig
-  ( GYCoreConfig (cfgNetworkId),
-    coreConfigIO,
-    withCfgProviders,
-  )
+import GeniusYield.GYConfig (
+  GYCoreConfig (cfgNetworkId),
+  coreConfigIO,
+  withCfgProviders,
+ )
 import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
 import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
 import Internal.Wallet.DB.Sqlite (createAccount, runAutoMigration)
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.Cors
-  ( CorsResourcePolicy (corsRequestHeaders),
-    cors,
-    simpleCorsResourcePolicy,
-  )
-import Options.Applicative
-  ( Parser,
-    auto,
-    command,
-    execParser,
-    fullDesc,
-    header,
-    help,
-    helper,
-    info,
-    long,
-    option,
-    progDesc,
-    short,
-    showDefault,
-    strOption,
-    subparser,
-    value,
-  )
+import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsRequestHeaders),
+  cors,
+  simpleCorsResourcePolicy,
+ )
+import Options.Applicative (
+  Parser,
+  auto,
+  command,
+  execParser,
+  fullDesc,
+  header,
+  help,
+  helper,
+  info,
+  long,
+  option,
+  progDesc,
+  short,
+  showDefault,
+  strOption,
+  subparser,
+  value,
+ )
 import Ply (readTypedScript)
 import Relude.Unsafe qualified as Unsafe
-import Servant
-  ( Application,
-    Handler (Handler),
-    hoistServer,
-    serve,
-  )
+import Servant (
+  Application,
+  Handler (Handler),
+  hoistServer,
+  serve,
+ )
 import System.Environment (getEnv)
 
 --------------------------------------------------------------------------------
 
 data Options = Options
-  { optionsCoreConfigFile :: !String,
-    optionsScriptsFile :: !String,
-    optionsRootKeyFile :: !String,
-    optionsCommand :: !Commands
+  { optionsCoreConfigFile :: !String
+  , optionsScriptsFile :: !String
+  , optionsRootKeyFile :: !String
+  , optionsCommand :: !Commands
   }
 
 data Commands
@@ -80,9 +80,9 @@ data Commands
   | PrintInternalAddresses ServerOptions
 
 data ServerOptions = ServerOptions
-  { serverOptionsPort :: !Int,
-    serverOptionsSqliteFile :: !String,
-    serverOptionsSqlitePoolSize :: !Int
+  { serverOptionsPort :: !Int
+  , serverOptionsSqliteFile :: !String
+  , serverOptionsSqlitePoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -229,12 +229,12 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
   mintingNftTypedScript <- readTypedScript "contracts/nft.json"
   let scripts =
         Scripts
-          { scriptsOneShotPolicy = policyTypedScript,
-            scriptCarbonNftPolicy = carbonNftTypedScript,
-            scriptCarbonTokenPolicy = carbonTokenTypedScript,
-            scriptMintingNftPolicy = mintingNftTypedScript,
-            scriptMarketplaceValidator = marketplaceTypedScript,
-            scriptOracleValidator = oracleTypedScript
+          { scriptsOneShotPolicy = policyTypedScript
+          , scriptCarbonNftPolicy = carbonNftTypedScript
+          , scriptCarbonTokenPolicy = carbonTokenTypedScript
+          , scriptMintingNftPolicy = mintingNftTypedScript
+          , scriptMarketplaceValidator = marketplaceTypedScript
+          , scriptOracleValidator = oracleTypedScript
           }
 
   metrics <- Metrics.initialize
@@ -265,13 +265,13 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
 
   return $
     EAAppEnv
-      { eaAppEnvGYProviders = providers,
-        eaAppEnvGYNetworkId = cfgNetworkId conf,
-        eaAppEnvMetrics = metrics,
-        eaAppEnvScripts = scripts,
-        eaAppEnvSqlPool = pool,
-        eaAppEnvRootKey = rootKey,
-        eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+      { eaAppEnvGYProviders = providers
+      , eaAppEnvGYNetworkId = cfgNetworkId conf
+      , eaAppEnvMetrics = metrics
+      , eaAppEnvScripts = scripts
+      , eaAppEnvSqlPool = pool
+      , eaAppEnvRootKey = rootKey
+      , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
       }
 
 server :: EAAppEnv -> Application

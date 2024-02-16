@@ -5,20 +5,20 @@ import EA.Script.Marketplace (MarketplaceParams, MarketplaceScriptParams (..), m
 import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName, TxOutRef)
 import PlutusLedgerApi.V1.Value (AssetClass)
-import Ply
-  ( AsData (AsData),
-    ScriptRole (MintingPolicyRole, ValidatorRole),
-    TypedScript,
-    (#),
-  )
+import Ply (
+  AsData (AsData),
+  ScriptRole (MintingPolicyRole, ValidatorRole),
+  TypedScript,
+  (#),
+ )
 
 data Scripts = Scripts
-  { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef]),
-    scriptCarbonNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef, AsData TokenName]),
-    scriptCarbonTokenPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TokenName]),
-    scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef]),
-    scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[AsData ScriptHash, AsData PubKeyHash, AsData TokenName, AsData CurrencySymbol, AsData TokenName]),
-    scriptOracleValidator :: !(TypedScript 'ValidatorRole '[AsData AssetClass, AsData PubKeyHash])
+  { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
+  , scriptCarbonNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef, AsData TokenName])
+  , scriptCarbonTokenPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TokenName])
+  , scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
+  , scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[AsData ScriptHash, AsData PubKeyHash, AsData TokenName, AsData CurrencySymbol, AsData TokenName])
+  , scriptOracleValidator :: !(TypedScript 'ValidatorRole '[AsData AssetClass, AsData PubKeyHash])
   }
 
 oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2

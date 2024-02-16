@@ -1,31 +1,31 @@
-module EA.Wallet
-  ( eaGetCollateral,
-    eaCreateAddresses,
-    eaGetInternalAddresses,
-    eaGetCollateralFromInternalWallet,
-    eaGetAddresses,
-    eaSelectOref,
-  )
+module EA.Wallet (
+  eaGetCollateral,
+  eaCreateAddresses,
+  eaGetInternalAddresses,
+  eaGetCollateralFromInternalWallet,
+  eaGetAddresses,
+  eaSelectOref,
+)
 where
 
 import Database.Persist.Sql (runSqlPool)
 import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaGetCollateral, eaLiftEither)
 import EA.Api.Types (UserId)
-import GeniusYield.Types
-  ( GYAddress,
-    GYProviders,
-    GYTxOutRef,
-    GYUTxO (utxoRef),
-    filterUTxOs,
-    gyQueryUtxosAtAddresses,
-    randomTxOutRef,
-  )
+import GeniusYield.Types (
+  GYAddress,
+  GYProviders,
+  GYTxOutRef,
+  GYUTxO (utxoRef),
+  filterUTxOs,
+  gyQueryUtxosAtAddresses,
+  randomTxOutRef,
+ )
 import Internal.Wallet (PaymentKey, deriveAddress)
-import Internal.Wallet.DB.Sqlite
-  ( createWalletIndexPair,
-    getInternalWalletIndexPairs',
-    getWalletIndexPairs',
-  )
+import Internal.Wallet.DB.Sqlite (
+  createWalletIndexPair,
+  getInternalWalletIndexPairs',
+  getWalletIndexPairs',
+ )
 
 --------------------------------------------------------------------------------
 

@@ -35,13 +35,13 @@ mintIpfsNftCarbonToken oref mktParams ownerAddr pkh tn mktSalePrice qty script =
 
       marketPlaceDatum =
         MarketplaceDatum
-          { mktDtmOwner = pubKeyHashToPlutus pkh,
-            mktDtmIssuer = pubKeyHashToPlutus pkh,
-            mktDtmIsSell = 1,
-            mktDtmSalePrice = mktSalePrice,
-            mktDtmAssetSymbol = mintingPolicyCurrencySymbol carbonTokenPolicy,
-            mktDtmAssetName = tokenNameToPlutus tn,
-            mktDtmAmount = qty
+          { mktDtmOwner = pubKeyHashToPlutus pkh
+          , mktDtmIssuer = pubKeyHashToPlutus pkh
+          , mktDtmIsSell = 1
+          , mktDtmSalePrice = mktSalePrice
+          , mktDtmAssetSymbol = mintingPolicyCurrencySymbol carbonTokenPolicy
+          , mktDtmAssetName = tokenNameToPlutus tn
+          , mktDtmAmount = qty
           }
   marketPlaceAddr <- scriptAddress $ marketplaceValidator mktParams script
 
