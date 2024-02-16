@@ -33,6 +33,9 @@ Available commands:
   run                      Run backend server
   swagger                  Export swagger api
   genrootkey               Root key generation
+  internaladdresses        Print internal addresses
+  tokens                   Print available auth tokens
+  addtoken                 Add new token
 ```
 
 ## `EAApp` layer - The reader monad
