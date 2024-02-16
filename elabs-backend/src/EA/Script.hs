@@ -14,11 +14,16 @@ import Ply (
  )
 
 data Scripts = Scripts
-  { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
-  , scriptCarbonPolicy :: !(TypedScript 'MintingPolicyRole '[TxId, Integer, TokenName])
-  , scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[TxOutRef])
-  , scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[ScriptHash, ScriptHash])
-  , scriptOracleMintingPolicy :: !(TypedScript 'MintingPolicyRole '[AssetClass, PubKeyHash])
+  { scriptsOneShotPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
+  , scriptCarbonPolicy ::
+      !(TypedScript 'MintingPolicyRole '[TxId, Integer, TokenName])
+  , scriptMintingNftPolicy ::
+      !(TypedScript 'MintingPolicyRole '[TxOutRef])
+  , scriptMarketplaceValidator ::
+      !(TypedScript 'ValidatorRole '[ScriptHash, ScriptHash])
+  , scriptOracleMintingPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AssetClass, PubKeyHash])
   }
 
 oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
