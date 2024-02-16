@@ -1,5 +1,6 @@
 module EA.Api.Carbon (tests) where
 
+import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (fromJust)
 import EA (eaAppEnvAuthTokens, eaLiftMaybe, runEAApp)
 import EA.Test.Helpers qualified as Helpers
@@ -13,7 +14,6 @@ import Setup (EACtx (..), server, withEASetup)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertStatus, runSession)
-import Data.ByteString.Lazy qualified as BL
 
 {-
 curl -X POST 'http://localhost:8081/api/v0/carbon/mint'
@@ -21,6 +21,7 @@ curl -X POST 'http://localhost:8081/api/v0/carbon/mint'
   -F 'file=@"sample-ipfs-file.txt"'
   -F "data={\"userId\":12, \"amount\":100, \"sell\":200}"
 -}
+
 -- | Tests for the /api/v0/carbon/mint endpoint
 tests :: IO Setup -> TestTree
 tests setup =
@@ -55,17 +56,28 @@ tests setup =
                   fileContent = "IPFS file content"
                   boundary = "EalabsBackendBoundary"
                   jsonData = "{\"userId\":12, \"amount\":100, \"sell\":200}"
-                  body = BL.concat
-                    [ "--", boundary, "\r\n"
-                    , "Content-Disposition: form-data; name=\"file\"; filename=\"", filePath, "\"\r\n"
-                    , "Content-Type: application/octet-stream\r\n\r\n"
-                    , fileContent, "\r\n"
-                    , "--", boundary, "\r\n"
-                    , "Content-Disposition: form-data; name=\"data\"\r\n"
-                    , "Content-Type: application/json\r\n\r\n"
-                    , jsonData, "\r\n"
-                    , "--", boundary, "--"
-                    ]
+                  body =
+                    BL.concat
+                      [ "--"
+                      , boundary
+                      , "\r\n"
+                      , "Content-Disposition: form-data; name=\"file\"; filename=\""
+                      , filePath
+                      , "\"\r\n"
+                      , "Content-Type: application/octet-stream\r\n\r\n"
+                      , fileContent
+                      , "\r\n"
+                      , "--"
+                      , boundary
+                      , "\r\n"
+                      , "Content-Disposition: form-data; name=\"data\"\r\n"
+                      , "Content-Type: application/json\r\n\r\n"
+                      , jsonData
+                      , "\r\n"
+                      , "--"
+                      , boundary
+                      , "--"
+                      ]
               response <-
                 Helpers.request
                   methodPost
