@@ -56,6 +56,7 @@ common deps
     , relude
     , resource-pool
     , serialise
+    , servant-auth-server
     , servant-client
     , servant-multipart
     , servant-multipart-client

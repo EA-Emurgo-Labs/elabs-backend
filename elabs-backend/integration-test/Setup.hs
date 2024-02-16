@@ -100,16 +100,19 @@ withEASetup ioSetup putLog kont =
 
     bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
 
-    let env =
-          EAAppEnv
-            { eaAppEnvGYProviders = ctxProviders ctx
-            , eaAppEnvGYNetworkId = GYPrivnet
-            , eaAppEnvMetrics = metrics
-            , eaAppEnvScripts = scripts
-            , eaAppEnvSqlPool = pool
-            , eaAppEnvRootKey = rootKey
-            , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-            }
+    let
+      tokens = ["AAAA"]
+      env =
+        EAAppEnv
+          { eaAppEnvGYProviders = ctxProviders ctx
+          , eaAppEnvGYNetworkId = GYPrivnet
+          , eaAppEnvMetrics = metrics
+          , eaAppEnvScripts = scripts
+          , eaAppEnvSqlPool = pool
+          , eaAppEnvRootKey = rootKey
+          , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+          , eaAppEnvAuthTokens = tokens
+          }
 
     -- DB migrations
     void $

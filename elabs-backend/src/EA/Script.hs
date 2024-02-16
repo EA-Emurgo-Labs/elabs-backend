@@ -13,12 +13,18 @@ import Ply (
  )
 
 data Scripts = Scripts
-  { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
-  , scriptCarbonNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef, AsData TokenName])
-  , scriptCarbonTokenPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TokenName])
-  , scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
-  , scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[AsData ScriptHash, AsData PubKeyHash, AsData TokenName, AsData CurrencySymbol, AsData TokenName])
-  , scriptOracleValidator :: !(TypedScript 'ValidatorRole '[AsData AssetClass, AsData PubKeyHash])
+  { scriptsOneShotPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
+  , scriptCarbonNftPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AsData TxOutRef, AsData TokenName])
+  , scriptCarbonTokenPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AsData TokenName])
+  , scriptMintingNftPolicy ::
+      !(TypedScript 'MintingPolicyRole '[AsData TxOutRef])
+  , scriptMarketplaceValidator ::
+      !(TypedScript 'ValidatorRole '[AsData ScriptHash, AsData PubKeyHash, AsData TokenName, AsData CurrencySymbol, AsData TokenName])
+  , scriptOracleValidator ::
+      !(TypedScript 'ValidatorRole '[AsData AssetClass, AsData PubKeyHash])
   }
 
 oneShotMintingPolicy :: GYTxOutRef -> Scripts -> GYMintingPolicy 'PlutusV2
@@ -27,7 +33,8 @@ oneShotMintingPolicy oref scripts =
     scriptsOneShotPolicy scripts
       # (AsData . txOutRefToPlutus $ oref)
 
-carbonNftMintingPolicy :: GYTxOutRef -> GYTokenName -> Scripts -> GYMintingPolicy 'PlutusV2
+carbonNftMintingPolicy ::
+  GYTxOutRef -> GYTokenName -> Scripts -> GYMintingPolicy 'PlutusV2
 carbonNftMintingPolicy oref tn scripts =
   mintingPolicyFromPly $
     scriptCarbonNftPolicy scripts
@@ -57,7 +64,8 @@ marketplaceValidator mktParam scripts =
           # AsData mktSpOracleSymbol
           # AsData mktSpOracleTokenName
 
-oracleValidator :: GYAssetClass -> GYPubKeyHash -> Scripts -> GYValidator 'PlutusV2
+oracleValidator ::
+  GYAssetClass -> GYPubKeyHash -> Scripts -> GYValidator 'PlutusV2
 oracleValidator asset pHash scripts =
   validatorFromPly $
     scriptOracleValidator scripts

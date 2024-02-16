@@ -27,7 +27,7 @@ import GeniusYield.GYConfig (
  )
 import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
 import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
-import Internal.Wallet.DB.Sqlite (createAccount, runAutoMigration)
+import Internal.Wallet.DB.Sqlite (addToken, createAccount, getTokens, runAutoMigration)
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors (
@@ -73,11 +73,19 @@ data Options = Options
   , optionsCommand :: !Commands
   }
 
+data AuthTokenOptions = AuthTokenOptions
+  { authtokenOptionsToken :: !String
+  , authtokenOptionsNotes :: !String
+  , authtokenOptionsServerOptions :: !ServerOptions
+  }
+
 data Commands
   = RunServer ServerOptions
   | ExportSwagger SwaggerOptions
   | GenerateRootKey RootKeyOptions
   | PrintInternalAddresses ServerOptions
+  | PrintAuthTokens ServerOptions
+  | AddAuthTokens AuthTokenOptions
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
@@ -124,7 +132,22 @@ options =
           <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
           <> command "genrootkey" (info (GenerateRootKey <$> rootKeyOptions) (progDesc "Root key generation"))
           <> command "internaladdresses" (info (PrintInternalAddresses <$> serverOptions) (progDesc "Print internal addresses"))
+          <> command "tokens" (info (PrintAuthTokens <$> serverOptions) (progDesc "Print available auth tokens"))
+          <> command "addtoken" (info (AddAuthTokens <$> authTokenOptions) (progDesc "Add new token"))
       )
+
+authTokenOptions :: Parser AuthTokenOptions
+authTokenOptions =
+  AuthTokenOptions
+    <$> strOption
+      ( long "token"
+          <> help "Auth token"
+      )
+    <*> strOption
+      ( long "notes"
+          <> help "Notes"
+      )
+    <*> serverOptions
 
 rootKeyOptions :: Parser RootKeyOptions
 rootKeyOptions =
@@ -213,6 +236,15 @@ app opts@(Options {..}) = do
           env <- initEAApp conf providers opts srvOpts
           addrs <- runEAApp env eaGetInternalAddresses
           putTextLn . show $ fst <$> addrs
+        PrintAuthTokens srvOpts -> do
+          env <- initEAApp conf providers opts srvOpts
+          putTextLn . show $ env.eaAppEnvAuthTokens
+        AddAuthTokens (AuthTokenOptions {..}) -> do
+          env <- initEAApp conf providers opts authtokenOptionsServerOptions
+          pool <- runEAApp env $ asks eaAppEnvSqlPool
+          runSqlPool
+            (addToken (T.pack authtokenOptionsToken) (T.pack authtokenOptionsNotes))
+            pool
 
 initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
 initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
@@ -254,9 +286,9 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
           (decodeUtf8 $ fromLogStr msg)
 
   -- migrate tables
-  void $
+  tokens <-
     runSqlPool
-      (runAutoMigration >> createAccount)
+      (runAutoMigration >> createAccount >> getTokens)
       pool
 
   rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
@@ -272,6 +304,7 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvSqlPool = pool
       , eaAppEnvRootKey = rootKey
       , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
+      , eaAppEnvAuthTokens = tokens
       }
 
 server :: EAAppEnv -> Application

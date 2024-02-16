@@ -6,11 +6,12 @@ module Internal.Wallet.DB.Sqlite (
   getInternalWalletIndexPairs',
   runAutoMigration,
   createAccount,
+  getTokens,
+  addToken,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
 import Data.Time (getCurrentTime)
-
 import Database.Persist.Sqlite (
   Entity (entityKey, entityVal),
   PersistStoreWrite (insert),
@@ -22,12 +23,11 @@ import Database.Persist.Sqlite (
   selectList,
   (==.),
  )
-
 import EA.Api.Types (UserId)
-
 import Internal.Wallet.DB.Schema (
   Account (Account),
   Address (..),
+  Auth (..),
   EntityField (..),
   migrateAll,
  )
@@ -101,3 +101,16 @@ createAccount = do
 
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
+
+getTokens ::
+  (MonadIO m) =>
+  ReaderT SqlBackend m [Text]
+getTokens = do
+  auths :: [Entity Auth] <- selectList [] []
+  return $
+    authToken . entityVal <$> auths
+
+addToken :: (MonadIO m) => Text -> Text -> ReaderT SqlBackend m ()
+addToken token notes = do
+  time <- liftIO getCurrentTime
+  void $ insert (Auth token notes time)
