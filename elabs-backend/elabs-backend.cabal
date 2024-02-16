@@ -140,7 +140,7 @@ library
     EA.Internal
     EA.Script
     EA.Script.Marketplace
-    EA.Tx.Changeblock.Operation
+    EA.Tx.Changeblock.MintIpfsNftCarbonToken
     EA.Tx.OneShotMint
     EA.Wallet
     Internal.Ipfs

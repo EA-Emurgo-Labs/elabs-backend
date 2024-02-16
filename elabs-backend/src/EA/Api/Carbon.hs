@@ -1,8 +1,8 @@
-module EA.Api.Carbon
-  ( CarbonApi,
-    CarbonMintRequest (..),
-    handleCarbonMint,
-  )
+module EA.Api.Carbon (
+  CarbonApi,
+  CarbonMintRequest (..),
+  handleCarbonMint,
+)
 where
 
 import Data.Aeson qualified as Aeson
@@ -11,24 +11,24 @@ import Data.Text qualified as T
 import Data.Text.Encoding.Base16 (encodeBase16)
 import EA (EAApp, EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts), eaLiftEither, eaLiftMaybe, eaLogInfo, eaSubmitTx)
 import EA.Api.Types (SubmitTxResponse, UserId, txBodySubmitTxResponse)
-import EA.Script (nftMintingPolicy, oracleValidator)
+import EA.Script (marketplaceValidator, nftMintingPolicy, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
-import EA.Tx.Changeblock.Operation (mintIpfsNftCarbonToken)
+import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
 import EA.Wallet (eaGetAddresses, eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
-import GeniusYield.TxBuilder (runGYTxMonadNode)
+import GeniusYield.TxBuilder (runGYTxMonadNode, runGYTxQueryMonadNode, scriptAddress)
 import GeniusYield.Types (GYAssetClass (GYToken), mintingPolicyId, unsafeTokenNameFromHex, validatorHash)
 import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
 import Internal.Wallet qualified as Wallet
 import Servant (Header, JSON, Post, type (:>))
-import Servant.Multipart
-  ( MultipartData,
-    MultipartForm,
-    Tmp,
-    lookupFile,
-    lookupInput,
-  )
+import Servant.Multipart (
+  MultipartData,
+  MultipartForm,
+  Tmp,
+  lookupFile,
+  lookupInput,
+ )
 import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
@@ -56,22 +56,22 @@ instance {-# OVERLAPPING #-} HasSwagger CarbonApi where
 --------------------------------------------------------------------------------
 
 data CarbonMintRequest = CarbonMintRequest
-  { -- | The user ID.
-    userId :: !UserId,
-    -- | The amount of carbon to mint.
-    amount :: !Natural,
-    -- | The sell price per unit of carbon.
-    sell :: !Natural
+  { userId :: !UserId
+  -- ^ The user ID.
+  , amount :: !Natural
+  -- ^ The amount of carbon to mint.
+  , sell :: !Natural
+  -- ^ The sell price per unit of carbon.
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data CarbonMintResponse = CarbonMintResponse
-  { ipfsHash :: !Text,
-    ipfsName :: !Text,
-    ipfsSize :: !Text,
-    ipfsPinningState :: !Text,
-    submitTxInfo :: !SubmitTxResponse
+  { ipfsHash :: !Text
+  , ipfsName :: !Text
+  , ipfsSize :: !Text
+  , ipfsPinningState :: !Text
+  , submitTxInfo :: !SubmitTxResponse
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
@@ -109,15 +109,16 @@ handleCarbonMint multipartData = do
       orcValidatorHash = validatorHash $ oracleValidator orcAssetClass issuer scripts
       marketParams =
         MarketplaceParams
-          { mktPrmOracleValidator = orcValidatorHash,
-            mktPrmEscrowValidator = issuer, -- TODO: User proper pubkeyhash of escrow
-            mktPrmVersion = unsafeTokenNameFromHex "76312e302e30", -- It can be any string for now using v1.0.0
-            mktPrmOracleSymbol = oracleNftAsset,
-            mktPrmOracleTokenName = oracleNftAssetName
+          { mktPrmOracleValidator = orcValidatorHash
+          , mktPrmEscrowValidator = issuer -- TODO: User proper pubkeyhash of escrow
+          , mktPrmVersion = unsafeTokenNameFromHex "76312e302e30" -- It can be any string for now using v1.0.0
+          , mktPrmOracleSymbol = oracleNftAsset
+          , mktPrmOracleTokenName = oracleNftAssetName
           }
 
   ipfsAddResp <- ipfsAddFile filePart
   ipfsPinObjResp <- ipfsPinObject ipfsAddResp.ipfs_hash
+  marketplaceAddress <- liftIO $ runGYTxQueryMonadNode nid providers $ scriptAddress $ marketplaceValidator marketParams scripts
 
   eaLogInfo "carbon-mint" $ show request
   eaLogInfo "carbon-mint" $ "IPFS HASH" <> show ipfsAddResp.ipfs_hash
@@ -125,7 +126,8 @@ handleCarbonMint multipartData = do
   txBody <-
     liftIO $
       runGYTxMonadNode nid providers [addr] addr collateral $
-        mintIpfsNftCarbonToken oref marketParams userAddr issuer tokenName (toInteger $ sell request) (toInteger $ amount request) scripts
+        return $
+          mintIpfsNftCarbonToken oref marketplaceAddress userAddr issuer tokenName (toInteger $ sell request) (toInteger $ amount request) scripts
 
   void $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
 
