@@ -1,11 +1,9 @@
 module EA.Script (Scripts (..), oneShotMintingPolicy, carbonTokenMintingPolicy, carbonNftMintingPolicy, nftMintingPolicy, marketplaceValidator, oracleValidator) where
 
-import Cardano.Api qualified
 import EA.Internal (mintingPolicyFromPly, validatorFromPly)
 import EA.Script.Marketplace (MarketplaceParams, MarketplaceScriptParams (..), marketPlaceParamsToScriptParams)
 import GeniusYield.Types
-import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName, TxOutRef, toBuiltin)
-import PlutusLedgerApi.V1.Tx (TxId (..))
+import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName, TxOutRef)
 import PlutusLedgerApi.V1.Value (AssetClass)
 import Ply
   ( AsData (AsData),
@@ -16,7 +14,7 @@ import Ply
 
 data Scripts = Scripts
   { scriptsOneShotPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef]),
-    scriptCarbonNftPolicy :: !(TypedScript 'MintingPolicyRole '[TxId, AsData Integer, AsData TokenName]),
+    scriptCarbonNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef, AsData TokenName]),
     scriptCarbonTokenPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TokenName]),
     scriptMintingNftPolicy :: !(TypedScript 'MintingPolicyRole '[AsData TxOutRef]),
     scriptMarketplaceValidator :: !(TypedScript 'ValidatorRole '[AsData ScriptHash, AsData PubKeyHash, AsData TokenName, AsData CurrencySymbol, AsData TokenName]),
@@ -33,12 +31,8 @@ carbonNftMintingPolicy :: GYTxOutRef -> GYTokenName -> Scripts -> GYMintingPolic
 carbonNftMintingPolicy oref tn scripts =
   mintingPolicyFromPly $
     scriptCarbonNftPolicy scripts
-      # txId
-      # txIndx
+      # (AsData . txOutRefToPlutus $ oref)
       # (AsData . tokenNameToPlutus $ tn)
-  where
-    txId = TxId . toBuiltin . Cardano.Api.serialiseToRawBytes . txIdToApi . fst . txOutRefToTuple $ oref
-    txIndx = AsData . fromIntegral . snd . txOutRefToTuple $ oref
 
 carbonTokenMintingPolicy :: GYTokenName -> Scripts -> GYMintingPolicy 'PlutusV2
 carbonTokenMintingPolicy tn scripts =
