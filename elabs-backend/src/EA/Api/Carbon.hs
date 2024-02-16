@@ -59,9 +59,9 @@ data CarbonMintRequest = CarbonMintRequest
   { -- | The user ID.
     userId :: !UserId,
     -- | The amount of carbon to mint.
-    amount :: !Int,
+    amount :: !Natural,
     -- | The sell price per unit of carbon.
-    sell :: !Integer
+    sell :: !Natural
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
@@ -97,7 +97,7 @@ handleCarbonMint multipartData = do
   pairs <- eaGetAddresses (userId request)
   (userAddr, _) <- eaLiftMaybe "No addresses found" (listToMaybe pairs)
   (collateral, colKey) <- eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
-  (addr, key, oref) <- liftIO (eaSelectOref providers internalAddrPairs (\r -> collateral /= Just (r, True))) >>= eaLiftMaybe "No UTxO found"
+  (addr, key, oref) <- eaSelectOref providers (pairs ++ internalAddrPairs) (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
 
   issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash addr)
   putStrLn $ "collateral " <> show collateral
@@ -127,7 +127,7 @@ handleCarbonMint multipartData = do
   txBody <-
     liftIO $
       runGYTxMonadNode nid providers [addr] userAddr Nothing $
-        mintIpfsNftCarbonToken oref marketParams userAddr issuer tokenName (sell request) (toInteger $ amount request) scripts
+        mintIpfsNftCarbonToken oref marketParams userAddr issuer tokenName (toInteger $ sell request) (toInteger $ amount request) scripts
 
   void $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
 
