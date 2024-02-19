@@ -31,7 +31,7 @@ type Api =
     :> NamedRoutes ChangeblockApi
 
 data ChangeblockApi mode = ChangeblockApi
-  { txApi :: mode :- TxApi
+  { txApi :: mode :- NamedRoutes TxApi
   , walletApi :: mode :- WalletApi
   , carbonApi :: mode :- CarbonApi
   -- TODO: , orderApi :: mode :- NamedRoutes OrderApi
