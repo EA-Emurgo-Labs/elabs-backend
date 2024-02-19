@@ -133,7 +133,6 @@ library
     EA
     EA.Api
     EA.Api.Carbon
-    EA.Api.Mint
     EA.Api.Order
     EA.Api.Tx
     EA.Api.Types
@@ -142,7 +141,6 @@ library
     EA.Script
     EA.Script.Marketplace
     EA.Tx.Changeblock.MintIpfsNftCarbonToken
-    EA.Tx.OneShotMint
     EA.Wallet
     Internal.Ipfs
     Internal.Ipfs.Types
@@ -183,7 +181,6 @@ executable integration-test
   main-is:        Main.hs
   other-modules:
     EA.Api.Carbon
-    EA.Api.MintTests
     EA.Api.WalletTests
     Setup
 

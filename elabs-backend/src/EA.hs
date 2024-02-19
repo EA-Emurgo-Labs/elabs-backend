@@ -10,7 +10,6 @@ module EA (
   eaThrow,
   eaCatch,
   eaHandle,
-  getOneShotMintingPolicy,
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
@@ -26,20 +25,18 @@ import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
-import EA.Script (Scripts (..), oneShotMintingPolicy)
+import EA.Script (Scripts (..))
 import GeniusYield.TxBuilder (adaOnlyUTxOPure)
 import GeniusYield.Types (
   GYAddress,
   GYLogNamespace,
   GYLogSeverity (..),
-  GYMintingPolicy,
   GYNetworkId,
   GYProviders (..),
   GYQueryUTxO (..),
   GYTx,
   GYTxId,
   GYTxOutRef,
-  PlutusVersion (PlutusV2),
   gyLog,
   gyLogDebug,
   gyLogError,
@@ -135,12 +132,6 @@ eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
 
 eaHandle :: (Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 eaHandle = flip eaCatch
-
---------------------------------------------------------------------------------
--- Reader helpers
-
-getOneShotMintingPolicy :: GYTxOutRef -> EAApp (GYMintingPolicy 'PlutusV2)
-getOneShotMintingPolicy oref = asks (oneShotMintingPolicy oref . eaAppEnvScripts)
 
 --------------------------------------------------------------------------------
 -- Provider functions
