@@ -43,26 +43,26 @@ handleOrderApi =
     }
 
 type OrderCreate =
-  "order"
+  "orders"
     :> ReqBody '[JSON] OrderRequest
     :> "create"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderBuy =
-  "order"
+  "orders"
     :> ReqBody '[JSON] OrderBuyRequest
     :> Capture "id" Int
     :> "buy"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderCancel =
-  "order"
+  "orders"
     :> Capture "id" Int
     :> "cancel"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderUpdate =
-  "order"
+  "orders"
     :> ReqBody '[JSON] OrderRequest
     :> Capture "id" Int
     :> "update"
@@ -91,6 +91,8 @@ data OrderBuyRequest = OrderBuyRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 --------------------------------------------------------------------------------
+
+-- TODO:
 
 handleOrderCreate :: OrderRequest -> EAApp SubmitTxResponse
 handleOrderCreate = error "TODO"
