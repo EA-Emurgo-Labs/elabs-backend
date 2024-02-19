@@ -79,13 +79,13 @@ withEASetup ioSetup putLog kont =
       optionsSqliteFile = "wallet.test." <> id <> ".db"
 
       scripts =
-          Scripts
-            { scriptCarbonNftPolicy = carbonNftTypedScript
-            , scriptCarbonTokenPolicy = carbonTokenTypedScript
-            , scriptMintingNftPolicy = mintingNftTypedScript
-            , scriptMarketplaceValidator = marketplaceTypedScript
-            , scriptOracleValidator = oracleTypedScript
-            }
+        Scripts
+          { scriptCarbonNftPolicy = carbonNftTypedScript
+          , scriptCarbonTokenPolicy = carbonTokenTypedScript
+          , scriptMintingNftPolicy = mintingNftTypedScript
+          , scriptMarketplaceValidator = marketplaceTypedScript
+          , scriptOracleValidator = oracleTypedScript
+          }
 
     -- Create Sqlite pool and run migrations
     pool <-
