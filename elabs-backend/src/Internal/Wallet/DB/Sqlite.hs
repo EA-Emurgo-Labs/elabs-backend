@@ -34,50 +34,71 @@ import Internal.Wallet.DB.Schema (
 
 --------------------------------------------------------------------------------
 
-createWalletIndexPair :: (MonadIO m) => Maybe UserId -> Int -> ReaderT SqlBackend m ()
-createWalletIndexPair userId n = do
+-- | Create wallet index pairs
+createWalletIndexPair ::
+  (MonadIO m) =>
+  -- | User ID
+  Maybe UserId ->
+  -- | Number of pairs
+  Int ->
+  -- | Collateral
+  Bool ->
+  ReaderT SqlBackend m ()
+createWalletIndexPair userId n collateral = do
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
     >>= \case
       [] -> error "No account record found"
       (key : _) ->
-        replicateM_ n $ insert (Address key userId time)
+        replicateM_ n $ insert (Address key userId collateral time)
 
+-- | Get wallet index pairs
 getWalletIndexPairs ::
   (MonadIO m) =>
+  -- | User ID
   UserId ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs userId = do
   addrs <- selectList [AddressUser ==. Just userId] []
   return $ map getIndexPair addrs
 
+-- | Get wallet index pairs, create if not exist
 getWalletIndexPairs' ::
   (MonadIO m) =>
+  -- | User ID
   UserId ->
+  -- | Number of pairs
   Int ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs' userId n = do
   pairs <- getWalletIndexPairs userId
-  when (null pairs) $ createWalletIndexPair (Just userId) n
+  when (null pairs) $ createWalletIndexPair (Just userId) n False
   getWalletIndexPairs userId
 
+-- | Get internal wallet index pairs
 getInternalWalletIndexPairs ::
   (MonadIO m) =>
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs = do
-  addrs <- selectList [AddressUser ==. Nothing] []
+  addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. False] []
   return $ map getIndexPair addrs
 
+-- | Get internal wallet index pairs, create if not exist
 getInternalWalletIndexPairs' ::
   (MonadIO m) =>
+  -- | Number of pairs
   Int ->
+  -- | Collateral
+  Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
-getInternalWalletIndexPairs' n = do
+getInternalWalletIndexPairs' n collateral = do
   pairs <- getInternalWalletIndexPairs
-  when (null pairs) $ createWalletIndexPair Nothing n
+  when (null pairs) $ createWalletIndexPair Nothing n collateral
   getInternalWalletIndexPairs
 
+-- | Get index pair from address entity
 getIndexPair ::
+  -- | Address entity
   Entity Address ->
   (Tagged "Account" Int64, Tagged "Address" Int64)
 getIndexPair addr =
@@ -85,6 +106,7 @@ getIndexPair addr =
   , Tagged . fromSqlKey . entityKey $ addr
   )
 
+-- | Get all accounts
 getAccounts ::
   (MonadIO m) =>
   ReaderT SqlBackend m [Entity Account]
@@ -99,9 +121,11 @@ createAccount = do
     time <- liftIO getCurrentTime
     void $ insert (Account time)
 
+-- | Run auto migration
 runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
 
+-- | Get all tokens
 getTokens ::
   (MonadIO m) =>
   ReaderT SqlBackend m [Text]
@@ -110,6 +134,7 @@ getTokens = do
   return $
     authToken . entityVal <$> auths
 
+-- | Add a new token
 addToken :: (MonadIO m) => Text -> Text -> ReaderT SqlBackend m ()
 addToken token notes = do
   time <- liftIO getCurrentTime

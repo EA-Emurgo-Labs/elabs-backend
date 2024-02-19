@@ -26,8 +26,17 @@ import GeniusYield.GYConfig (
   withCfgProviders,
  )
 import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
-import Internal.Wallet (genRootKeyFromMnemonic, readRootKey, writeRootKey)
-import Internal.Wallet.DB.Sqlite (addToken, createAccount, getTokens, runAutoMigration)
+import Internal.Wallet (
+  genRootKeyFromMnemonic,
+  readRootKey,
+  writeRootKey,
+ )
+import Internal.Wallet.DB.Sqlite (
+  addToken,
+  createAccount,
+  getTokens,
+  runAutoMigration,
+ )
 import Network.HTTP.Types qualified as HttpTypes
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors (
@@ -52,6 +61,7 @@ import Options.Applicative (
   showDefault,
   strOption,
   subparser,
+  switch,
   value,
  )
 import Ply (readTypedScript)
@@ -78,11 +88,16 @@ data AuthTokenOptions = AuthTokenOptions
   , authtokenOptionsServerOptions :: !ServerOptions
   }
 
+data InternalAddressesOptions = InternalAddressesOptions
+  { internalAddressesCollateral :: !Bool
+  , internalAddressesServerOptions :: !ServerOptions
+  }
+
 data Commands
   = RunServer ServerOptions
   | ExportSwagger SwaggerOptions
   | GenerateRootKey RootKeyOptions
-  | PrintInternalAddresses ServerOptions
+  | PrintInternalAddresses InternalAddressesOptions
   | PrintAuthTokens ServerOptions
   | AddAuthTokens AuthTokenOptions
 
@@ -123,10 +138,16 @@ options =
       ( command "run" (info (RunServer <$> serverOptions) (progDesc "Run backend server"))
           <> command "swagger" (info (ExportSwagger <$> swaggerOptions) (progDesc "Export swagger api"))
           <> command "genrootkey" (info (GenerateRootKey <$> rootKeyOptions) (progDesc "Root key generation"))
-          <> command "internaladdresses" (info (PrintInternalAddresses <$> serverOptions) (progDesc "Print internal addresses"))
+          <> command "internaladdresses" (info (PrintInternalAddresses <$> internalAddressesOptions) (progDesc "Print internal addresses"))
           <> command "tokens" (info (PrintAuthTokens <$> serverOptions) (progDesc "Print available auth tokens"))
           <> command "addtoken" (info (AddAuthTokens <$> authTokenOptions) (progDesc "Add new token"))
       )
+
+internalAddressesOptions :: Parser InternalAddressesOptions
+internalAddressesOptions =
+  InternalAddressesOptions
+    <$> switch (long "collateral" <> help "Collateral")
+    <*> serverOptions
 
 authTokenOptions :: Parser AuthTokenOptions
 authTokenOptions =
@@ -224,9 +245,11 @@ app opts@(Options {..}) = do
               return
               (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
           writeRootKey optionsRootKeyFile $ genRootKeyFromMnemonic mw
-        PrintInternalAddresses srvOpts -> do
-          env <- initEAApp conf providers opts srvOpts
-          addrs <- runEAApp env eaGetInternalAddresses
+        PrintInternalAddresses (InternalAddressesOptions {..}) -> do
+          env <-
+            initEAApp conf providers opts internalAddressesServerOptions
+          addrs <-
+            runEAApp env $ eaGetInternalAddresses internalAddressesCollateral
           putTextLn . show $ fst <$> addrs
         PrintAuthTokens srvOpts -> do
           env <- initEAApp conf providers opts srvOpts

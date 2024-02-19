@@ -28,15 +28,15 @@ import Internal.Wallet.DB.Sqlite (
 
 --------------------------------------------------------------------------------
 
-eaGetInternalAddresses :: EAApp [(GYAddress, PaymentKey)]
-eaGetInternalAddresses = do
+eaGetInternalAddresses :: Bool -> EAApp [(GYAddress, PaymentKey)]
+eaGetInternalAddresses collateral = do
   nid <- asks eaAppEnvGYNetworkId
   rootK <- asks eaAppEnvRootKey
   indexPairs <-
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                (getInternalWalletIndexPairs' 1)
+                (getInternalWalletIndexPairs' 1 collateral)
           )
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
@@ -59,13 +59,13 @@ eaCreateAddresses userId n = do
   asks eaAppEnvSqlPool
     >>= ( liftIO
             . runSqlPool
-              (createWalletIndexPair (Just userId) n)
+              (createWalletIndexPair (Just userId) n False)
         )
 
 -- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::
   EAApp (Maybe (Maybe (GYTxOutRef, Bool), PaymentKey))
-eaGetCollateralFromInternalWallet = eaGetInternalAddresses >>= getCollateral
+eaGetCollateralFromInternalWallet = eaGetInternalAddresses True >>= getCollateral
 
 -- FIXME: Maybe Maybe??
 getCollateral ::

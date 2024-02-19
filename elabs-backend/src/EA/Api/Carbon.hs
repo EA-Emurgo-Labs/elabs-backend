@@ -9,14 +9,35 @@ import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import Data.Text qualified as T
 import Data.Text.Encoding.Base16 (encodeBase16)
-import EA (EAApp, EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts), eaLiftEither, eaLiftMaybe, eaLogInfo, eaSubmitTx)
+import EA (
+  EAApp,
+  EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts),
+  eaLiftEither,
+  eaLiftMaybe,
+  eaLogInfo,
+  eaSubmitTx,
+ )
 import EA.Api.Types (SubmitTxResponse, UserId, txBodySubmitTxResponse)
 import EA.Script (marketplaceValidator, nftMintingPolicy, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
-import EA.Wallet (eaGetAddresses, eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
-import GeniusYield.TxBuilder (runGYTxMonadNode, runGYTxQueryMonadNode, scriptAddress)
-import GeniusYield.Types (GYAssetClass (GYToken), mintingPolicyId, unsafeTokenNameFromHex, validatorHash)
+import EA.Wallet (
+  eaGetAddresses,
+  eaGetCollateralFromInternalWallet,
+  eaGetInternalAddresses,
+  eaSelectOref,
+ )
+import GeniusYield.TxBuilder (
+  runGYTxMonadNode,
+  runGYTxQueryMonadNode,
+  scriptAddress,
+ )
+import GeniusYield.Types (
+  GYAssetClass (GYToken),
+  mintingPolicyId,
+  unsafeTokenNameFromHex,
+  validatorHash,
+ )
 import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
@@ -93,7 +114,7 @@ handleCarbonApi multipartData = do
   nid <- asks eaAppEnvGYNetworkId
   providers <- asks eaAppEnvGYProviders
   scripts <- asks eaAppEnvScripts
-  internalAddrPairs <- eaGetInternalAddresses
+  internalAddrPairs <- eaGetInternalAddresses False
   pairs <- eaGetAddresses (userId request)
   (userAddr, _) <- eaLiftMaybe "No addresses found" (listToMaybe pairs)
   (collateral, colKey) <- eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"

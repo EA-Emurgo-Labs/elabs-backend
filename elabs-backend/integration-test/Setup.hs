@@ -122,7 +122,7 @@ withEASetup ioSetup putLog kont =
 
     -- Adding funds to the internal collateral address
     txId <- runEAApp env $ do
-      addrs <- eaGetInternalAddresses
+      addrs <- eaGetInternalAddresses True
       (addr, _) <-
         eaLiftMaybe "No internal address found" $
           viaNonEmpty head addrs

@@ -1,4 +1,4 @@
-module EA.Api.Carbon (tests) where
+module EA.Api.CarbonTests (tests) where
 
 import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (fromJust)
@@ -33,7 +33,7 @@ tests setup =
             step "1. Creating a UTXO on one the internal address"
             flip runSession (server eaCtxEnv) $ do
               void . liftIO $ runEAApp eaCtxEnv $ do
-                addrs <- eaGetInternalAddresses
+                addrs <- eaGetInternalAddresses True
                 (addr, _) <-
                   eaLiftMaybe "No addresses found" $
                     viaNonEmpty head addrs
