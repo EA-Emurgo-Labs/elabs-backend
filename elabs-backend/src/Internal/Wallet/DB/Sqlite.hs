@@ -78,9 +78,11 @@ getWalletIndexPairs' userId n = do
 -- | Get internal wallet index pairs
 getInternalWalletIndexPairs ::
   (MonadIO m) =>
+  Bool ->
+  -- ^ Collateral
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
-getInternalWalletIndexPairs = do
-  addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. False] []
+getInternalWalletIndexPairs collateral = do
+  addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. collateral] []
   return $ map getIndexPair addrs
 
 -- | Get internal wallet index pairs, create if not exist
@@ -92,9 +94,9 @@ getInternalWalletIndexPairs' ::
   Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs' n collateral = do
-  pairs <- getInternalWalletIndexPairs
+  pairs <- getInternalWalletIndexPairs collateral
   when (null pairs) $ createWalletIndexPair Nothing n collateral
-  getInternalWalletIndexPairs
+  getInternalWalletIndexPairs collateral
 
 -- | Get index pair from address entity
 getIndexPair ::
