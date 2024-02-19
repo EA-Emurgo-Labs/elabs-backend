@@ -9,14 +9,34 @@ import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import Data.Text qualified as T
 import Data.Text.Encoding.Base16 (encodeBase16)
-import EA (EAApp, EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts), eaLiftEither, eaLiftMaybe, eaLogInfo, eaSubmitTx)
+import EA (
+  EAApp,
+  EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts),
+  eaLiftEither,
+  eaLiftMaybe,
+  eaSubmitTx,
+ )
 import EA.Api.Types (SubmitTxResponse, UserId, txBodySubmitTxResponse)
 import EA.Script (marketplaceValidator, nftMintingPolicy, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
-import EA.Wallet (eaGetAddresses, eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
-import GeniusYield.TxBuilder (runGYTxMonadNode, runGYTxQueryMonadNode, scriptAddress)
-import GeniusYield.Types (GYAssetClass (GYToken), mintingPolicyId, unsafeTokenNameFromHex, validatorHash)
+import EA.Wallet (
+  eaGetAddresses,
+  eaGetCollateralFromInternalWallet,
+  eaGetInternalAddresses,
+  eaSelectOref,
+ )
+import GeniusYield.TxBuilder (
+  runGYTxMonadNode,
+  runGYTxQueryMonadNode,
+  scriptAddress,
+ )
+import GeniusYield.Types (
+  GYAssetClass (GYToken),
+  mintingPolicyId,
+  unsafeTokenNameFromHex,
+  validatorHash,
+ )
 import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
@@ -93,11 +113,25 @@ handleCarbonApi multipartData = do
   nid <- asks eaAppEnvGYNetworkId
   providers <- asks eaAppEnvGYProviders
   scripts <- asks eaAppEnvScripts
-  internalAddrPairs <- eaGetInternalAddresses
-  pairs <- eaGetAddresses (userId request)
-  (userAddr, _) <- eaLiftMaybe "No addresses found" (listToMaybe pairs)
-  (collateral, colKey) <- eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
-  (addr, key, oref) <- eaSelectOref (pairs ++ internalAddrPairs) (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
+
+  -- Get the internal address pairs.
+  internalAddrPairs <- eaGetInternalAddresses False
+
+  -- Get the user address. We don't need the signing key here.
+  (userAddr, _) <-
+    eaLiftMaybe "No addresses found"
+      . listToMaybe
+      =<< eaGetAddresses (userId request)
+
+  -- Get the collateral address and its signing key.
+  (collateral, colKey) <-
+    eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
+
+  (addr, key, oref) <-
+    eaSelectOref
+      internalAddrPairs
+      (\r -> collateral /= Just (r, True))
+      >>= eaLiftMaybe "No UTxO found"
 
   issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash addr)
 
@@ -105,29 +139,51 @@ handleCarbonApi multipartData = do
   let oracleNftAsset = mintingPolicyId $ nftMintingPolicy oref scripts
       oracleNftAssetName = unsafeTokenNameFromHex "43424c"
       orcAssetClass = GYToken oracleNftAsset oracleNftAssetName
+
       -- TODO: user proper operaor pubkey hash for oracle validator
-      orcValidatorHash = validatorHash $ oracleValidator orcAssetClass issuer scripts
+      orcValidatorHash =
+        validatorHash $ oracleValidator orcAssetClass issuer scripts
+
       marketParams =
         MarketplaceParams
           { mktPrmOracleValidator = orcValidatorHash
-          , mktPrmEscrowValidator = issuer -- TODO: User proper pubkeyhash of escrow
-          , mktPrmVersion = unsafeTokenNameFromHex "76312e302e30" -- It can be any string for now using v1.0.0
-          , mktPrmOracleSymbol = oracleNftAsset
+          , mktPrmEscrowValidator = issuer
+          , -- \^ TODO: User proper pubkeyhash of escrow
+            mktPrmVersion = unsafeTokenNameFromHex "76312e302e30"
+          , -- \^ It can be any string for now using v1.0.0
+            mktPrmOracleSymbol = oracleNftAsset
           , mktPrmOracleTokenName = oracleNftAssetName
           }
 
   ipfsAddResp <- ipfsAddFile filePart
   ipfsPinObjResp <- ipfsPinObject ipfsAddResp.ipfs_hash
-  marketplaceAddress <- liftIO $ runGYTxQueryMonadNode nid providers $ scriptAddress $ marketplaceValidator marketParams scripts
 
-  eaLogInfo "carbon-mint" $ show request
-  eaLogInfo "carbon-mint" $ "IPFS HASH" <> show ipfsAddResp.ipfs_hash
-  let tokenName = unsafeTokenNameFromHex $ encodeBase16 $ T.take 10 $ T.append "CBLK" ipfsAddResp.ipfs_hash
+  marketplaceAddress <-
+    liftIO $
+      runGYTxQueryMonadNode nid providers $
+        scriptAddress (marketplaceValidator marketParams scripts)
+
+  let
+    tokenName =
+      unsafeTokenNameFromHex $
+        encodeBase16 $
+          T.take 10 $
+            T.append "CBLK" ipfsAddResp.ipfs_hash
+
+    tx =
+      mintIpfsNftCarbonToken
+        oref
+        marketplaceAddress
+        userAddr
+        issuer
+        tokenName
+        (toInteger $ sell request)
+        (toInteger $ amount request)
+        scripts
+
   txBody <-
     liftIO $
-      runGYTxMonadNode nid providers [addr] addr collateral $
-        return $
-          mintIpfsNftCarbonToken oref marketplaceAddress userAddr issuer tokenName (toInteger $ sell request) (toInteger $ amount request) scripts
+      runGYTxMonadNode nid providers [addr] addr collateral (return tx)
 
   void $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
 

@@ -57,3 +57,6 @@ run:
 
 show-internal-address:
 	cabal run elabs-backend:app -- internaladdresses
+
+show-internal-collateral-address:
+	cabal run elabs-backend:app -- internaladdresses --collateral
