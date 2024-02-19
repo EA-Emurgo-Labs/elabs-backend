@@ -68,7 +68,6 @@ import System.Environment (getEnv)
 
 data Options = Options
   { optionsCoreConfigFile :: !String
-  , optionsScriptsFile :: !String
   , optionsRootKeyFile :: !String
   , optionsCommand :: !Commands
   }
@@ -112,13 +111,6 @@ options =
           <> help "Core config file path"
           <> showDefault
           <> value "config.json"
-      )
-    <*> option
-      auto
-      ( long "scripts"
-          <> help "Scripts file"
-          <> showDefault
-          <> value "scripts.json"
       )
     <*> option
       auto
@@ -251,18 +243,15 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
   -- read .env in the environment
   loadFile defaultConfig
 
-  -- TODO: This is one particular script
-  --       -> Make FromJSON instance of Scripts
-  policyTypedScript <- readTypedScript optionsScriptsFile
   carbonTokenTypedScript <- readTypedScript "contracts/carbon-token.json"
   carbonNftTypedScript <- readTypedScript "contracts/carbon-nft.json"
   marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
   oracleTypedScript <- readTypedScript "contracts/oracle.json"
   mintingNftTypedScript <- readTypedScript "contracts/nft.json"
+
   let scripts =
         Scripts
-          { scriptsOneShotPolicy = policyTypedScript
-          , scriptCarbonNftPolicy = carbonNftTypedScript
+          { scriptCarbonNftPolicy = carbonNftTypedScript
           , scriptCarbonTokenPolicy = carbonTokenTypedScript
           , scriptMintingNftPolicy = mintingNftTypedScript
           , scriptMarketplaceValidator = marketplaceTypedScript

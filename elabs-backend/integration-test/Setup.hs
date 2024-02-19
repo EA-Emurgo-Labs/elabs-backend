@@ -65,30 +65,27 @@ withEASetup ioSetup putLog kont =
     loadFile defaultConfig
 
     id <- randomString 10
-    let
-      -- TODO: load this dynamically, also check cleanupSetup function
-      optionsScriptsFile = "scripts.debug.json"
-      optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
     rootKey <- createRootKey
 
-    -- TODO: PIYUSH => Load script better
-    policyTypedScript <- readTypedScript optionsScriptsFile
     carbonNftTypedScript <- readTypedScript "contracts/carbon-nft.json"
     carbonTokenTypedScript <- readTypedScript "contracts/carbon-token.json"
     marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
     oracleTypedScript <- readTypedScript "contracts/oracle.json"
     mintingNftTypedScript <- readTypedScript "contracts/nft.json"
-    let scripts =
-          Scripts
-            { scriptsOneShotPolicy = policyTypedScript
-            , scriptCarbonNftPolicy = carbonNftTypedScript
-            , scriptCarbonTokenPolicy = carbonTokenTypedScript
-            , scriptMintingNftPolicy = mintingNftTypedScript
-            , scriptMarketplaceValidator = marketplaceTypedScript
-            , scriptOracleValidator = oracleTypedScript
-            }
+
+    let
+      optionsSqliteFile = "wallet.test." <> id <> ".db"
+
+      scripts =
+        Scripts
+          { scriptCarbonNftPolicy = carbonNftTypedScript
+          , scriptCarbonTokenPolicy = carbonTokenTypedScript
+          , scriptMintingNftPolicy = mintingNftTypedScript
+          , scriptMarketplaceValidator = marketplaceTypedScript
+          , scriptOracleValidator = oracleTypedScript
+          }
 
     -- Create Sqlite pool and run migrations
     pool <-

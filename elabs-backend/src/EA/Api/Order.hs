@@ -1,13 +1,46 @@
-module EA.Api.Order (OrderApi) where
+module EA.Api.Order (
+  OrderApi,
+  handleOrderApi,
+) where
 
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
+import EA (EAApp)
 import EA.Api.Types (SubmitTxResponse, UserId)
-import Servant (Capture, JSON, Post, ReqBody, type (:<|>), type (:>))
+import Servant (
+  Capture,
+  GenericMode ((:-)),
+  HasServer (ServerT),
+  JSON,
+  NamedRoutes,
+  Post,
+  ReqBody,
+  ToServantApi,
+  type (:>),
+ )
+import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
 
-type OrderApi = OrderCreate :<|> OrderBuy :<|> OrderCancel :<|> OrderUpdate
+data OrderApi mode = OrderApi
+  { orderCreate :: mode :- OrderCreate
+  , orderBuy :: mode :- OrderBuy
+  , orderCancel :: mode :- OrderCancel
+  , orderUpdate :: mode :- OrderUpdate
+  }
+  deriving stock (Generic)
+
+instance HasSwagger (NamedRoutes OrderApi) where
+  toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi OrderApi))
+
+handleOrderApi :: ServerT (NamedRoutes OrderApi) EAApp
+handleOrderApi =
+  OrderApi
+    { orderCreate = handleOrderCreate
+    , orderBuy = handleOrderBuy
+    , orderCancel = handleOrderCancel
+    , orderUpdate = handleOrderUpdate
+    }
 
 type OrderCreate =
   "order"
@@ -56,3 +89,17 @@ data OrderBuyRequest = OrderBuyRequest
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
+
+--------------------------------------------------------------------------------
+
+handleOrderCreate :: OrderRequest -> EAApp SubmitTxResponse
+handleOrderCreate = error "TODO"
+
+handleOrderBuy :: OrderBuyRequest -> Int -> EAApp SubmitTxResponse
+handleOrderBuy = error "TODO"
+
+handleOrderCancel :: Int -> EAApp SubmitTxResponse
+handleOrderCancel = error "TODO"
+
+handleOrderUpdate :: OrderRequest -> Int -> EAApp SubmitTxResponse
+handleOrderUpdate = error "TODO"
