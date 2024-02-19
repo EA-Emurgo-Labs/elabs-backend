@@ -78,8 +78,8 @@ getWalletIndexPairs' userId n = do
 -- | Get internal wallet index pairs
 getInternalWalletIndexPairs ::
   (MonadIO m) =>
+  -- | Collateral
   Bool ->
-  -- ^ Collateral
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs collateral = do
   addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. collateral] []
