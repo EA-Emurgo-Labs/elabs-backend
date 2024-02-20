@@ -1,8 +1,17 @@
 # EMURGO Labs Backend
 
+You must first be in the nix development shell.
+```
+nix develop
+```
+
 This will create the `root.key`
 ```
 cabal run elabs-backend:app -- genrootkey --mnemonic "ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal"
+```
+This will create a test auth token:
+```
+cabal run elabs-backend:app -- addtoken --token TEST --notes Test
 ```
 
 ## run api

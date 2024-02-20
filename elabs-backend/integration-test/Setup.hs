@@ -65,30 +65,27 @@ withEASetup ioSetup putLog kont =
     loadFile defaultConfig
 
     id <- randomString 10
-    let
-      -- TODO: load this dynamically, also check cleanupSetup function
-      optionsScriptsFile = "scripts.debug.json"
-      optionsSqliteFile = "wallet.test." <> id <> ".db"
 
     metrics <- Metrics.initialize
     rootKey <- createRootKey
 
-    -- TODO: PIYUSH => Load script better
-    policyTypedScript <- readTypedScript optionsScriptsFile
     carbonNftTypedScript <- readTypedScript "contracts/carbon-nft.json"
     carbonTokenTypedScript <- readTypedScript "contracts/carbon-token.json"
     marketplaceTypedScript <- readTypedScript "contracts/marketplace.json"
     oracleTypedScript <- readTypedScript "contracts/oracle.json"
     mintingNftTypedScript <- readTypedScript "contracts/nft.json"
-    let scripts =
-          Scripts
-            { scriptsOneShotPolicy = policyTypedScript
-            , scriptCarbonNftPolicy = carbonNftTypedScript
-            , scriptCarbonTokenPolicy = carbonTokenTypedScript
-            , scriptMintingNftPolicy = mintingNftTypedScript
-            , scriptMarketplaceValidator = marketplaceTypedScript
-            , scriptOracleValidator = oracleTypedScript
-            }
+
+    let
+      optionsSqliteFile = "wallet.test." <> id <> ".db"
+
+      scripts =
+        Scripts
+          { scriptCarbonNftPolicy = carbonNftTypedScript
+          , scriptCarbonTokenPolicy = carbonTokenTypedScript
+          , scriptMintingNftPolicy = mintingNftTypedScript
+          , scriptMarketplaceValidator = marketplaceTypedScript
+          , scriptOracleValidator = oracleTypedScript
+          }
 
     -- Create Sqlite pool and run migrations
     pool <-
@@ -125,18 +122,26 @@ withEASetup ioSetup putLog kont =
 
     -- Adding funds to the internal collateral address
     txId <- runEAApp env $ do
-      addrs <- eaGetInternalAddresses
       (addr, _) <-
-        eaLiftMaybe "No internal address found" $
-          viaNonEmpty head addrs
-      let user = ctxUser2 ctx
-          tx =
-            mustHaveOutput
-              (GYTxOut addr (valueFromLovelace 5_000_000) Nothing Nothing)
+        eaLiftMaybe "No internal address found"
+          . viaNonEmpty head
+          =<< eaGetInternalAddresses False
+      (colAddr, _) <-
+        eaLiftMaybe "No internal collateral address found"
+          . viaNonEmpty head
+          =<< eaGetInternalAddresses True
+
+      let
+        user = ctxUser2 ctx
+        tx =
+          mustHaveOutput
+            (GYTxOut colAddr (valueFromLovelace 5_000_000) Nothing Nothing)
+            <> mustHaveOutput
+              (GYTxOut addr (valueFromLovelace 1_000_000_000) Nothing Nothing)
+
       txBody <- liftIO $ ctxRunI ctx user $ return tx
       liftIO $ submitTx ctx user txBody
-
-    putLog $ "Send 5 Ada to the collateral address: " <> show txId
+    putLog $ "Send funds to the internal addresses: " <> show txId
 
     kont $ EACtx ctx env
 

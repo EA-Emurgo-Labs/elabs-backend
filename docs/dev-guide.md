@@ -25,7 +25,6 @@ Usage: app [--core-config ARG] [--scripts ARG] [--root-key ARG] COMMAND
 
 Available options:
   --core-config ARG        Core config file path (default: "config.json")
-  --scripts ARG            Scripts file (default: "scripts.json")
   --root-key ARG           Root key file (default: "root.key")
   -h,--help                Show this help text
 

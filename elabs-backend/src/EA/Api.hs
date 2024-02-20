@@ -7,10 +7,6 @@ module EA.Api (
 import Data.Swagger (Swagger)
 import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
 import EA.Api.Carbon (CarbonApi, handleCarbonApi)
-import EA.Api.Mint (
-  MintApi (..),
-  handleMintApi,
- )
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
@@ -35,19 +31,15 @@ type Api =
     :> NamedRoutes ChangeblockApi
 
 data ChangeblockApi mode = ChangeblockApi
-  { txApi :: mode :- TxApi
-  , mintApi :: mode :- NamedRoutes MintApi
+  { txApi :: mode :- NamedRoutes TxApi
   , walletApi :: mode :- WalletApi
   , carbonApi :: mode :- CarbonApi
+  -- TODO: , orderApi :: mode :- NamedRoutes OrderApi
   }
   deriving stock (Generic)
 
 instance HasSwagger (NamedRoutes ChangeblockApi) where
   toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi ChangeblockApi))
-
--- TODO:
--- type ChangeblockApi =
---   "api" :> "v0" :> CarbonApi :<|> OrderApi
 
 apiSwagger :: Swagger
 apiSwagger = toSwagger appApi
@@ -64,9 +56,9 @@ changeblockServer ::
 changeblockServer _ =
   ChangeblockApi
     { txApi = handleTxApi
-    , mintApi = handleMintApi
     , walletApi = handleWalletApi
     , carbonApi = handleCarbonApi
+    -- TODO: , orderApi = handleOrderApi
     }
 
 changeblockServer' ::
