@@ -28,17 +28,17 @@ data MarketplaceDatum = MarketplaceDatum
   }
   deriving stock (Show)
 
-marketplaceAtTxOutref :: GYTxOutRef ->  Either String MarketplaceInfo
+marketplaceAtTxOutref :: GYTxOutRef -> EAApp( Either String MarketplaceInfo)
 marketplaceAtTxOutref oref = do
     providers <- asks eaAppEnvGYProviders
     [utxo] <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
-    result <- utxoDatumPure utxo
+    let result = utxoDatumPure utxo
 
-    case result of
-        Left msg -> Left msg
-        Right datum -> do
-                let (addr, val, (MarketplaceDatum owner salePrice  assetCS  assetTN   assetAmount issuer   isSell)) = datum
-                let info = MarketplaceInfo {
+    return $ case result of
+        Left msg -> Left "Datum not found"
+        Right datum -> 
+                let (addr, val, MarketplaceDatum owner salePrice  assetCS  assetTN   assetAmount issuer   isSell) = datum
+                    info = MarketplaceInfo {
                         mktInfoTxOutRef = oref
                         , mktInfoValue = val
                         , mktInfoOwner = owner
@@ -49,5 +49,4 @@ marketplaceAtTxOutref oref = do
                         , mktInfoIssuer = issuer   
                         , mktInfoIsSell = isSell
                         }
-                return (Right info)
-
+                in Right info
