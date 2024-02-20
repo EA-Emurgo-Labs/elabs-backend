@@ -1,23 +1,19 @@
-module EA.Tx.Changeblock.Marketplace () where
+module EA.Tx.Changeblock.Marketplace (MarketplaceInfo (..)) where
 
-import GeniusYield.Types (
-    GYTxoutRef,
-    GYValue,
-    GYPubKeyHash,
-    GYMintingPolicyId,
-    GYTokenName,
-    )
+import GeniusYield.Types (GYMintingPolicyId, GYPubKeyHash, GYTokenName, GYTxOutRef, GYValue)
 
-data MarketplaceInfo = MarketplaceInfo {
-   mktInfOref :: GYTxoutRef,
-   mktInfValue :: GYValue,
-   mktInfOwner  :: GYPubKeyHash,
-   mktInfSalePrice  :: Integer,
-   mktInfCarbonPolicyId :: GYMintingPolicyId,
-   mktInfCarbonTokenName :: GYTokenName,
-   mktInfCarbonTokenAmount :: Integer,
-   mktInfIssuer :: GYPubKeyHash,
-   mktInfIsSell :: Integer
- }
+data MarketplaceInfo = MarketplaceInfo
+  { mktInfoTxOutRef :: GYTxOutRef
+  , mktInfoValue :: GYValue
+  , mktInfoOwner :: GYPubKeyHash
+  , mktInfoSalePrice :: Integer
+  , mktInfoCarbonPolicyId :: GYMintingPolicyId
+  , mktInfoCarbonAssetName :: GYTokenName
+  , mktInfoAmount :: Integer
+  , mktInfoIssuer :: GYPubKeyHash
+  , mktInfoIsSell :: Integer
+  }
+  deriving stock (Show)
 
-marketplaceAtTxOutref :: GYTxoutRef ->  Either String MarketplaceInfo
+marketplaceAtTxOutref :: GYTxOutRef ->  Either String MarketplaceInfo
+
