@@ -141,6 +141,7 @@ library
     EA.Internal
     EA.Script
     EA.Script.Marketplace
+    EA.Tx.Changeblock.Marketplace
     EA.Tx.Changeblock.MintIpfsNftCarbonToken
     EA.Tx.OneShotMint
     EA.Wallet
