@@ -1,8 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module EA.Script.Marketplace (MarketplaceAction (..), MarketplaceScriptParams (..), MarketplaceDatum (..), MarketplaceParams (..), marketPlaceParamsToScriptParams) where
+module EA.Script.Marketplace (
+  MarketplaceAction (..),
+  MarketplaceScriptParams (..),
+  MarketplaceDatum (..),
+  MarketplaceParams (..),
+  MarketplaceInfo (..),
+  marketPlaceParamsToScriptParams,
+  marketplaceInfoToDatum,
+) where
 
-import GeniusYield.Types (GYMintingPolicyId, GYPubKeyHash, GYTokenName, GYValidatorHash, mintingPolicyIdCurrencySymbol, pubKeyHashToPlutus, tokenNameToPlutus, validatorHashToPlutus)
+import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
@@ -70,4 +78,30 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
     , mktSpVersion = tokenNameToPlutus mktPrmVersion
     , mktSpOracleSymbol = mintingPolicyIdCurrencySymbol mktPrmOracleSymbol
     , mktSpOracleTokenName = tokenNameToPlutus mktPrmOracleTokenName
+    }
+
+data MarketplaceInfo = MarketplaceInfo
+  { mktInfoTxOutRef :: GYTxOutRef
+  , mktInfoAddress :: GYAddress
+  , mktInfoValue :: GYValue
+  , mktInfoOwner :: GYPubKeyHash
+  , mktInfoSalePrice :: Integer
+  , mktInfoCarbonPolicyId :: GYMintingPolicyId
+  , mktInfoCarbonAssetName :: GYTokenName
+  , mktInfoAmount :: Integer
+  , mktInfoIssuer :: GYPubKeyHash
+  , mktInfoIsSell :: Integer
+  }
+  deriving stock (Show)
+
+marketplaceInfoToDatum :: MarketplaceInfo -> MarketplaceDatum
+marketplaceInfoToDatum MarketplaceInfo {..} =
+  MarketplaceDatum
+    { mktDtmOwner = pubKeyHashToPlutus mktInfoOwner
+    , mktDtmSalePrice = mktInfoSalePrice
+    , mktDtmAssetSymbol = mintingPolicyIdCurrencySymbol mktInfoCarbonPolicyId
+    , mktDtmAssetName = tokenNameToPlutus mktInfoCarbonAssetName
+    , mktDtmAmount = mktInfoAmount
+    , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
+    , mktDtmIsSell = mktInfoIsSell
     }

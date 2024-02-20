@@ -140,6 +140,7 @@ library
     EA.Internal
     EA.Script
     EA.Script.Marketplace
+    EA.Script.Oracle
     EA.Tx.Changeblock.Marketplace
     EA.Tx.Changeblock.MintIpfsNftCarbonToken
     EA.Wallet
