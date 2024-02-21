@@ -4,11 +4,9 @@
   nixConfig = {
     extra-experimental-features = [ "nix-command" "flakes" ];
     extra-substituters = [
-      "https://cache.iog.io"
       "https://ea-emurgo-labs.cachix.org"
     ];
     extra-trusted-public-keys = [
-      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       "ea-emurgo-labs.cachix.org-1:C4qCB9BfOH+otex5Mr5YclmyXer66BA7Oe4H1BmOzII="
     ];
     allow-import-from-derivation = "true";
