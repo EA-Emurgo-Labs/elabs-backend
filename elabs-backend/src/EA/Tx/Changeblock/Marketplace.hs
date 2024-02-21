@@ -1,7 +1,7 @@
-module EA.Tx.Changeblock.Marketplace (MarketplaceInfo (..), buy) where
+module EA.Tx.Changeblock.Marketplace (MarketplaceInfo (..), buy, marketplaceAtTxOutRef) where
 
 import EA.Script (Scripts, marketplaceValidator)
-import EA.Script.Marketplace (MarketplaceDatum (..), MarketplaceInfo (..), MarketplaceParams (..), marketplaceInfoToDatum)
+import EA.Script.Marketplace (MarketplaceDatum (..), MarketplaceInfo (..), MarketplaceParams (..), marketplaceInfoToDatum, marketplaceDatumToInfo)
 import EA.Script.Marketplace qualified as MarketplaceAction
 import EA.Script.Oracle (OracleInfo (..))
 import GeniusYield.TxBuilder (GYTxSkeleton, mustBeSignedBy, mustHaveInput, mustHaveOutput, mustHaveRefInput, utxoDatumPure)
@@ -46,27 +46,13 @@ buy nid info@MarketplaceInfo {..} OracleInfo {..} buyerPubKeyHash mMarketplaceRe
         , mktDtmIsSell = 0
         }
 
-marketplaceAtTxOutRef :: GYTxOutRef -> EAApp( Either String MarketplaceInfo)
+marketplaceAtTxOutRef :: GYTxOutRef -> EAApp MarketplaceInfo
 marketplaceAtTxOutRef oref = do
     providers <- asks eaAppEnvGYProviders
-    [utxo] <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
-    let result = utxoDatumPure utxo
+    utxos <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
+    utxo <- eaLiftMaybe "No UTXO found" $ listToMaybe utxos
+    (addr, val, datum) <-
+      eaLiftEither (const "Cannot extract data from UTXO")
+        $ utxoDatumPure @MarketplaceDatum utxo
 
-    return $ case result of
-        Left msg -> Left "Datum not found"
-        Right datum -> 
-                let (addr, val, MarketplaceDatum owner salePrice  assetCS  assetTN   assetAmount issuer   isSell) = datum
-                    Right pubkeyIssue = pubKeyHashFromPlutus issuer  
-                    Right pubkeyOwner = pubKeyHashFromPlutus owner  
-                    info = MarketplaceInfo {
-                        mktInfoTxOutRef = oref
-                        , mktInfoValue = val
-                        , mktInfoOwner = pubkeyOwner
-                        , mktInfoSalePrice = salePrice
-                        , mktInfoCarbonPolicyId = assetCS
-                        , mktInfoCarbonAssetName = assetTN
-                        , mktInfoAmount = assetAmount
-                        , mktInfoIssuer = pubkeyIssue 
-                        , mktInfoIsSell = isSell
-                        }
-                in Right info
+    return $ marketplaceDatumToInfo oref val addr datum

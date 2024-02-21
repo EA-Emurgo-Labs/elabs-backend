@@ -8,12 +8,15 @@ module EA.Script.Marketplace (
   MarketplaceInfo (..),
   marketPlaceParamsToScriptParams,
   marketplaceInfoToDatum,
+  marketplaceDatumToInfo,
 ) where
 
 import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
+import PlutusLedgerApi.V1.Value (assetClass)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
+
 
 data MarketplaceAction
   = BUY
@@ -105,3 +108,38 @@ marketplaceInfoToDatum MarketplaceInfo {..} =
     , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
     , mktDtmIsSell = mktInfoIsSell
     }
+
+
+marketplaceDatumToInfo :: GYTxOutRef -> GYValue -> GYAddress -> MarketplaceDatum -> MarketplaceInfo
+marketplaceDatumToInfo oref val addr datum = do
+  let pubkeyIssuer = fromRight "" (pubKeyHashFromPlutus $ mktDtmIssuer datum)
+      pubkeyOwner = fromRight "" (pubKeyHashFromPlutus $ mktDtmOwner datum)
+      carbonAsset = fromRight "" (assetClassFromPlutus $ assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
+  case carbonAsset of
+      GYToken tokenPolicy tokenName ->
+        MarketplaceInfo
+            {
+              mktInfoTxOutRef = oref
+            , mktInfoAddress = addr
+            , mktInfoValue = val
+            , mktInfoOwner = pubkeyOwner
+            , mktInfoSalePrice = mktDtmSalePrice datum
+            , mktInfoCarbonPolicyId = tokenPolicy
+            , mktInfoCarbonAssetName = tokenName
+            , mktInfoAmount = mktDtmAmount datum
+            , mktInfoIssuer = pubkeyIssuer
+            , mktInfoIsSell = mktDtmIsSell datum
+            }
+      _ -> MarketplaceInfo
+            {
+              mktInfoTxOutRef = oref
+            , mktInfoAddress = addr
+            , mktInfoValue = val
+            , mktInfoOwner = pubkeyOwner
+            , mktInfoSalePrice = mktDtmSalePrice datum
+            , mktInfoCarbonPolicyId = ""
+            , mktInfoCarbonAssetName = ""
+            , mktInfoAmount = mktDtmAmount datum
+            , mktInfoIssuer = pubkeyIssuer
+            , mktInfoIsSell = mktDtmIsSell datum
+            }
