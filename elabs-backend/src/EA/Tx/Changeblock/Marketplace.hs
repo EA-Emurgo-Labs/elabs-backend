@@ -56,3 +56,15 @@ marketplaceAtTxOutRef oref = do
         $ utxoDatumPure @MarketplaceDatum utxo
 
     return $ marketplaceDatumToInfo oref val addr datum
+
+_marketplaceInfos :: GYNetworkId -> MarketplaceParams -> Scripts -> EAApp [MarketplaceInfo]
+_marketplaceInfos nid mktPlaceParams scripts = do
+  let mktPlaceValidator = marketplaceValidator mktPlaceParams scripts
+      marketplaceAddr = addressFromValidator nid mktPlaceValidator
+  providers <- asks eaAppEnvGYProviders
+  _utxos <- liftIO $ gyQueryUtxosAtAddressesWithDatums providers [marketplaceAddr]
+  --Todo check each utxo
+  return $ map (\x ->  do
+        (addr, val, datum) <- eaLiftEither (const "Cannot extract data from UTXO") $ utxoDatumPure @MarketplaceDatum x
+         marketplaceDatumToInfo (first $ utxosRefs $ utxosFromUTxO x) val addr datum
+        ) _utxos
