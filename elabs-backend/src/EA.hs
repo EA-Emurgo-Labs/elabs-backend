@@ -28,8 +28,13 @@ import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
 import EA.Script (Scripts (..), marketplaceValidator)
-import EA.Script.Marketplace (MarketplaceDatum, MarketplaceInfo, MarketplaceParams, marketplaceDatumToInfo)
-import GeniusYield.TxBuilder (GYQueryDatumError, adaOnlyUTxOPure, utxoDatumPure)
+import EA.Script.Marketplace (
+  MarketplaceDatum,
+  MarketplaceInfo,
+  MarketplaceParams,
+  marketplaceDatumToInfo,
+ )
+import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
 import GeniusYield.Types (
   GYAddress,
   GYDatum,
@@ -188,7 +193,8 @@ eaMarketplaceAtTxOutRef oref = do
     eaLiftEither (const "Cannot extract data from UTXO") $
       utxoDatumPure @MarketplaceDatum utxo
 
-  return $ marketplaceDatumToInfo oref val addr datum
+  eaLiftEither (const "Cannot create market place info") $
+    marketplaceDatumToInfo oref val addr datum
 
 eaMarketplaceInfos :: MarketplaceParams -> EAApp [MarketplaceInfo]
 eaMarketplaceInfos mktPlaceParams = do
@@ -208,7 +214,9 @@ eaMarketplaceInfos mktPlaceParams = do
       filter isRight $
         map utxoToMarketplaceInfo utxos
   where
-    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Either GYQueryDatumError MarketplaceInfo
+    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Either String MarketplaceInfo
     utxoToMarketplaceInfo t@(utxo, _) = do
-      (addr, value, datum) <- utxoDatumPure @MarketplaceDatum t
-      return $ marketplaceDatumToInfo (utxoRef utxo) value addr datum
+      (addr, value, datum) <-
+        either (Left . show) Right $
+          utxoDatumPure @MarketplaceDatum t
+      marketplaceDatumToInfo (utxoRef utxo) value addr datum

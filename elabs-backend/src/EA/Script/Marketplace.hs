@@ -108,36 +108,38 @@ marketplaceInfoToDatum MarketplaceInfo {..} =
     , mktDtmIsSell = mktInfoIsSell
     }
 
--- FIXME: ... -> Either String MarketplaceInfo
-marketplaceDatumToInfo :: GYTxOutRef -> GYValue -> GYAddress -> MarketplaceDatum -> MarketplaceInfo
+marketplaceDatumToInfo ::
+  GYTxOutRef ->
+  GYValue ->
+  GYAddress ->
+  MarketplaceDatum ->
+  Either String MarketplaceInfo
 marketplaceDatumToInfo oref val addr datum = do
-  let pubkeyIssuer = fromRight "" (pubKeyHashFromPlutus $ mktDtmIssuer datum)
-      pubkeyOwner = fromRight "" (pubKeyHashFromPlutus $ mktDtmOwner datum)
-      carbonAsset = fromRight "" (assetClassFromPlutus $ assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
-  case carbonAsset of
-    GYToken tokenPolicy tokenName ->
-      MarketplaceInfo
-        { mktInfoTxOutRef = oref
-        , mktInfoAddress = addr
-        , mktInfoValue = val
-        , mktInfoOwner = pubkeyOwner
-        , mktInfoSalePrice = mktDtmSalePrice datum
-        , mktInfoCarbonPolicyId = tokenPolicy
-        , mktInfoCarbonAssetName = tokenName
-        , mktInfoAmount = mktDtmAmount datum
-        , mktInfoIssuer = pubkeyIssuer
-        , mktInfoIsSell = mktDtmIsSell datum
-        }
-    _ ->
-      MarketplaceInfo
-        { mktInfoTxOutRef = oref
-        , mktInfoAddress = addr
-        , mktInfoValue = val
-        , mktInfoOwner = pubkeyOwner
-        , mktInfoSalePrice = mktDtmSalePrice datum
-        , mktInfoCarbonPolicyId = ""
-        , mktInfoCarbonAssetName = ""
-        , mktInfoAmount = mktDtmAmount datum
-        , mktInfoIssuer = pubkeyIssuer
-        , mktInfoIsSell = mktDtmIsSell datum
-        }
+  pubkeyIssuer <- seither . pubKeyHashFromPlutus $ mktDtmIssuer datum
+  pubkeyOwner <- seither . pubKeyHashFromPlutus $ mktDtmOwner datum
+  (tokenPolicy, tokenName) <-
+    seither $
+      unpackAc
+        <$> assetClassFromPlutus
+          (assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
+
+  return
+    MarketplaceInfo
+      { mktInfoTxOutRef = oref
+      , mktInfoAddress = addr
+      , mktInfoValue = val
+      , mktInfoOwner = pubkeyOwner
+      , mktInfoSalePrice = mktDtmSalePrice datum
+      , mktInfoCarbonPolicyId = tokenPolicy
+      , mktInfoCarbonAssetName = tokenName
+      , mktInfoAmount = mktDtmAmount datum
+      , mktInfoIssuer = pubkeyIssuer
+      , mktInfoIsSell = mktDtmIsSell datum
+      }
+  where
+    seither :: (Show b) => Either b a -> Either String a
+    seither = either (Left . show) Right
+
+    unpackAc :: GYAssetClass -> (GYMintingPolicyId, GYTokenName)
+    unpackAc (GYToken tokenPolicy tokenName) = (tokenPolicy, tokenName)
+    unpackAc _ = ("", "")
