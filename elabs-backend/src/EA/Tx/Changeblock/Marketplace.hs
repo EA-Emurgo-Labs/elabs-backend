@@ -1,12 +1,47 @@
-module EA.Tx.Changeblock.Marketplace (MarketplaceInfo (..), buy, marketplaceAtTxOutRef) where
+module EA.Tx.Changeblock.Marketplace (
+  MarketplaceInfo (..),
+  buy,
+) where
 
+import EA ()
 import EA.Script (Scripts, marketplaceValidator)
-import EA.Script.Marketplace (MarketplaceDatum (..), MarketplaceInfo (..), MarketplaceParams (..), marketplaceInfoToDatum, marketplaceDatumToInfo)
+import EA.Script.Marketplace (
+  MarketplaceDatum (..),
+  MarketplaceInfo (..),
+  MarketplaceParams (..),
+  marketplaceInfoToDatum,
+ )
 import EA.Script.Marketplace qualified as MarketplaceAction
 import EA.Script.Oracle (OracleInfo (..))
-import GeniusYield.TxBuilder (GYTxSkeleton, mustBeSignedBy, mustHaveInput, mustHaveOutput, mustHaveRefInput, utxoDatumPure)
-import GeniusYield.Types
-import EA
+import GeniusYield.TxBuilder (
+  GYTxSkeleton,
+  mustBeSignedBy,
+  mustHaveInput,
+  mustHaveOutput,
+  mustHaveRefInput,
+ )
+import GeniusYield.Types (
+  GYAssetClass (GYToken),
+  GYInScript (GYInReference, GYInScript),
+  GYNetworkId,
+  GYPubKeyHash,
+  GYTxIn (GYTxIn, gyTxInTxOutRef, gyTxInWitness),
+  GYTxInWitness (GYTxInWitnessScript),
+  GYTxOutRef,
+  PlutusVersion (PlutusV2),
+  addressFromPubKeyHash,
+  addressFromValidator,
+  datumFromPlutusData,
+  mintingPolicyIdCurrencySymbol,
+  mkGYTxOut,
+  mkGYTxOutNoDatum,
+  pubKeyHashToPlutus,
+  redeemerFromPlutusData,
+  tokenNameToPlutus,
+  validatorToScript,
+  valueFromLovelace,
+  valueSingleton,
+ )
 
 type BuyerPubkeyHash = GYPubKeyHash
 
@@ -45,27 +80,3 @@ buy nid info@MarketplaceInfo {..} OracleInfo {..} buyerPubKeyHash mMarketplaceRe
         , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
         , mktDtmIsSell = 0
         }
-
-marketplaceAtTxOutRef :: GYTxOutRef -> EAApp MarketplaceInfo
-marketplaceAtTxOutRef oref = do
-    providers <- asks eaAppEnvGYProviders
-    utxos <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
-    utxo <- eaLiftMaybe "No UTXO found" $ listToMaybe utxos
-    (addr, val, datum) <-
-      eaLiftEither (const "Cannot extract data from UTXO")
-        $ utxoDatumPure @MarketplaceDatum utxo
-
-    return $ marketplaceDatumToInfo oref val addr datum
-
-_marketplaceInfos :: GYNetworkId -> MarketplaceParams -> Scripts -> EAApp [MarketplaceInfo]
-_marketplaceInfos nid mktPlaceParams scripts = do
-  let mktPlaceValidator = marketplaceValidator mktPlaceParams scripts
-      marketplaceAddr = addressFromValidator nid mktPlaceValidator
-  providers <- asks eaAppEnvGYProviders
-  _utxos <- liftIO $ gyQueryUtxosAtAddressesWithDatums providers [marketplaceAddr]
-  let _utxosRight = filter(\x -> isRight . utxoDatumPure @MarketplaceDatum x) _utxos
-  --Todo check each utxo
-  return $ map (\x ->  do
-        (addr, val, datum) <- eaLiftEither (const "Cannot extract data from UTXO") $ utxoDatumPure @MarketplaceDatum x
-         marketplaceDatumToInfo (first $ utxosRefs $ utxosFromUTxO x) val addr datum
-        ) _utxosRight

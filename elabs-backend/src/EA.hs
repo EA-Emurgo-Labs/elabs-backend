@@ -17,6 +17,8 @@ module EA (
   eaGetAdaOnlyUTxO,
   eaGetCollateral,
   eaGetCollateral',
+  eaMarketplaceAtTxOutRef,
+  eaMarketplaceInfos,
 )
 where
 
@@ -25,10 +27,12 @@ import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
 import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
-import EA.Script (Scripts (..))
-import GeniusYield.TxBuilder (adaOnlyUTxOPure)
+import EA.Script (Scripts (..), marketplaceValidator)
+import EA.Script.Marketplace (MarketplaceDatum, MarketplaceInfo, MarketplaceParams, marketplaceDatumToInfo)
+import GeniusYield.TxBuilder (GYQueryDatumError, adaOnlyUTxOPure, utxoDatumPure)
 import GeniusYield.Types (
   GYAddress,
+  GYDatum,
   GYLogNamespace,
   GYLogSeverity (..),
   GYNetworkId,
@@ -37,11 +41,15 @@ import GeniusYield.Types (
   GYTx,
   GYTxId,
   GYTxOutRef,
+  GYUTxO (utxoRef),
+  addressFromValidator,
   gyLog,
   gyLogDebug,
   gyLogError,
   gyLogInfo,
   gyLogWarning,
+  gyQueryUtxosAtAddressesWithDatums,
+  gyQueryUtxosAtTxOutRefsWithDatums,
  )
 import Internal.Wallet (RootKey)
 import UnliftIO (MonadUnliftIO (withRunInIO))
@@ -170,3 +178,37 @@ eaGetCollateral' (addr : addrs) n = do
   eaGetCollateral addr n >>= \case
     Nothing -> eaGetCollateral' addrs n
     Just oref -> return $ Just oref
+
+eaMarketplaceAtTxOutRef :: GYTxOutRef -> EAApp MarketplaceInfo
+eaMarketplaceAtTxOutRef oref = do
+  providers <- asks eaAppEnvGYProviders
+  utxos <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
+  utxo <- eaLiftMaybe "No UTXO found" $ listToMaybe utxos
+  (addr, val, datum) <-
+    eaLiftEither (const "Cannot extract data from UTXO") $
+      utxoDatumPure @MarketplaceDatum utxo
+
+  return $ marketplaceDatumToInfo oref val addr datum
+
+eaMarketplaceInfos :: MarketplaceParams -> EAApp [MarketplaceInfo]
+eaMarketplaceInfos mktPlaceParams = do
+  providers <- asks eaAppEnvGYProviders
+  nid <- asks eaAppEnvGYNetworkId
+  scripts <- asks eaAppEnvScripts
+
+  let mktPlaceValidator = marketplaceValidator mktPlaceParams scripts
+      marketplaceAddr = addressFromValidator nid mktPlaceValidator
+
+  utxos <-
+    liftIO $
+      gyQueryUtxosAtAddressesWithDatums providers [marketplaceAddr]
+
+  eaLiftEither (const "No marketplace infos found.") $
+    sequence $
+      filter isRight $
+        map utxoToMarketplaceInfo utxos
+  where
+    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Either GYQueryDatumError MarketplaceInfo
+    utxoToMarketplaceInfo t@(utxo, _) = do
+      (addr, value, datum) <- utxoDatumPure @MarketplaceDatum t
+      return $ marketplaceDatumToInfo (utxoRef utxo) value addr datum

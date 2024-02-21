@@ -17,7 +17,6 @@ import PlutusLedgerApi.V1.Value (assetClass)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
 
-
 data MarketplaceAction
   = BUY
   | MERGE
@@ -109,37 +108,36 @@ marketplaceInfoToDatum MarketplaceInfo {..} =
     , mktDtmIsSell = mktInfoIsSell
     }
 
-
+-- FIXME: ... -> Either String MarketplaceInfo
 marketplaceDatumToInfo :: GYTxOutRef -> GYValue -> GYAddress -> MarketplaceDatum -> MarketplaceInfo
 marketplaceDatumToInfo oref val addr datum = do
   let pubkeyIssuer = fromRight "" (pubKeyHashFromPlutus $ mktDtmIssuer datum)
       pubkeyOwner = fromRight "" (pubKeyHashFromPlutus $ mktDtmOwner datum)
       carbonAsset = fromRight "" (assetClassFromPlutus $ assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
   case carbonAsset of
-      GYToken tokenPolicy tokenName ->
-        MarketplaceInfo
-            {
-              mktInfoTxOutRef = oref
-            , mktInfoAddress = addr
-            , mktInfoValue = val
-            , mktInfoOwner = pubkeyOwner
-            , mktInfoSalePrice = mktDtmSalePrice datum
-            , mktInfoCarbonPolicyId = tokenPolicy
-            , mktInfoCarbonAssetName = tokenName
-            , mktInfoAmount = mktDtmAmount datum
-            , mktInfoIssuer = pubkeyIssuer
-            , mktInfoIsSell = mktDtmIsSell datum
-            }
-      _ -> MarketplaceInfo
-            {
-              mktInfoTxOutRef = oref
-            , mktInfoAddress = addr
-            , mktInfoValue = val
-            , mktInfoOwner = pubkeyOwner
-            , mktInfoSalePrice = mktDtmSalePrice datum
-            , mktInfoCarbonPolicyId = ""
-            , mktInfoCarbonAssetName = ""
-            , mktInfoAmount = mktDtmAmount datum
-            , mktInfoIssuer = pubkeyIssuer
-            , mktInfoIsSell = mktDtmIsSell datum
-            }
+    GYToken tokenPolicy tokenName ->
+      MarketplaceInfo
+        { mktInfoTxOutRef = oref
+        , mktInfoAddress = addr
+        , mktInfoValue = val
+        , mktInfoOwner = pubkeyOwner
+        , mktInfoSalePrice = mktDtmSalePrice datum
+        , mktInfoCarbonPolicyId = tokenPolicy
+        , mktInfoCarbonAssetName = tokenName
+        , mktInfoAmount = mktDtmAmount datum
+        , mktInfoIssuer = pubkeyIssuer
+        , mktInfoIsSell = mktDtmIsSell datum
+        }
+    _ ->
+      MarketplaceInfo
+        { mktInfoTxOutRef = oref
+        , mktInfoAddress = addr
+        , mktInfoValue = val
+        , mktInfoOwner = pubkeyOwner
+        , mktInfoSalePrice = mktDtmSalePrice datum
+        , mktInfoCarbonPolicyId = ""
+        , mktInfoCarbonAssetName = ""
+        , mktInfoAmount = mktDtmAmount datum
+        , mktInfoIssuer = pubkeyIssuer
+        , mktInfoIsSell = mktDtmIsSell datum
+        }
