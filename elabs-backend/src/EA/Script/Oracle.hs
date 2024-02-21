@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module EA.Script.Oracle (OracleDatum (..), OracleScriptParams (..), OracleAction (..), oracleMintingPolicy) where
+module EA.Script.Oracle (OracleDatum (..), OracleScriptParams (..), OracleAction (..), OracleInfo (..)) where
 
-import EA.Script (Scripts (..))
 import GeniusYield.Types
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusLedgerApi.V1.Value (AssetClass)
@@ -20,10 +19,18 @@ data OracleScriptParams = OracleScriptParams
   , orcScriptPrmOperator :: PubKeyHash
   }
 
-PlutusTx.unstableMakeIsData ''OracleParams
+PlutusTx.unstableMakeIsData ''OracleScriptParams
 
 data OracleAction
   = Update
   | Delete
 
 PlutusTx.makeIsDataIndexed ''OracleAction [('Update, 0), ('Delete, 1)]
+
+data OracleInfo = OracleInfo
+  { orcInfoUtxoRef :: GYTxOutRef
+  , orcInfoAddress :: GYAddress
+  , orcInfoValue :: GYValue
+  , orcInfoRate :: Integer
+  }
+  deriving stock (Show)
