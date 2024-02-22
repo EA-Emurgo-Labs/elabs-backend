@@ -8,10 +8,12 @@ module EA.Script.Marketplace (
   MarketplaceInfo (..),
   marketPlaceParamsToScriptParams,
   marketplaceInfoToDatum,
+  marketplaceDatumToInfo,
 ) where
 
 import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
+import PlutusLedgerApi.V1.Value (assetClass)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
 
@@ -105,3 +107,39 @@ marketplaceInfoToDatum MarketplaceInfo {..} =
     , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
     , mktDtmIsSell = mktInfoIsSell
     }
+
+marketplaceDatumToInfo ::
+  GYTxOutRef ->
+  GYValue ->
+  GYAddress ->
+  MarketplaceDatum ->
+  Either String MarketplaceInfo
+marketplaceDatumToInfo oref val addr datum = do
+  pubkeyIssuer <- seither . pubKeyHashFromPlutus $ mktDtmIssuer datum
+  pubkeyOwner <- seither . pubKeyHashFromPlutus $ mktDtmOwner datum
+  (tokenPolicy, tokenName) <-
+    seither $
+      unpackAc
+        <$> assetClassFromPlutus
+          (assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
+
+  return
+    MarketplaceInfo
+      { mktInfoTxOutRef = oref
+      , mktInfoAddress = addr
+      , mktInfoValue = val
+      , mktInfoOwner = pubkeyOwner
+      , mktInfoSalePrice = mktDtmSalePrice datum
+      , mktInfoCarbonPolicyId = tokenPolicy
+      , mktInfoCarbonAssetName = tokenName
+      , mktInfoAmount = mktDtmAmount datum
+      , mktInfoIssuer = pubkeyIssuer
+      , mktInfoIsSell = mktDtmIsSell datum
+      }
+  where
+    seither :: (Show b) => Either b a -> Either String a
+    seither = either (Left . show) Right
+
+    unpackAc :: GYAssetClass -> (GYMintingPolicyId, GYTokenName)
+    unpackAc (GYToken tokenPolicy tokenName) = (tokenPolicy, tokenName)
+    unpackAc _ = ("", "")
