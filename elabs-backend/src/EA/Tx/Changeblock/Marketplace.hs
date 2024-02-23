@@ -1,4 +1,4 @@
-module EA.Tx.Changeblock.Marketplace (buy, partialBuy, sell, cancel) where
+module EA.Tx.Changeblock.Marketplace (buy, partialBuy, sell, cancel, merge) where
 
 import EA ()
 import EA.Script (Scripts, marketplaceValidator)
@@ -20,9 +20,9 @@ import GeniusYield.Types (
   GYTxIn (GYTxIn, gyTxInTxOutRef, gyTxInWitness),
   GYTxInWitness (GYTxInWitnessScript),
   GYTxOutRef,
-  PlutusVersion (PlutusV2),
   GYValidator,
   GYValue,
+  PlutusVersion (PlutusV2),
   addressFromPubKeyHash,
   datumFromPlutusData,
   mintingPolicyIdCurrencySymbol,
@@ -35,6 +35,8 @@ import GeniusYield.Types (
   valueFromLovelace,
   valueSingleton,
  )
+
+import Data.List.NonEmpty qualified as NE
 
 type BuyerPubkeyHash = GYPubKeyHash
 
@@ -206,3 +208,39 @@ cancel nid info@MarketplaceInfo {..} OracleInfo {..} mMarketplaceRefScript mktpl
         <> mustHaveOutput (mkGYTxOutNoDatum escrowAddress (valueFromLovelace orcInfoRate))
         <> mustHaveOutput (mkGYTxOut mktInfoAddress (mkCarbontokenValue info mktInfoAmount) (datumFromPlutusData cancelDatum))
         <> mustBeSignedBy mktInfoOwner
+
+merge ::
+  -- | The Network Id
+  GYNetworkId ->
+  -- | NonEmpty Marketplace Infos
+  NE.NonEmpty MarketplaceInfo ->
+  -- | The Oracle Info
+  OracleInfo ->
+  -- | Optional marketplace reference script UtxoRef
+  Maybe GYTxOutRef ->
+  -- | The Escrow PubkeyHash
+  GYPubKeyHash ->
+  -- | The Marketplace Validator
+  GYValidator 'PlutusV2 ->
+  GYTxSkeleton 'PlutusV2
+merge nid infos OracleInfo {..} mMarketplaceRefScript escrowPubkeyHash mktValidator =
+  let info = NE.head infos
+      filteredInfos = NE.filter (\m -> mktInfoOwner m == mktInfoOwner info && mktInfoIsSell m == 0 && mktInfoIssuer m == mktInfoIssuer info) infos
+      inputs = foldMap (\info -> mustHaveInput $ mkMarketplaceInput mktValidator mMarketplaceRefScript info Marketplace.MERGE) filteredInfos
+      escrowAddress = addressFromPubKeyHash nid escrowPubkeyHash
+      mergedAmt = sum $ mktInfoAmount <$> NE.toList infos
+      newDatum =
+        MarketplaceDatum
+          { mktDtmOwner = pubKeyHashToPlutus $ mktInfoOwner info
+          , mktDtmSalePrice = orcInfoRate
+          , mktDtmAssetSymbol = mintingPolicyIdCurrencySymbol $ mktInfoCarbonPolicyId info
+          , mktDtmAssetName = tokenNameToPlutus $ mktInfoCarbonAssetName info
+          , mktDtmAmount = mergedAmt
+          , mktDtmIssuer = pubKeyHashToPlutus $ mktInfoIssuer info
+          , mktDtmIsSell = 0
+          }
+   in mustHaveRefInput orcInfoUtxoRef
+        <> inputs
+        <> mustHaveOutput (mkGYTxOutNoDatum escrowAddress (valueFromLovelace orcInfoRate))
+        <> mustHaveOutput (mkGYTxOut (mktInfoAddress info) (mkCarbontokenValue info mergedAmt) (datumFromPlutusData newDatum))
+        <> mustBeSignedBy (mktInfoOwner info)
