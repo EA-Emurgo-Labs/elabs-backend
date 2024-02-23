@@ -1,9 +1,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module EA.Script.Marketplace (MarketplaceAction (..), MarketplaceScriptParams (..), MarketplaceDatum (..), MarketplaceParams (..), marketPlaceParamsToScriptParams) where
+module EA.Script.Marketplace (
+  MarketplaceAction (..),
+  MarketplaceScriptParams (..),
+  MarketplaceDatum (..),
+  MarketplaceParams (..),
+  MarketplaceInfo (..),
+  marketPlaceParamsToScriptParams,
+  marketplaceInfoToDatum,
+  marketplaceDatumToInfo,
+) where
 
-import GeniusYield.Types (GYMintingPolicyId, GYPubKeyHash, GYTokenName, GYValidatorHash, mintingPolicyIdCurrencySymbol, pubKeyHashToPlutus, tokenNameToPlutus, validatorHashToPlutus)
+import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
+import PlutusLedgerApi.V1.Value (assetClass)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
 
@@ -71,3 +81,65 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
     , mktSpOracleSymbol = mintingPolicyIdCurrencySymbol mktPrmOracleSymbol
     , mktSpOracleTokenName = tokenNameToPlutus mktPrmOracleTokenName
     }
+
+data MarketplaceInfo = MarketplaceInfo
+  { mktInfoTxOutRef :: GYTxOutRef
+  , mktInfoAddress :: GYAddress
+  , mktInfoValue :: GYValue
+  , mktInfoOwner :: GYPubKeyHash
+  , mktInfoSalePrice :: Integer
+  , mktInfoCarbonPolicyId :: GYMintingPolicyId
+  , mktInfoCarbonAssetName :: GYTokenName
+  , mktInfoAmount :: Integer
+  , mktInfoIssuer :: GYPubKeyHash
+  , mktInfoIsSell :: Integer
+  }
+  deriving stock (Show)
+
+marketplaceInfoToDatum :: MarketplaceInfo -> MarketplaceDatum
+marketplaceInfoToDatum MarketplaceInfo {..} =
+  MarketplaceDatum
+    { mktDtmOwner = pubKeyHashToPlutus mktInfoOwner
+    , mktDtmSalePrice = mktInfoSalePrice
+    , mktDtmAssetSymbol = mintingPolicyIdCurrencySymbol mktInfoCarbonPolicyId
+    , mktDtmAssetName = tokenNameToPlutus mktInfoCarbonAssetName
+    , mktDtmAmount = mktInfoAmount
+    , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
+    , mktDtmIsSell = mktInfoIsSell
+    }
+
+marketplaceDatumToInfo ::
+  GYTxOutRef ->
+  GYValue ->
+  GYAddress ->
+  MarketplaceDatum ->
+  Either String MarketplaceInfo
+marketplaceDatumToInfo oref val addr datum = do
+  pubkeyIssuer <- seither . pubKeyHashFromPlutus $ mktDtmIssuer datum
+  pubkeyOwner <- seither . pubKeyHashFromPlutus $ mktDtmOwner datum
+  (tokenPolicy, tokenName) <-
+    seither $
+      unpackAc
+        <$> assetClassFromPlutus
+          (assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
+
+  return
+    MarketplaceInfo
+      { mktInfoTxOutRef = oref
+      , mktInfoAddress = addr
+      , mktInfoValue = val
+      , mktInfoOwner = pubkeyOwner
+      , mktInfoSalePrice = mktDtmSalePrice datum
+      , mktInfoCarbonPolicyId = tokenPolicy
+      , mktInfoCarbonAssetName = tokenName
+      , mktInfoAmount = mktDtmAmount datum
+      , mktInfoIssuer = pubkeyIssuer
+      , mktInfoIsSell = mktDtmIsSell datum
+      }
+  where
+    seither :: (Show b) => Either b a -> Either String a
+    seither = either (Left . show) Right
+
+    unpackAc :: GYAssetClass -> (GYMintingPolicyId, GYTokenName)
+    unpackAc (GYToken tokenPolicy tokenName) = (tokenPolicy, tokenName)
+    unpackAc _ = ("", "")
