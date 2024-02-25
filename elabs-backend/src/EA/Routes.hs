@@ -1,16 +1,16 @@
 module EA.Routes (appRoutes, routes) where
 
+import Data.Swagger (Swagger)
+import EA (EAApp)
 import EA.Api (Api, apiServer, apiSwagger)
 import Servant (
+  Get,
+  HasServer (ServerT),
+  JSON,
+  NamedRoutes,
   (:-),
   (:>),
-  HasServer (ServerT),
-  NamedRoutes,
-  Get,
-  JSON
  )
-import EA (EAApp)
-import Data.Swagger (Swagger)
 
 --------------------------------------------------------------------------------
 
