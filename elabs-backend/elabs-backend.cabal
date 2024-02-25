@@ -138,6 +138,7 @@ library
     EA.Api.Types
     EA.Api.Wallet
     EA.Internal
+    EA.Routes
     EA.Script
     EA.Script.Marketplace
     EA.Script.Oracle

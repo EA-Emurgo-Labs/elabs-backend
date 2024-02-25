@@ -1,4 +1,5 @@
 module EA.Api (
+  Api,
   appApi,
   apiSwagger,
   apiServer,
@@ -25,8 +26,7 @@ import Servant.Swagger (HasSwagger, toSwagger)
 --------------------------------------------------------------------------------
 
 type Api =
-  "api"
-    :> "v0"
+  "v0"
     :> Header "Authorization" AuthorizationHeader
     :> NamedRoutes ChangeblockApi
 
@@ -34,7 +34,7 @@ data ChangeblockApi mode = ChangeblockApi
   { txApi :: mode :- NamedRoutes TxApi
   , walletApi :: mode :- WalletApi
   , carbonApi :: mode :- CarbonApi
-  -- TODO: , orderApi :: mode :- NamedRoutes OrderApi
+  -- , orderApi :: mode :- NamedRoutes OrderApi
   }
   deriving stock (Generic)
 
@@ -58,7 +58,7 @@ changeblockServer _ =
     { txApi = handleTxApi
     , walletApi = handleWalletApi
     , carbonApi = handleCarbonApi
-    -- TODO: , orderApi = handleOrderApi
+    -- , orderApi = handleOrderApi
     }
 
 changeblockServer' ::
