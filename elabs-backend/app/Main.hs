@@ -20,8 +20,8 @@ import EA.Api (apiSwagger)
 import EA.Internal (fromLogLevel)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..), nftMintingPolicy, oracleValidator)
-import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
 import EA.Tx.Changeblock.Oracle (createOracle)
+import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
 import GeniusYield.GYConfig (
   GYCoreConfig (cfgNetworkId),
   coreConfigIO,
