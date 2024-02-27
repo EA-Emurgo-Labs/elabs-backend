@@ -45,7 +45,7 @@ import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
 import Internal.Wallet qualified as Wallet
-import Servant (JSON, Post, type (:>), Tagged)
+import Servant (JSON, Post, Tagged, type (:>))
 import Servant.Multipart (
   MultipartData,
   Tmp,
