@@ -8,6 +8,7 @@ module EA.Api (
 import Data.Swagger (Swagger)
 import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
 import EA.Api.Carbon (CarbonApi, handleCarbonApi)
+import EA.Api.Order (OrderApi, handleOrderApi)
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
@@ -34,7 +35,7 @@ data ChangeblockApi mode = ChangeblockApi
   { txApi :: mode :- NamedRoutes TxApi
   , walletApi :: mode :- WalletApi
   , carbonApi :: mode :- CarbonApi
-  -- , orderApi :: mode :- NamedRoutes OrderApi
+  , orderApi :: mode :- NamedRoutes OrderApi
   }
   deriving stock (Generic)
 
@@ -58,7 +59,7 @@ changeblockServer _ =
     { txApi = handleTxApi
     , walletApi = handleWalletApi
     , carbonApi = handleCarbonApi
-    -- , orderApi = handleOrderApi
+    , orderApi = handleOrderApi
     }
 
 changeblockServer' ::

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module EA.Api.Carbon (
   CarbonApi,
   CarbonMintRequest (..),
@@ -41,7 +43,7 @@ import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
 import Internal.Wallet qualified as Wallet
-import Servant (Header, JSON, Post, type (:>))
+import Servant (JSON, Post, type (:>))
 import Servant.Multipart (
   MultipartData,
   MultipartForm,
@@ -49,29 +51,25 @@ import Servant.Multipart (
   lookupFile,
   lookupInput,
  )
-import Servant.Swagger (HasSwagger (toSwagger))
+import Servant.Swagger (HasSwagger (..))
 
 --------------------------------------------------------------------------------
 
 type CarbonApi = CarbonMint
 
+type MultipartFormData = MultipartForm Tmp (MultipartData Tmp)
+
 type CarbonMint =
   "carbon"
-    :> MultipartForm Tmp (MultipartData Tmp)
+    :> MultipartFormData
     :> "mint"
     :> Post '[JSON] CarbonMintResponse
 
 --------------------------------------------------------------------------------
--- FIXME: This is because of MultiparForm, which is not supported by HasSwagger
+-- Orphan instances for HasSwagger
 
-type CarbonMintFix =
-  "carbon"
-    :> Header "user_id" UserId
-    :> "mint"
-    :> Post '[JSON] CarbonMintResponse
-
-instance {-# OVERLAPPING #-} HasSwagger CarbonApi where
-  toSwagger _ = toSwagger (Proxy :: Proxy CarbonMintFix)
+instance (HasSwagger api) => HasSwagger (MultipartFormData :> api) where
+  toSwagger _ = toSwagger (Proxy :: Proxy api)
 
 --------------------------------------------------------------------------------
 
