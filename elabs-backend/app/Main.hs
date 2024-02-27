@@ -15,23 +15,27 @@ import Database.Persist.Sqlite (
   createSqlitePool,
   runSqlPool,
  )
-import EA (EAAppEnv (..), runEAApp)
+import EA (EAAppEnv (..), eaLiftMaybe, eaSubmitTx, runEAApp)
 import EA.Api (apiSwagger)
 import EA.Internal (fromLogLevel)
 import EA.Routes (appRoutes, routes)
-import EA.Script (Scripts (..))
-import EA.Wallet (eaGetInternalAddresses)
+import EA.Script (Scripts (..), nftMintingPolicy, oracleValidator)
+import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
+import EA.Tx.Changeblock.Oracle (createOracle)
 import GeniusYield.GYConfig (
   GYCoreConfig (cfgNetworkId),
   coreConfigIO,
   withCfgProviders,
  )
-import GeniusYield.Types (GYProviders, gyLog, gyLogInfo)
+import GeniusYield.Imports (printf)
+import GeniusYield.TxBuilder (addressToPubKeyHashIO, runGYTxMonadNode)
+import GeniusYield.Types
 import Internal.Wallet (
   genRootKeyFromMnemonic,
   readRootKey,
   writeRootKey,
  )
+import Internal.Wallet qualified as Wallet
 import Internal.Wallet.DB.Sqlite (
   addToken,
   createAccount,
@@ -101,6 +105,14 @@ data Commands
   | PrintInternalAddresses InternalAddressesOptions
   | PrintAuthTokens ServerOptions
   | AddAuthTokens AuthTokenOptions
+  | CreateOracle CreateOracleOptions
+
+data CreateOracleOptions = CreateOracleOptions
+  { createOracleServerOptions :: !ServerOptions
+  , createOracleOptionsRate :: !Int
+  , createOracleOptionsAssetName :: !String
+  }
+  deriving stock (Show, Read)
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
@@ -142,6 +154,23 @@ options =
           <> command "internaladdresses" (info (PrintInternalAddresses <$> internalAddressesOptions) (progDesc "Print internal addresses"))
           <> command "tokens" (info (PrintAuthTokens <$> serverOptions) (progDesc "Print available auth tokens"))
           <> command "addtoken" (info (AddAuthTokens <$> authTokenOptions) (progDesc "Add new token"))
+          <> command "createOracle" (info (CreateOracle <$> createOracleOptions) (progDesc "Create oracle"))
+      )
+
+createOracleOptions :: Parser CreateOracleOptions
+createOracleOptions =
+  CreateOracleOptions
+    <$> serverOptions
+    <*> option
+      auto
+      ( long "rate"
+          <> help "Rate"
+      )
+    <*> strOption
+      ( long "asset"
+          <> help "Asset name"
+          <> showDefault
+          <> value "43424c"
       )
 
 internalAddressesOptions :: Parser InternalAddressesOptions
@@ -261,6 +290,38 @@ app opts@(Options {..}) = do
           runSqlPool
             (addToken (T.pack authtokenOptionsToken) (T.pack authtokenOptionsNotes))
             pool
+        CreateOracle (CreateOracleOptions {..}) -> do
+          env <- initEAApp conf providers opts createOracleServerOptions
+          internalAddrPairs <- runEAApp env $ eaGetInternalAddresses False
+
+          -- Get the collateral address and its signing key.
+          (collateral, colKey) <- runEAApp env $ eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
+
+          (addr, key, oref) <- runEAApp env $ eaSelectOref internalAddrPairs (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
+
+          operatorPubkeyHash <- addressToPubKeyHashIO addr
+
+          -- TODO: User proper policyId for Oracle NFT
+          let scripts = eaAppEnvScripts env
+              networkId = eaAppEnvGYNetworkId env
+              orcNftPolicy = nftMintingPolicy oref scripts
+              oracleNftAsset = mintingPolicyId orcNftPolicy
+              orcTokenName = unsafeTokenNameFromHex $ T.pack createOracleOptionsAssetName
+              orcAssetClass = GYToken oracleNftAsset orcTokenName
+              orcValidator = oracleValidator orcAssetClass operatorPubkeyHash scripts
+              orcAddress = addressFromValidator networkId orcValidator
+              skeleton = createOracle (fromIntegral createOracleOptionsRate) oref orcAddress orcTokenName orcNftPolicy
+
+          txBody <-
+            liftIO $
+              runGYTxMonadNode networkId providers [addr] addr collateral (return skeleton)
+
+          void $ return $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
+
+          printf "Oracle created with TxId: %s" (txBodyTxId txBody)
+          printf "Operator pubkeyHash: %s \n Operator Address: %s" operatorPubkeyHash addr
+          printf "Oracle NFT Asset: %s" orcAssetClass
+          printf "Oracle Address: %s" orcAddress
 
 initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
 initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
