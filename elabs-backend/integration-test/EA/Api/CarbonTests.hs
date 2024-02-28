@@ -5,7 +5,7 @@ import Data.Maybe (fromJust)
 import EA (eaAppEnvAuthTokens, eaLiftMaybe, runEAApp)
 import EA.Test.Helpers qualified as Helpers
 import EA.Wallet (eaGetInternalAddresses)
-import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2), ctxRunI, submitTx)
+import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2, ctxUser3), ctxRunI, submitTx)
 import GeniusYield.Test.Privnet.Setup (Setup)
 import GeniusYield.TxBuilder (mustHaveOutput)
 import GeniusYield.Types (GYTxOut (GYTxOut), valueFromLovelace)
@@ -16,9 +16,10 @@ import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertStatus, runSession)
 
 {-
-curl -X POST 'http://localhost:8081/api/v0/carbon/mint'
-  -H "Content-Type: multipart/form-data"
-  -F 'file=@"sample-ipfs-file.txt"'
+curl -X POST 'http://localhost:8081/api/v0/carbon/mint' \
+  -H "Authorization: TEST" \
+  -H "Content-Type: multipart/form-data" \
+  -F 'file=@"sample-ipfs-file.txt"' \
   -F "data={\"userId\":12, \"amount\":100, \"sell\":200}"
 -}
 
@@ -28,7 +29,7 @@ tests setup =
   testGroup
     "Mint tests"
     [ testCaseSteps "Test /api/v0/carbon/mint endpoint" $
-        \step -> withEASetup setup step $
+        \step -> withEASetup ctxUser3 setup step $
           \EACtx {..} -> do
             step "1. Creating a UTXO on one the internal address"
             flip runSession (server eaCtxEnv) $ do
