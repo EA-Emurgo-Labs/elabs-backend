@@ -73,7 +73,7 @@ getCollateral ::
   EAApp (Maybe (Maybe (GYTxOutRef, Bool), PaymentKey))
 getCollateral [] = return Nothing
 getCollateral ((addr, key) : pairs) = do
-  eaGetCollateral addr 5 >>= \case
+  eaGetCollateral addr 5_000_000 >>= \case
     Nothing -> getCollateral pairs
     Just (oref, _) -> return $ Just (Just (oref, True), key)
 
