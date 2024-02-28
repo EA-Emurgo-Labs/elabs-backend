@@ -32,6 +32,7 @@ At the moment, there is an issue with building the binary within Docker. As a wo
 nix develop --accept-flake-config
 cabal install elabs-backend:app --installdir=bin
 ```
+> Make sure that the `bin/app` is an actual binary and not a symlink!
 
 ## Step 5: Build the Docker Image
 
