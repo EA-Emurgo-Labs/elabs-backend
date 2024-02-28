@@ -20,6 +20,7 @@ import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
 import GeniusYield.Test.Privnet.Ctx (
   Ctx (..),
+  User,
   ctxProviders,
   ctxRunI,
   submitTx,
@@ -27,7 +28,9 @@ import GeniusYield.Test.Privnet.Ctx (
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (mustHaveOutput)
 import GeniusYield.Types (
+  GYAwaitTxParameters (GYAwaitTxParameters),
   GYNetworkId (GYPrivnet),
+  GYProviders (gyAwaitTxConfirmed),
   GYTxOut (GYTxOut),
   valueFromLovelace,
  )
@@ -55,11 +58,12 @@ data EACtx = EACtx
   }
 
 withEASetup ::
+  (Ctx -> User) ->
   IO Setup ->
   (String -> IO ()) ->
   (EACtx -> IO ()) ->
   IO ()
-withEASetup ioSetup putLog kont =
+withEASetup getUser ioSetup putLog kont =
   withSetup ioSetup putLog $ \ctx -> do
     -- read .env file
     loadFile defaultConfig
@@ -99,9 +103,10 @@ withEASetup ioSetup putLog kont =
 
     let
       tokens = ["AAAA"]
+      providers = ctxProviders ctx
       env =
         EAAppEnv
-          { eaAppEnvGYProviders = ctxProviders ctx
+          { eaAppEnvGYProviders = providers
           , eaAppEnvGYNetworkId = GYPrivnet
           , eaAppEnvMetrics = metrics
           , eaAppEnvScripts = scripts
@@ -132,7 +137,7 @@ withEASetup ioSetup putLog kont =
           =<< eaGetInternalAddresses True
 
       let
-        user = ctxUser2 ctx
+        user = getUser ctx
         tx =
           mustHaveOutput
             (GYTxOut colAddr (valueFromLovelace 5_000_000) Nothing Nothing)
@@ -141,6 +146,9 @@ withEASetup ioSetup putLog kont =
 
       txBody <- liftIO $ ctxRunI ctx user $ return tx
       liftIO $ submitTx ctx user txBody
+
+    gyAwaitTxConfirmed providers (GYAwaitTxParameters 5 5_000_000 1) txId
+
     putLog $ "Send funds to the internal addresses: " <> show txId
 
     kont $ EACtx ctx env
