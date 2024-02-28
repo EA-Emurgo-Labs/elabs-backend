@@ -14,7 +14,7 @@ import Data.List ((!!))
 import Data.Text qualified as T
 import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
-import EA.Api (apiServer, appApi)
+import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
@@ -147,8 +147,8 @@ withEASetup ioSetup putLog kont =
 
 server :: EAAppEnv -> Application
 server env =
-  serve appApi $
-    hoistServer appApi (Handler . ExceptT . try . runEAApp env) apiServer
+  serve appRoutes $
+    hoistServer appRoutes (Handler . ExceptT . try . runEAApp env) routes
 
 randomString :: Int -> IO String
 randomString len = replicateM len randomChar

@@ -16,9 +16,10 @@ import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertStatus, runSession)
 
 {-
-curl -X POST 'http://localhost:8081/api/v0/carbon/mint'
-  -H "Content-Type: multipart/form-data"
-  -F 'file=@"sample-ipfs-file.txt"'
+curl -X POST 'http://localhost:8081/api/v0/carbon/mint' \
+  -H "Authorization: TEST" \
+  -H "Content-Type: multipart/form-data" \
+  -F 'file=@"sample-ipfs-file.txt"' \
   -F "data={\"userId\":12, \"amount\":100, \"sell\":200}"
 -}
 
