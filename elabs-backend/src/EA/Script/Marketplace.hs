@@ -6,11 +6,14 @@ module EA.Script.Marketplace (
   MarketplaceDatum (..),
   MarketplaceParams (..),
   MarketplaceInfo (..),
+  MarketplaceSellInfo (..),
   marketPlaceParamsToScriptParams,
   marketplaceInfoToDatum,
   marketplaceDatumToInfo,
 ) where
 
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
 import GeniusYield.Types
 import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusLedgerApi.V1.Value (assetClass)
@@ -82,6 +85,9 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
     , mktSpOracleTokenName = tokenNameToPlutus mktPrmOracleTokenName
     }
 
+data MarketplaceSellInfo = M_BUY | M_SELL
+  deriving stock (Enum, Show, Eq, Generic)
+  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
 data MarketplaceInfo = MarketplaceInfo
   { mktInfoTxOutRef :: GYTxOutRef
   , mktInfoAddress :: GYAddress
@@ -92,9 +98,10 @@ data MarketplaceInfo = MarketplaceInfo
   , mktInfoCarbonAssetName :: GYTokenName
   , mktInfoAmount :: Integer
   , mktInfoIssuer :: GYPubKeyHash
-  , mktInfoIsSell :: Integer
+  , mktInfoIsSell :: MarketplaceSellInfo
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
 
 marketplaceInfoToDatum :: MarketplaceInfo -> MarketplaceDatum
 marketplaceInfoToDatum MarketplaceInfo {..} =
@@ -105,7 +112,7 @@ marketplaceInfoToDatum MarketplaceInfo {..} =
     , mktDtmAssetName = tokenNameToPlutus mktInfoCarbonAssetName
     , mktDtmAmount = mktInfoAmount
     , mktDtmIssuer = pubKeyHashToPlutus mktInfoIssuer
-    , mktDtmIsSell = mktInfoIsSell
+    , mktDtmIsSell = toInteger $ fromEnum mktInfoIsSell
     }
 
 marketplaceDatumToInfo ::
@@ -134,7 +141,7 @@ marketplaceDatumToInfo oref val addr datum = do
       , mktInfoCarbonAssetName = tokenName
       , mktInfoAmount = mktDtmAmount datum
       , mktInfoIssuer = pubkeyIssuer
-      , mktInfoIsSell = mktDtmIsSell datum
+      , mktInfoIsSell = toEnum $ fromInteger $ mktDtmIsSell datum
       }
   where
     seither :: (Show b) => Either b a -> Either String a
