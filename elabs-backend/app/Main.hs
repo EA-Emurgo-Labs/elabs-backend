@@ -10,6 +10,7 @@ import Control.Monad.Logger (
 import Control.Monad.Metrics qualified as Metrics
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
+import Data.List qualified as List
 import Data.Text qualified as T
 import Database.Persist.Sqlite (
   createSqlitePool,
@@ -20,6 +21,7 @@ import EA.Api (apiSwagger)
 import EA.Internal (fromLogLevel)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..), nftMintingPolicy, oracleValidator)
+import EA.Script.Oracle (oracleNftAsset, utxoToOracleInfo)
 import EA.Tx.Changeblock.Oracle (createOracle)
 import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
 import GeniusYield.GYConfig (
@@ -299,10 +301,9 @@ app opts@(Options {..}) = do
 
           (addr, key, oref) <- runEAApp env $ eaSelectOref internalAddrPairs (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
 
-          operatorPubkeyHash <- addressToPubKeyHashIO addr
-
           -- TODO: User proper policyId for Oracle NFT
-          let scripts = eaAppEnvScripts env
+          let operatorPubkeyHash = eaAppEnvOracleOperatorPubKeyHash env
+              scripts = eaAppEnvScripts env
               networkId = eaAppEnvGYNetworkId env
               orcNftPolicy = nftMintingPolicy oref scripts
               oracleNftAsset = mintingPolicyId orcNftPolicy
@@ -316,12 +317,11 @@ app opts@(Options {..}) = do
             liftIO $
               runGYTxMonadNode networkId providers [addr] addr collateral (return skeleton)
 
-          void $ return $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
-
-          printf "Oracle created with TxId: %s" (txBodyTxId txBody)
-          printf "Operator pubkeyHash: %s \n Operator Address: %s" operatorPubkeyHash addr
-          printf "Oracle NFT Asset: %s" orcAssetClass
-          printf "Oracle Address: %s" orcAddress
+          gyTxId <- runEAApp env $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
+          printf "\n Oracle created with TxId: %s \n " gyTxId
+          printf "\n Operator pubkeyHash: %s \n Operator Address: %s \n" operatorPubkeyHash addr
+          printf "\n Oracle NFT Asset: %s \n" orcAssetClass
+          printf "\n Oracle Address: %s \n" orcAddress
 
 initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
 initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
@@ -369,6 +369,27 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
 
   bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
 
+  -- Get Oracle Info for reference input
+  oracleRefInputUtxo <-
+    lookupEnv "ORACLE_UTXO_REF"
+      >>= maybe (pure []) (gyQueryUtxosAtTxOutRefsWithDatums providers . List.singleton . fromString)
+      >>= maybe (pure Nothing) (return . rightToMaybe . utxoToOracleInfo) . listToMaybe
+
+  (oracleNftPolicyId, oracleNftTokenName) <-
+    maybe
+      (return (Nothing, Nothing))
+      (return . oracleNftPolicyIdAndTokenName . oracleNftAsset)
+      oracleRefInputUtxo
+
+  -- Oracle Operator and Escrow PubkeyHash
+  operatorPubkeyHash <- addressToPubKeyHashIO $ oracleOperatorAddress (cfgNetworkId conf)
+  escrowPubkeyHash <- addressToPubKeyHashIO $ escrowAddress (cfgNetworkId conf)
+
+  -- Get Marketplace Utxo for reference script
+  marketplaceRefScriptUtxo <-
+    lookupEnv "MARKETPLACE_REF_SCRIPT_UTXO"
+      >>= maybe (return Nothing) (gyQueryUtxoAtTxOutRef providers . fromString)
+
   return $
     EAAppEnv
       { eaAppEnvGYProviders = providers
@@ -379,7 +400,27 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvRootKey = rootKey
       , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
       , eaAppEnvAuthTokens = tokens
+      , eaAppEnvOracleRefInputUtxo = oracleRefInputUtxo
+      , eaAppEnvMarketplaceRefScriptUtxo = utxoRef <$> marketplaceRefScriptUtxo
+      , eaAppEnvOracleOperatorPubKeyHash = operatorPubkeyHash
+      , eaAppEnvOracleNftMintingPolicyId = oracleNftPolicyId
+      , eaAppEnvOracleNftTokenName = oracleNftTokenName
+      , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
+      , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76302e302e31" -- v0.0.1
       }
+  where
+    -- \^ Using version v1.0.0
+
+    oracleNftPolicyIdAndTokenName :: Maybe GYAssetClass -> (Maybe GYMintingPolicyId, Maybe GYTokenName)
+    oracleNftPolicyIdAndTokenName (Just (GYToken policyId tokename)) = (Just policyId, Just tokename)
+    oracleNftPolicyIdAndTokenName _ = (Nothing, Nothing)
+
+    -- TODO: Use valid Escrow & oracle Operator  address
+    escrowAddress :: GYNetworkId -> GYAddress
+    escrowAddress _ = unsafeAddressFromText "addr_test1vqg9ahydr4gjl2s674zaqfdd3ncq8mzez97cyhh5g4zv0rqfstk9g"
+
+    oracleOperatorAddress :: GYNetworkId -> GYAddress
+    oracleOperatorAddress _ = unsafeAddressFromText "addr_test1vqg9ahydr4gjl2s674zaqfdd3ncq8mzez97cyhh5g4zv0rqfstk9g"
 
 server :: EAAppEnv -> Application
 server env =
