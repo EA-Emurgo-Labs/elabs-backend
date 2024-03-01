@@ -23,9 +23,11 @@ createOracle ::
 createOracle rate utxoRef orcAddr orcleNftTokenName oracleNftMintingPolicy =
   let nftMintingPolicyId = mintingPolicyId oracleNftMintingPolicy
       nftValue = valueSingleton (GYToken nftMintingPolicyId orcleNftTokenName) 1
+      datum = Just (datumFromPlutusData $ OracleDatum $ toInteger rate, GYTxOutUseInlineDatum)
+      output = GYTxOut orcAddr nftValue datum Nothing
    in mustMint (GYMintScript oracleNftMintingPolicy) unitRedeemer orcleNftTokenName 1
         <> mustHaveInput (GYTxIn utxoRef GYTxInWitnessKey)
-        <> mustHaveOutput (mkGYTxOut orcAddr nftValue (datumFromPlutusData $ OracleDatum $ toInteger rate))
+        <> mustHaveOutput output
 
 updateOracle ::
   -- | New Rate
