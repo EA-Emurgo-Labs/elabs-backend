@@ -10,7 +10,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding.Base16 (encodeBase16)
 import EA (
   EAApp,
-  EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvScripts),
+  EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvMarketplaceEscrowPubKeyHash, eaAppEnvMarketplaceVersion, eaAppEnvOracleNftMintingPolicyId, eaAppEnvOracleNftTokenName, eaAppEnvOracleOperatorPubKeyHash, eaAppEnvScripts),
   eaLiftEither,
   eaLiftMaybe,
   eaSubmitTx,
@@ -21,7 +21,7 @@ import EA.Api.Types (
   txBodySubmitTxResponse,
  )
 import EA.Orphans (MultipartFormDataTmp)
-import EA.Script (marketplaceValidator, nftMintingPolicy, oracleValidator)
+import EA.Script (marketplaceValidator, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
 import EA.Wallet (
@@ -37,7 +37,6 @@ import GeniusYield.TxBuilder (
  )
 import GeniusYield.Types (
   GYAssetClass (GYToken),
-  mintingPolicyId,
   unsafeTokenNameFromHex,
   validatorHash,
  )
@@ -105,6 +104,11 @@ handleCarbonApi multipartData = do
   nid <- asks eaAppEnvGYNetworkId
   providers <- asks eaAppEnvGYProviders
   scripts <- asks eaAppEnvScripts
+  marketplaceVersion <- asks eaAppEnvMarketplaceVersion
+  escrowPubkeyHash <- asks eaAppEnvMarketplaceEscrowPubKeyHash
+  operatorPubkeyHash <- asks eaAppEnvOracleOperatorPubKeyHash
+  oracleAssetName <- asks eaAppEnvOracleNftTokenName >>= eaLiftMaybe "No Oracle NFT token name"
+  oraclePolicyId <- asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybe "No Oracle NFT minting policy ID"
 
   -- Get the internal address pairs.
   internalAddrPairs <- eaGetInternalAddresses False
@@ -125,35 +129,32 @@ handleCarbonApi multipartData = do
       (\r -> collateral /= Just (r, True))
       >>= eaLiftMaybe "No UTxO found"
 
-  issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash addr)
+  -- TODO: Issuer should be Internal Wallet address ?
+  issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash userAddr)
+  owner <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash userAddr)
 
-  -- TODO: User proper policyId for Oracle NFT
-  let oracleNftAsset = mintingPolicyId $ nftMintingPolicy oref scripts
-      oracleNftAssetName = unsafeTokenNameFromHex "43424c"
-      orcAssetClass = GYToken oracleNftAsset oracleNftAssetName
-
-      -- TODO: user proper operaor pubkey hash for oracle validator
-      orcValidatorHash =
-        validatorHash $ oracleValidator orcAssetClass issuer scripts
+  let orcValidatorHash =
+        validatorHash $ oracleValidator (GYToken oraclePolicyId oracleAssetName) operatorPubkeyHash scripts
 
       marketParams =
         MarketplaceParams
           { mktPrmOracleValidator = orcValidatorHash
-          , mktPrmEscrowValidator = issuer
-          , -- \^ TODO: User proper pubkeyhash of escrow
-            mktPrmVersion = unsafeTokenNameFromHex "76312e302e30"
-          , -- \^ It can be any string for now using v1.0.0
-            mktPrmOracleSymbol = oracleNftAsset
-          , mktPrmOracleTokenName = oracleNftAssetName
+          , mktPrmEscrowValidator = escrowPubkeyHash
+          , mktPrmVersion = marketplaceVersion
+          , mktPrmOracleSymbol = oraclePolicyId
+          , mktPrmOracleTokenName = oracleAssetName
           }
-
-  ipfsAddResp <- ipfsAddFile filePart
-  ipfsPinObjResp <- ipfsPinObject ipfsAddResp.ipfs_hash
 
   marketplaceAddress <-
     liftIO $
       runGYTxQueryMonadNode nid providers $
         scriptAddress (marketplaceValidator marketParams scripts)
+
+  putStrLn $ "\n Carbon Mint: Marketplace params: " ++ show marketParams
+  putStrLn $ "\n Carbon Mint:  Marketplace address: " ++ show marketplaceAddress
+
+  ipfsAddResp <- ipfsAddFile filePart
+  ipfsPinObjResp <- ipfsPinObject ipfsAddResp.ipfs_hash
 
   let
     tokenName =
@@ -167,6 +168,7 @@ handleCarbonApi multipartData = do
         oref
         marketplaceAddress
         userAddr
+        owner
         issuer
         tokenName
         (toInteger $ sell request)
