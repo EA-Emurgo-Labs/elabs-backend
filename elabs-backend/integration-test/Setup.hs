@@ -16,6 +16,7 @@ import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..))
+import EA.Script.Oracle (OracleInfo (OracleInfo))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
 import GeniusYield.Test.Privnet.Ctx (
@@ -26,14 +27,8 @@ import GeniusYield.Test.Privnet.Ctx (
   submitTx,
  )
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
-import GeniusYield.TxBuilder (mustHaveOutput)
-import GeniusYield.Types (
-  GYAwaitTxParameters (GYAwaitTxParameters),
-  GYNetworkId (GYPrivnet),
-  GYProviders (gyAwaitTxConfirmed),
-  GYTxOut (GYTxOut),
-  valueFromLovelace,
- )
+import GeniusYield.TxBuilder (addressToPubKeyHashIO, mustHaveOutput)
+import GeniusYield.Types
 import Internal.Wallet.DB.Sqlite (
   createAccount,
   runAutoMigration,
@@ -100,10 +95,18 @@ withEASetup getUser ioSetup putLog kont =
         )
 
     bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+    -- TODO: Use valid oracle operator address
+    oracleOperatorPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText ""
+    -- TODO: Use valid escrow address
+    escrowPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText ""
 
     let
       tokens = ["AAAA"]
       providers = ctxProviders ctx
+      -- use valid oracle info
+      oracleInfo = OracleInfo (fromString "") (unsafeAddressFromText "") (valueFromList []) 0
+      -- TODO use valid oracle nft policy id and asset name
+      (oracleNftPolicyId, oracleNftAssetName) = ("", "")
       env =
         EAAppEnv
           { eaAppEnvGYProviders = providers
@@ -114,6 +117,13 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvRootKey = rootKey
           , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
           , eaAppEnvAuthTokens = tokens
+          , eaAppEnvOracleRefInputUtxo = Just oracleInfo
+          , eaAppEnvMarketplaceRefScriptUtxo = Nothing
+          , eaAppEnvOracleOperatorPubKeyHash = oracleOperatorPubkeyHash
+          , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
+          , eaAppEnvOracleNftMintingPolicyId = Just oracleNftPolicyId
+          , eaAppEnvOracleNftTokenName = Just oracleNftAssetName
+          , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76312e302e30"
           }
 
     -- DB migrations
