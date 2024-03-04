@@ -1,40 +1,16 @@
-# Setting up Changeblock Backend with Docker
+# Building the Docker image for the Changeblock backend
 
-This guide will walk you through the process of setting up the Changeblock backend using Docker.
+This guide will walk you through setting up a Docker image for the Changeblock backend.
 
-## Step 1: Clone the Repository
+## Step 1: Configure the Application
 
-First, clone the Changeblock backend source code to a new directory using the following command:
+Prepare the following configuration files:
+ `config.json`
+`.env`
+`root.key`
+`wallet.db` (if you start from scratch, you can ignore this file)
 
-```bash
-git clone --depth 1 git@github.com:EA-Emurgo-Labs/changeblock-backend.git changeblock-backend-docker
-```
-
-## Step 2: Configure the Application
-
-Next, copy the `config.example.json` file and rename it to `config.json`. Open this file and fill out the core provider information.
-
-Similarly, copy the `.env.example` file and rename it to `.env`. Replace the `BLOCKFROST_IPFS` token in this file with your actual token.
-
-## Step 3: Create a New Wallet
-
-Use your wallet app to create a new wallet. Write down the mnemonic and use it to create the root key for the backend:
-
-```bash
-cabal run elabs-backend:app -- genrootkey --mnemonic "<MNEMONIC>"
-```
-
-## Step 4: Build the Binary
-
-At the moment, there is an issue with building the binary within Docker. As a workaround, you can prebuild the binary yourself:
-
-```bash
-nix develop --accept-flake-config
-cabal install elabs-backend:app --installdir=bin
-```
-> Make sure that the `bin/app` is an actual binary and not a symlink!
-
-## Step 5: Build the Docker Image
+## Step 2: Build the Docker Image
 
 Finally, obtain a Cachix authentication token and use it to build the Docker image:
 
