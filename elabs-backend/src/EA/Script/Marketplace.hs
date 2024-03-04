@@ -15,8 +15,8 @@ module EA.Script.Marketplace (
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import GeniusYield.Types
-import PlutusLedgerApi.V1 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusLedgerApi.V1.Value (assetClass)
+import PlutusLedgerApi.V2 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
 

@@ -4,8 +4,8 @@ module EA.Script.Oracle (OracleDatum (..), OracleScriptParams (..), OracleAction
 
 import GeniusYield.TxBuilder (utxoDatumPure)
 import GeniusYield.Types
-import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusLedgerApi.V1.Value (AssetClass)
+import PlutusLedgerApi.V2 (PubKeyHash)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
 

@@ -417,10 +417,10 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
 
     -- TODO: Use valid Escrow & oracle Operator  address
     escrowAddress :: GYNetworkId -> GYAddress
-    escrowAddress _ = unsafeAddressFromText "addr_test1vqg9ahydr4gjl2s674zaqfdd3ncq8mzez97cyhh5g4zv0rqfstk9g"
+    escrowAddress _ = unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
 
     oracleOperatorAddress :: GYNetworkId -> GYAddress
-    oracleOperatorAddress _ = unsafeAddressFromText "addr_test1vqg9ahydr4gjl2s674zaqfdd3ncq8mzez97cyhh5g4zv0rqfstk9g"
+    oracleOperatorAddress _ = unsafeAddressFromText "addr_test1qruxukp4fdncrcnxds6ze2afcufs8w4a6m02a0u7yucppwfx23xw3uj9gkatk450ac7hec80ujfyvk3c97f7n8eljjrq74zl3e"
 
 server :: EAAppEnv -> Application
 server env =

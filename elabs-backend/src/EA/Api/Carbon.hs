@@ -150,9 +150,6 @@ handleCarbonApi multipartData = do
       runGYTxQueryMonadNode nid providers $
         scriptAddress (marketplaceValidator marketParams scripts)
 
-  putStrLn $ "\n Carbon Mint: Marketplace params: " ++ show marketParams
-  putStrLn $ "\n Carbon Mint:  Marketplace address: " ++ show marketplaceAddress
-
   ipfsAddResp <- ipfsAddFile filePart
   ipfsPinObjResp <- ipfsPinObject ipfsAddResp.ipfs_hash
 

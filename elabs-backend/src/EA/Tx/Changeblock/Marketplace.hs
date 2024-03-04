@@ -258,11 +258,10 @@ adjustOrders ::
   NewAmount ->
   NewSellType ->
   MarketplaceParams ->
-  GYPubKeyHash ->
   Scripts ->
   GYTxSkeleton 'PlutusV2
-adjustOrders nid info OracleInfo {..} mMarketplaceRefScript newPrice newAmount newSaleInfo marketplaceParams escrowPubkeyHash scripts =
-  let escrowAddress = addressFromPubKeyHash nid escrowPubkeyHash
+adjustOrders nid info OracleInfo {..} mMarketplaceRefScript newPrice newAmount newSaleInfo marketplaceParams scripts =
+  let escrowAddress = addressFromPubKeyHash nid (mktPrmEscrowValidator marketplaceParams)
       mktValidator = marketplaceValidator marketplaceParams scripts
       oldAmt = mktInfoAmount info - newAmount
       oldDatum =

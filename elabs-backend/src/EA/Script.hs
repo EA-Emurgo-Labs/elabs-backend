@@ -14,14 +14,14 @@ import EA.Script.Marketplace (
   marketPlaceParamsToScriptParams,
  )
 import GeniusYield.Types
-import PlutusLedgerApi.V1 (
+import PlutusLedgerApi.V1.Value (AssetClass)
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   PubKeyHash,
   ScriptHash,
   TokenName,
   TxOutRef,
  )
-import PlutusLedgerApi.V1.Value (AssetClass)
 import Ply (
   AsData (AsData),
   ScriptRole (MintingPolicyRole, ValidatorRole),

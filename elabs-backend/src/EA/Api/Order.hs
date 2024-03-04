@@ -172,7 +172,6 @@ withMarketplaceApiCtx f = do
           , mktPrmOracleSymbol = oracleNftPolicyId
           , mktPrmOracleTokenName = oracleNftTknName
           }
-  putStrLn $ "\n Orders: Marketplace params: " ++ show marketplaceParams
   -- Get the collateral address and its signing key.
   (collateral, colKey) <-
     eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
@@ -208,7 +207,7 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
       =<< eaGetAddresses (UserId ownerUserId)
 
   handleTx mCtx ownerAddr ownerKey $
-    adjustOrders mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger sellReqPrice) (toInteger sellReqAmount) Marketplace.M_SELL mktCtxParams (mktInfoOwner marketplaceInfo) mktCtxScripts
+    adjustOrders mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger sellReqPrice) (toInteger sellReqAmount) Marketplace.M_SELL mktCtxParams mktCtxScripts
   where
     -- TODO: Better error handling
     validateRequestSale :: MarketplaceInfo -> Either String ()
@@ -262,8 +261,6 @@ handleOrderCancel OrderCancelRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddresses (UserId ownerUserId)
 
-  putStrLn $ "OwnerAddr: " <> show ownerAddr
-
   handleTx mCtx ownerAddr ownerKey $ cancel mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript mktCtxParams mktCtxScripts
   where
     validateCancelOrder :: MarketplaceInfo -> Either String ()
@@ -294,7 +291,6 @@ handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
 handleListOrders :: Maybe Natural -> Maybe Int -> EAApp [MarketplaceInfo]
 handleListOrders ownerUserId orderType = withMarketplaceApiCtx $ \MarketplaceApiCtx {..} -> do
   mInfos <- asks eaMarketplaceInfos mktCtxParams
-  putStrLn $ "MarketplaceInfos: " <> show mInfos
   ownerPubkeys <- mOwnerPubKeyHashes
   return $ filter (\m -> filterByOwner ownerPubkeys m && filterByType m) mInfos
   where

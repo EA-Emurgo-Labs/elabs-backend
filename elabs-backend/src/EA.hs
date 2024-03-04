@@ -193,7 +193,6 @@ eaMarketplaceInfos mktPlaceParams = do
   let mktPlaceValidator = marketplaceValidator mktPlaceParams scripts
       marketplaceAddr = addressFromValidator nid mktPlaceValidator
 
-  putStrLn $ "\n Marketplace address: " ++ show marketplaceAddr
   utxos <-
     liftIO $
       gyQueryUtxosAtAddressesWithDatums providers [marketplaceAddr]
