@@ -48,7 +48,12 @@ docker push 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock
 ```
 
 ## Step 4 Deploying it via Beanstalk
-TODO
+After you update the Docker image, you can deploy it to the environment.
+
+```bash
+cd remote
+eb deploy changeblock-testnet
+```
 
 # See also
 * https://mmhaskell.com/blog/2023/2/20/pushing-our-container-to-aws-ecr
