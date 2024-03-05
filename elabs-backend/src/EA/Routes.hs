@@ -16,7 +16,7 @@ import Servant (
 
 data Routes mode = Routes
   { api :: mode :- "api" :> Api
-  , swagger :: mode :- "swagger.json" :> Get '[JSON] Swagger
+  , swagger :: mode :- "swaggerison.json" :> Get '[JSON] Swagger
   }
   deriving stock (Generic)
 

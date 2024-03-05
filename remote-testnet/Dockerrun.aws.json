@@ -1,7 +1,7 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:latest"
+    "Name": "724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest"
   },
   "Ports": [{
     "ContainerPort": 8081,

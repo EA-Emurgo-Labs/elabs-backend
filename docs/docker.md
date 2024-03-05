@@ -42,19 +42,27 @@ aws ecr get-login-password --region us-east-1 | \
 ### Step 3.3 Tag and push your docker image
 
 ```bash
-docker tag <DOCKER_IMAGE> 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:latest
+docker tag <DOCKER_IMAGE> 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest
 
-docker push 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:latest
+docker push 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest
 ```
+
+Use `mainnet-latest` for the mainnet image.
 
 ## Step 4 Deploying it via Beanstalk
 After you update the Docker image, you can deploy it to the environment.
 
 ```bash
-cd remote
-eb deploy changeblock-testnet
+cd remote-testnet
+eb deploy
 ```
 
+For mainnet
+
+```bash
+cd remote-mainnet
+eb deploy
+```
 # See also
 * https://mmhaskell.com/blog/2023/2/20/pushing-our-container-to-aws-ecr
 * https://mmhaskell.com/blog/2023/2/23/deploying-a-haskell-server-to-aws
