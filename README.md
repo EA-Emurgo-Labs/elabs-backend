@@ -39,3 +39,4 @@ To run the integration test, please ensure that `cardano-cli` and `cardano-node`
 - [Wallet backend](docs/wallet-backend.md)
 - [Authorization header](docs/auth.md)
 - [Deployig a docker image](docs/docker.md)
+- [Infrastructure](docs/aws.md)
