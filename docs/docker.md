@@ -1,39 +1,16 @@
-# Setting up Changeblock Backend with Docker
+# Deploying a docker image
 
-This guide will walk you through the process of setting up the Changeblock backend using Docker.
+This guide will walk you through setting up a Docker image for the Changeblock backend.
 
-## Step 1: Clone the Repository
+## Step 1: Configure the Application
 
-First, clone the Changeblock backend source code to a new directory using the following command:
+Prepare the following configuration files:
+ `config.json`
+`.env`
+`root. key`
+`wallet. db` (if you start from scratch, you can ignore this file)
 
-```bash
-git clone --depth 1 git@github.com:EA-Emurgo-Labs/changeblock-backend.git changeblock-backend-docker
-```
-
-## Step 2: Configure the Application
-
-Next, copy the `config.example.json` file and rename it to `config.json`. Open this file and fill out the core provider information.
-
-Similarly, copy the `.env.example` file and rename it to `.env`. Replace the `BLOCKFROST_IPFS` token in this file with your actual token.
-
-## Step 3: Create a New Wallet
-
-Use your wallet app to create a new wallet. Write down the mnemonic and use it to create the root key for the backend:
-
-```bash
-cabal run elabs-backend:app -- genrootkey --mnemonic "<MNEMONIC>"
-```
-
-## Step 4: Build the Binary
-
-At the moment, there is an issue with building the binary within Docker. As a workaround, you can prebuild the binary yourself:
-
-```bash
-nix develop --accept-flake-config
-cabal install elabs-backend:app --installdir=bin
-```
-
-## Step 5: Build the Docker Image
+## Step 2: Build the Docker Image
 
 Finally, obtain a Cachix authentication token and use it to build the Docker image:
 
@@ -41,4 +18,52 @@ Finally, obtain a Cachix authentication token and use it to build the Docker ima
 docker build --build-arg CACHIX_AUTHTOKEN=<AUTHTOKEN> -t elabs-backend .
 ```
 
+Try running it
+
+```bash
+docker run labs-backend
+```
+
 That's it! You have now successfully set up the Changeblock backend using Docker.
+
+## Step 3: Register it to the AWS ECR
+
+On AWS, we have a private registry repository called `emurgo-labs-changeblock`. We will push the image to this repository.
+
+### Step 3. 1 Install the AWS CLI
+We must install the AWS Command Line Interface to interact with our AWS account. https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+
+### Step 3.2 Login using the CLI
+
+```bash
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin 724240871965.dkr.ecr.us-east-1.amazonaws.com
+```
+### Step 3.3 Tag and push your docker image
+
+```bash
+docker tag <DOCKER_IMAGE> 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest
+
+docker push 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest
+```
+
+Use `mainnet-latest` for the mainnet image.
+
+## Step 4 Deploying it via Beanstalk
+After you update the Docker image, you can deploy it to the environment.
+
+```bash
+cd remote-testnet
+eb deploy
+```
+
+For mainnet
+
+```bash
+cd remote-mainnet
+eb deploy
+```
+# See also
+* https://mmhaskell.com/blog/2023/2/20/pushing-our-container-to-aws-ecr
+* https://mmhaskell.com/blog/2023/2/23/deploying-a-haskell-server-to-aws
+* https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/GettingStarted.Cleanup.html
