@@ -35,11 +35,19 @@ We must install the AWS Command Line Interface to interact with our AWS account.
 
 ### Step 3.2 Login using the CLI
 
+Ccopy the "Access Key ID" and the key itself from AWS and type:
+
+```bash
+aws configure
+```
+
+### Step 3.3 Login to Docker
+
 ```bash
 aws ecr get-login-password --region us-east-1 | \
   docker login --username AWS --password-stdin 724240871965.dkr.ecr.us-east-1.amazonaws.com
 ```
-### Step 3.3 Tag and push your docker image
+### Step 3.4 Tag and push your docker image
 
 ```bash
 docker tag <DOCKER_IMAGE> 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock:testnet-latest
