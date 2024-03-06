@@ -88,11 +88,11 @@ type OrderUpdate =
 --------------------------------------------------------------------------------
 
 data OrderSellRequest = OrderSellRequest
-  { ownerUserId :: !Natural
+  { ownerUserId :: !UserId
   -- ^ The user ID. The owner of the order.
-  , sellReqAmount :: !Int
+  , sellReqAmount :: !Natural
   -- ^ The amount of carbon to mint.
-  , sellReqPrice :: !Int
+  , sellReqPrice :: !Natural
   -- ^ The sell price per unit of carbon.
   , sellReqOrderUtxoRef :: !GYTxOutRef
   -- ^ The order UTXO reference.
@@ -100,9 +100,9 @@ data OrderSellRequest = OrderSellRequest
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 data OrderUpdateRequest = OrderUpdateRequest
-  { ownerUserId :: !Natural
+  { ownerUserId :: !UserId
   -- ^ The user ID. The owner of the order.
-  , updatedPrice :: !Int
+  , updatedPrice :: !Natural
   -- ^ The sell price per unit of carbon.
   , orderUtxoRef :: !GYTxOutRef
   -- ^ The order UTXO reference.
@@ -111,7 +111,7 @@ data OrderUpdateRequest = OrderUpdateRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderCancelRequest = OrderCancelRequest
-  { ownerUserId :: !Natural
+  { ownerUserId :: !UserId
   -- ^ The user ID who is owner of the order.
   , cancelOrderUtxo :: !GYTxOutRef
   -- ^ The order UTXO reference.
@@ -120,7 +120,7 @@ data OrderCancelRequest = OrderCancelRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderBuyRequest = OrderBuyRequest
-  { buyerUserId :: !Natural
+  { buyerUserId :: !UserId
   -- ^ The user ID.
   , buyAmount :: !Int
   -- ^ The amount of carbon to buy.
@@ -204,7 +204,7 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
   (ownerAddr, ownerKey) <-
     eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses (UserId ownerUserId)
+      =<< eaGetAddresses ownerUserId
 
   handleTx mCtx ownerAddr ownerKey $
     adjustOrders mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger sellReqPrice) (toInteger sellReqAmount) Marketplace.M_SELL mktCtxParams mktCtxScripts
@@ -227,7 +227,7 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
   (buyerAddr, buyerKey) <-
     eaLiftMaybe "No addresses found"
       . listToMaybe
-      =<< eaGetAddresses (UserId buyerUserId)
+      =<< eaGetAddresses buyerUserId
 
   buyerPubkeyHash <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash buyerAddr)
   let tx =
@@ -259,7 +259,7 @@ handleOrderCancel OrderCancelRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   (ownerAddr, ownerKey) <-
     eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses (UserId ownerUserId)
+      =<< eaGetAddresses ownerUserId
 
   handleTx mCtx ownerAddr ownerKey $ cancel mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript mktCtxParams mktCtxScripts
   where
@@ -278,7 +278,7 @@ handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   (ownerAddr, ownerKey) <-
     eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses (UserId ownerUserId)
+      =<< eaGetAddresses ownerUserId
 
   handleTx mCtx ownerAddr ownerKey $ sell mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger updatedPrice) mktCtxParams mktCtxScripts
   where

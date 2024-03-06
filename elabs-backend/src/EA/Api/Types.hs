@@ -100,10 +100,13 @@ data CarbonMintRequest = CarbonMintRequest
 
 newtype UserId = UserId {unUserId :: Natural}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Swagger.ToSchema, Aeson.ToJSON, Swagger.ToParamSchema)
+  deriving anyclass (Swagger.ToSchema, Swagger.ToParamSchema)
 
 instance Aeson.FromJSON UserId where
   parseJSON = fmap UserId . Aeson.parseJSON
+
+instance Aeson.ToJSON UserId where
+  toJSON = Aeson.toJSON . unUserId
 
 instance FromHttpApiData UserId where
   parseUrlPiece = bimap (T.pack . TC.getTextDecodingError) UserId . TC.fromText

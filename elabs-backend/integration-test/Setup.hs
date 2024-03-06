@@ -16,7 +16,7 @@ import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..))
-import EA.Script.Oracle (OracleInfo (OracleInfo))
+import EA.Script.Oracle (OracleInfo (OracleInfo, orcInfoAddress, orcInfoRate, orcInfoUtxoRef, orcInfoValue))
 import EA.Test.Helpers (createRootKey)
 import EA.Wallet (eaGetInternalAddresses)
 import GeniusYield.Test.Privnet.Ctx (
@@ -103,10 +103,6 @@ withEASetup getUser ioSetup putLog kont =
     let
       tokens = ["AAAA"]
       providers = ctxProviders ctx
-      -- use valid oracle info
-      oracleInfo = OracleInfo (fromString "") (unsafeAddressFromText "") (valueFromList []) 0
-      -- TODO use valid oracle nft policy id and asset name
-      (oracleNftPolicyId, oracleNftAssetName) = ("", "")
       env =
         EAAppEnv
           { eaAppEnvGYProviders = providers
@@ -117,12 +113,12 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvRootKey = rootKey
           , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
           , eaAppEnvAuthTokens = tokens
-          , eaAppEnvOracleRefInputUtxo = Just oracleInfo
+          , eaAppEnvOracleRefInputUtxo = Nothing
           , eaAppEnvMarketplaceRefScriptUtxo = Nothing
           , eaAppEnvOracleOperatorPubKeyHash = oracleOperatorPubkeyHash
           , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
-          , eaAppEnvOracleNftMintingPolicyId = Just oracleNftPolicyId
-          , eaAppEnvOracleNftTokenName = Just oracleNftAssetName
+          , eaAppEnvOracleNftMintingPolicyId = Nothing
+          , eaAppEnvOracleNftTokenName = Nothing
           , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76312e302e30"
           }
 
