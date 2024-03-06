@@ -21,7 +21,9 @@ import EA.Api (apiSwagger)
 import EA.Internal (fromLogLevel)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..), nftMintingPolicy, oracleValidator)
+import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Script.Oracle (oracleNftAsset, utxoToOracleInfo)
+import EA.Tx.Changeblock.Marketplace (deployScript)
 import EA.Tx.Changeblock.Oracle (createOracle)
 import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
 import GeniusYield.GYConfig (
@@ -108,11 +110,18 @@ data Commands
   | PrintAuthTokens ServerOptions
   | AddAuthTokens AuthTokenOptions
   | CreateOracle CreateOracleOptions
+  | DeployScript DeployMarketplaceScriptOptions
 
 data CreateOracleOptions = CreateOracleOptions
   { createOracleServerOptions :: !ServerOptions
   , createOracleOptionsRate :: !Int
   , createOracleOptionsAssetName :: !String
+  }
+  deriving stock (Show, Read)
+
+data DeployMarketplaceScriptOptions = DeployMarketplaceScriptOptions
+  { dplMktplaceServerOptions :: !ServerOptions
+  , dplMktplaceAddress :: !Text
   }
   deriving stock (Show, Read)
 
@@ -157,6 +166,7 @@ options =
           <> command "tokens" (info (PrintAuthTokens <$> serverOptions) (progDesc "Print available auth tokens"))
           <> command "addtoken" (info (AddAuthTokens <$> authTokenOptions) (progDesc "Add new token"))
           <> command "createOracle" (info (CreateOracle <$> createOracleOptions) (progDesc "Create oracle"))
+          <> command "deployScript" (info (DeployScript <$> deployScriptOption) (progDesc "Deploy Marketplace Script"))
       )
 
 createOracleOptions :: Parser CreateOracleOptions
@@ -173,6 +183,17 @@ createOracleOptions =
           <> help "Asset name"
           <> showDefault
           <> value "43424c"
+      )
+
+deployScriptOption :: Parser DeployMarketplaceScriptOptions
+deployScriptOption =
+  DeployMarketplaceScriptOptions
+    <$> serverOptions
+    <*> strOption
+      ( long "address"
+          <> help "Address"
+          <> showDefault
+          <> value "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
       )
 
 internalAddressesOptions :: Parser InternalAddressesOptions
@@ -322,6 +343,40 @@ app opts@(Options {..}) = do
           printf "\n Operator pubkeyHash: %s \n Operator Address: %s \n" operatorPubkeyHash addr
           printf "\n Oracle NFT Asset: %s \n" orcAssetClass
           printf "\n Oracle Address: %s \n" orcAddress
+        DeployScript (DeployMarketplaceScriptOptions {..}) -> do
+          printf "Deploying Marketplace Script to Address: %s" dplMktplaceAddress
+          env <- initEAApp conf providers opts dplMktplaceServerOptions
+          internalAddrPairs <- runEAApp env $ eaGetInternalAddresses False
+          oracleNftPolicyId <- runEAApp env $ asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybe "No Oracle NFT Policy Id"
+          oracleNftTknName <- runEAApp env $ asks eaAppEnvOracleNftTokenName >>= eaLiftMaybe "No Oracle NFT Token Name"
+          escrowPubkeyHash <- runEAApp env $ asks eaAppEnvMarketplaceEscrowPubKeyHash
+          version <- runEAApp env $ asks eaAppEnvMarketplaceVersion
+          networkId <- runEAApp env $ asks eaAppEnvGYNetworkId
+
+          -- Get the collateral address and its signing key.
+          (collateral, colKey) <- runEAApp env $ eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
+
+          (addr, key, _oref) <- runEAApp env $ eaSelectOref internalAddrPairs (\r -> collateral /= Just (r, True)) >>= eaLiftMaybe "No UTxO found"
+
+          let scripts = eaAppEnvScripts env
+              oracleValidatorHash = validatorHash $ oracleValidator (GYToken oracleNftPolicyId oracleNftTknName) (eaAppEnvOracleOperatorPubKeyHash env) scripts
+              marketplaceParams =
+                MarketplaceParams
+                  { mktPrmOracleValidator = oracleValidatorHash
+                  , mktPrmEscrowValidator = escrowPubkeyHash
+                  , mktPrmVersion = version
+                  , mktPrmOracleSymbol = oracleNftPolicyId
+                  , mktPrmOracleTokenName = oracleNftTknName
+                  }
+              skeleton = deployScript (unsafeAddressFromText dplMktplaceAddress) marketplaceParams scripts
+
+          txBody <-
+            liftIO $
+              runGYTxMonadNode networkId providers [addr] addr collateral (return skeleton)
+
+          gyTxId <- runEAApp env $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
+
+          printf "\n Deployed Marketplace Script to Utxo:  %s#0" gyTxId
 
 initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
 initEAApp conf providers (Options {..}) (ServerOptions {..}) = do

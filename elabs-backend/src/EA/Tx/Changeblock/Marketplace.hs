@@ -1,4 +1,4 @@
-module EA.Tx.Changeblock.Marketplace (buy, partialBuy, sell, cancel, merge, adjustOrders) where
+module EA.Tx.Changeblock.Marketplace (buy, partialBuy, sell, cancel, merge, adjustOrders, deployScript) where
 
 import EA ()
 import EA.Script (Scripts, marketplaceValidator)
@@ -12,29 +12,7 @@ import GeniusYield.TxBuilder (
   mustHaveOutput,
   mustHaveRefInput,
  )
-import GeniusYield.Types (
-  GYAssetClass (GYToken),
-  GYInScript (GYInReference, GYInScript),
-  GYNetworkId,
-  GYPubKeyHash,
-  GYTxIn (GYTxIn, gyTxInTxOutRef, gyTxInWitness),
-  GYTxInWitness (GYTxInWitnessScript),
-  GYTxOutRef,
-  GYValidator,
-  GYValue,
-  PlutusVersion (PlutusV2),
-  addressFromPubKeyHash,
-  datumFromPlutusData,
-  mintingPolicyIdCurrencySymbol,
-  mkGYTxOut,
-  mkGYTxOutNoDatum,
-  pubKeyHashToPlutus,
-  redeemerFromPlutusData,
-  tokenNameToPlutus,
-  validatorToScript,
-  valueFromLovelace,
-  valueSingleton,
- )
+import GeniusYield.Types
 
 import Data.List.NonEmpty qualified as NE
 
@@ -291,3 +269,9 @@ adjustOrders nid info OracleInfo {..} mMarketplaceRefScript newPrice newAmount n
         <> mustHaveOutput (mkGYTxOut (mktInfoAddress info) (mkCarbontokenValue info newAmount) (datumFromPlutusData newDatum))
         <> mustHaveOutput (mkGYTxOutNoDatum escrowAddress (valueFromLovelace orcInfoRate))
         <> mustBeSignedBy (mktInfoOwner info)
+
+deployScript :: GYAddress -> MarketplaceParams -> Scripts -> GYTxSkeleton 'PlutusV2
+deployScript toAddr marketplaceParams scripts =
+  let mktValidator = marketplaceValidator marketplaceParams scripts
+      out = GYTxOut toAddr (valueFromLovelace 0) Nothing (Just $ validatorToScript mktValidator)
+   in mustHaveOutput out
