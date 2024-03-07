@@ -225,7 +225,7 @@ merge nid infos OracleInfo {..} mMarketplaceRefScript escrowPubkeyHash mktValida
 
 type NewPrice = Integer
 type NewAmount = Integer
-type NewSellType = Marketplace.MarketplaceSellInfo
+type NewSellType = Marketplace.MarketplaceOrderType
 
 adjustOrders ::
   GYNetworkId ->

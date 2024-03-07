@@ -22,7 +22,7 @@ import Servant (
 import Servant.Swagger (HasSwagger (toSwagger))
 
 import EA.Script (Scripts, oracleValidator)
-import EA.Script.Marketplace (MarketplaceInfo (MarketplaceInfo, mktInfoAmount, mktInfoIsSell, mktInfoOwner), MarketplaceParams (..), MarketplaceSellInfo (M_SELL))
+import EA.Script.Marketplace (MarketplaceInfo (MarketplaceInfo, mktInfoAmount, mktInfoIsSell, mktInfoOwner), MarketplaceOrderType (..), MarketplaceParams (..))
 import EA.Script.Marketplace qualified as Marketplace
 import EA.Script.Oracle (OracleInfo)
 import EA.Tx.Changeblock.Marketplace (adjustOrders, buy, cancel, partialBuy, sell)
@@ -58,7 +58,7 @@ handleOrderApi =
 type OrderList =
   "orders"
     :> QueryParam "ownerUserId" Natural
-    :> QueryParam "orderType" Int
+    :> QueryParam "orderType" MarketplaceOrderType
     :> Get '[JSON] [MarketplaceInfo]
 
 type OrderCreate =
@@ -288,7 +288,7 @@ handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
       when (updatedPrice == fromInteger mktInfoAmount) $ Left "Price must be different from current price"
       when (mktInfoIsSell /= M_SELL) $ Left "Can only update price for sell orders"
 
-handleListOrders :: Maybe Natural -> Maybe Int -> EAApp [MarketplaceInfo]
+handleListOrders :: Maybe Natural -> Maybe MarketplaceOrderType -> EAApp [MarketplaceInfo]
 handleListOrders ownerUserId orderType = withMarketplaceApiCtx $ \MarketplaceApiCtx {..} -> do
   mInfos <- asks eaMarketplaceInfos mktCtxParams
   ownerPubkeys <- mOwnerPubKeyHashes
@@ -306,4 +306,4 @@ handleListOrders ownerUserId orderType = withMarketplaceApiCtx $ \MarketplaceApi
     filterByOwner pubkeyHashes MarketplaceInfo {..} = isNothing ownerUserId || mktInfoOwner `elem` pubkeyHashes
 
     filterByType :: MarketplaceInfo -> Bool
-    filterByType MarketplaceInfo {..} = maybe True (\ot -> mktInfoIsSell == toEnum ot) orderType
+    filterByType MarketplaceInfo {..} = maybe True (mktInfoIsSell ==) orderType

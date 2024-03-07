@@ -6,7 +6,7 @@ module EA.Script.Marketplace (
   MarketplaceDatum (..),
   MarketplaceParams (..),
   MarketplaceInfo (..),
-  MarketplaceSellInfo (..),
+  MarketplaceOrderType (..),
   marketPlaceParamsToScriptParams,
   marketplaceInfoToDatum,
   marketplaceDatumToInfo,
@@ -14,11 +14,13 @@ module EA.Script.Marketplace (
 
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
+import Data.Text qualified as T
 import GeniusYield.Types
 import PlutusLedgerApi.V1.Value (assetClass)
 import PlutusLedgerApi.V2 (CurrencySymbol, PubKeyHash, ScriptHash, TokenName)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as PlutusTx
+import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData (toUrlPiece))
 
 data MarketplaceAction
   = BUY
@@ -85,9 +87,27 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
     , mktSpOracleTokenName = tokenNameToPlutus mktPrmOracleTokenName
     }
 
-data MarketplaceSellInfo = M_BUY | M_SELL
+data MarketplaceOrderType = M_BUY | M_SELL
   deriving stock (Enum, Show, Eq, Generic)
-  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
+  deriving anyclass (Swagger.ToSchema, Swagger.ToParamSchema)
+
+instance Aeson.FromJSON MarketplaceOrderType where
+  parseJSON = Aeson.withText "MarketplaceOrderType" $ \case
+    "BUY" -> pure M_BUY
+    "SELL" -> pure M_SELL
+    _ -> fail "Invalid MarketplaceOrderType: "
+
+instance Aeson.ToJSON MarketplaceOrderType where
+  toJSON M_BUY = Aeson.String "BUY"
+  toJSON M_SELL = Aeson.String "SELL"
+
+instance FromHttpApiData MarketplaceOrderType where
+  parseUrlPiece t = either (Left . T.pack) Right $ Aeson.eitherDecode $ Aeson.encode t
+
+instance ToHttpApiData MarketplaceOrderType where
+  toUrlPiece M_BUY = "BUY"
+  toUrlPiece M_SELL = "SELL"
+
 data MarketplaceInfo = MarketplaceInfo
   { mktInfoTxOutRef :: GYTxOutRef
   , mktInfoAddress :: GYAddress
@@ -98,7 +118,7 @@ data MarketplaceInfo = MarketplaceInfo
   , mktInfoCarbonAssetName :: GYTokenName
   , mktInfoAmount :: Integer
   , mktInfoIssuer :: GYPubKeyHash
-  , mktInfoIsSell :: MarketplaceSellInfo
+  , mktInfoIsSell :: MarketplaceOrderType
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
