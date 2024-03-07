@@ -343,6 +343,7 @@ app opts@(Options {..}) = do
           printf "\n Operator pubkeyHash: %s \n Operator Address: %s \n" operatorPubkeyHash addr
           printf "\n Oracle NFT Asset: %s \n" orcAssetClass
           printf "\n Oracle Address: %s \n" orcAddress
+          printf "\n \n export ORACLE_UTXO_REF=%s#0 \n" gyTxId
         DeployScript (DeployMarketplaceScriptOptions {..}) -> do
           printf "Deploying Marketplace Script to Address: %s" dplMktplaceAddress
           env <- initEAApp conf providers opts dplMktplaceServerOptions
@@ -376,7 +377,7 @@ app opts@(Options {..}) = do
 
           gyTxId <- runEAApp env $ eaSubmitTx $ Wallet.signTx txBody [key, colKey]
 
-          printf "\n Deployed Marketplace Script to Utxo:  %s#0" gyTxId
+          printf "\n \n export MARKETPLACE_REF_SCRIPT_UTXO=%s#0 \n" gyTxId
 
 initEAApp :: GYCoreConfig -> GYProviders -> Options -> ServerOptions -> IO EAAppEnv
 initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
@@ -461,11 +462,9 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvOracleNftMintingPolicyId = oracleNftPolicyId
       , eaAppEnvOracleNftTokenName = oracleNftTokenName
       , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
-      , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76302e302e31" -- v0.0.1
+      , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76302e302e33" -- v0.0.3
       }
   where
-    -- \^ Using version v1.0.0
-
     oracleNftPolicyIdAndTokenName :: Maybe GYAssetClass -> (Maybe GYMintingPolicyId, Maybe GYTokenName)
     oracleNftPolicyIdAndTokenName (Just (GYToken policyId tokename)) = (Just policyId, Just tokename)
     oracleNftPolicyIdAndTokenName _ = (Nothing, Nothing)
