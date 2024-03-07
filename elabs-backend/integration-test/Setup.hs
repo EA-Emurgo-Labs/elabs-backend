@@ -26,14 +26,8 @@ import GeniusYield.Test.Privnet.Ctx (
   submitTx,
  )
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
-import GeniusYield.TxBuilder (mustHaveOutput)
-import GeniusYield.Types (
-  GYAwaitTxParameters (GYAwaitTxParameters),
-  GYNetworkId (GYPrivnet),
-  GYProviders (gyAwaitTxConfirmed),
-  GYTxOut (GYTxOut),
-  valueFromLovelace,
- )
+import GeniusYield.TxBuilder (addressToPubKeyHashIO, mustHaveOutput)
+import GeniusYield.Types
 import Internal.Wallet.DB.Sqlite (
   createAccount,
   runAutoMigration,
@@ -100,10 +94,15 @@ withEASetup getUser ioSetup putLog kont =
         )
 
     bfIpfsToken <- getEnv "BLOCKFROST_IPFS"
+    -- TODO: Use valid oracle operator address
+    oracleOperatorPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
+    -- TODO: Use valid escrow address
+    escrowPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
 
     let
       tokens = ["AAAA"]
       providers = ctxProviders ctx
+      (orcPolicy, orcTn) = (fromString "492335da5d8eb86f076717211c3e7e4711eedf8c358923e925b3c3b5", unsafeTokenNameFromHex "6f72636c65")
       env =
         EAAppEnv
           { eaAppEnvGYProviders = providers
@@ -114,6 +113,13 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvRootKey = rootKey
           , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
           , eaAppEnvAuthTokens = tokens
+          , eaAppEnvOracleRefInputUtxo = Nothing
+          , eaAppEnvMarketplaceRefScriptUtxo = Nothing
+          , eaAppEnvOracleOperatorPubKeyHash = oracleOperatorPubkeyHash
+          , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
+          , eaAppEnvOracleNftMintingPolicyId = Just orcPolicy
+          , eaAppEnvOracleNftTokenName = Just orcTn
+          , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76312e302e30"
           }
 
     -- DB migrations

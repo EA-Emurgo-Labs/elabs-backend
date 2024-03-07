@@ -16,7 +16,9 @@ mintIpfsNftCarbonToken ::
   MarketPlaceAddress ->
   -- | Owner Address
   GYAddress ->
-  -- | Owner Pubkey hash
+  -- | owner Pubkey hash
+  GYPubKeyHash ->
+  -- | Issuer Pubkey hash
   GYPubKeyHash ->
   -- | TokenName generated with combination of IPFS hash
   GYTokenName ->
@@ -27,7 +29,7 @@ mintIpfsNftCarbonToken ::
   -- | The EA Scripts
   Scripts ->
   GYTxSkeleton 'PlutusV2
-mintIpfsNftCarbonToken oref marketplaceAddr ownerAddr pkh tn mktSalePrice qty script =
+mintIpfsNftCarbonToken oref marketplaceAddr ownerAddr ownerPkh issuerPkh tn mktSalePrice qty script =
   let carbonNftPolicy = carbonNftMintingPolicy oref tn script
       carbonTokenPolicy = carbonTokenMintingPolicy tn script
       carbonToken = GYToken (mintingPolicyId carbonTokenPolicy) tn
@@ -35,8 +37,8 @@ mintIpfsNftCarbonToken oref marketplaceAddr ownerAddr pkh tn mktSalePrice qty sc
 
       marketPlaceDatum =
         MarketplaceDatum
-          { mktDtmOwner = pubKeyHashToPlutus pkh
-          , mktDtmIssuer = pubKeyHashToPlutus pkh
+          { mktDtmOwner = pubKeyHashToPlutus ownerPkh
+          , mktDtmIssuer = pubKeyHashToPlutus issuerPkh
           , mktDtmIsSell = 1
           , mktDtmSalePrice = mktSalePrice
           , mktDtmAssetSymbol = mintingPolicyCurrencySymbol carbonTokenPolicy

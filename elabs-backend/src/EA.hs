@@ -34,28 +34,9 @@ import EA.Script.Marketplace (
   MarketplaceParams,
   marketplaceDatumToInfo,
  )
+import EA.Script.Oracle (OracleInfo)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
-import GeniusYield.Types (
-  GYAddress,
-  GYDatum,
-  GYLogNamespace,
-  GYLogSeverity (..),
-  GYNetworkId,
-  GYProviders (..),
-  GYQueryUTxO (..),
-  GYTx,
-  GYTxId,
-  GYTxOutRef,
-  GYUTxO (utxoRef),
-  addressFromValidator,
-  gyLog,
-  gyLogDebug,
-  gyLogError,
-  gyLogInfo,
-  gyLogWarning,
-  gyQueryUtxosAtAddressesWithDatums,
-  gyQueryUtxosAtTxOutRefsWithDatums,
- )
+import GeniusYield.Types
 import Internal.Wallet (RootKey)
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
@@ -86,6 +67,13 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvRootKey :: !RootKey
   , eaAppEnvBlockfrostIpfsProjectId :: !String
   , eaAppEnvAuthTokens :: ![Text]
+  , eaAppEnvOracleRefInputUtxo :: !(Maybe OracleInfo)
+  , eaAppEnvMarketplaceRefScriptUtxo :: !(Maybe GYTxOutRef)
+  , eaAppEnvMarketplaceEscrowPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvMarketplaceVersion :: !GYTokenName
+  , eaAppEnvOracleOperatorPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvOracleNftMintingPolicyId :: !(Maybe GYMintingPolicyId)
+  , eaAppEnvOracleNftTokenName :: !(Maybe GYTokenName)
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
