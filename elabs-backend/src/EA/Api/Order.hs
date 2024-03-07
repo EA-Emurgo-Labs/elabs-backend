@@ -122,7 +122,7 @@ data OrderCancelRequest = OrderCancelRequest
 data OrderBuyRequest = OrderBuyRequest
   { buyerUserId :: !UserId
   -- ^ The user ID.
-  , buyAmount :: !Int
+  , buyAmount :: !Natural
   -- ^ The amount of carbon to buy.
   , orderUtxo :: !GYTxOutRef
   }
