@@ -28,7 +28,7 @@ import GeniusYield.Test.Privnet.Ctx (
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (addressToPubKeyHashIO, mustHaveOutput)
 import GeniusYield.Types
-import Internal.Wallet.DB.Sqlite (
+import Internal.Wallet.DB.Sql (
   createAccount,
   runAutoMigration,
  )

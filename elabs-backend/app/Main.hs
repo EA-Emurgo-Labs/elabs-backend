@@ -40,7 +40,7 @@ import Internal.Wallet (
   writeRootKey,
  )
 import Internal.Wallet qualified as Wallet
-import Internal.Wallet.DB.Sqlite (
+import Internal.Wallet.DB.Sql (
   addToken,
   createAccount,
   getTokens,
