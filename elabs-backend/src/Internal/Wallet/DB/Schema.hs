@@ -45,20 +45,20 @@ share
   [persistLowerCase|
 
 Account
-  created UTCTime default=CURRENT_TIME
+  created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 
 Address
   accountId AccountId
   user UserId Maybe
   collateral Bool default=False
-  created UTCTime default=CURRENT_TIME
+  created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 
 Auth
   token Text
   notes Text
-  created UTCTime default=CURRENT_TIME
+  created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 
 |]
