@@ -220,7 +220,7 @@ rootKeyOptions =
   RootKeyOptions
     <$> strOption
       ( long "mnemonic"
-          <> help "Mnemonic (15 words)"
+          <> help "Mnemonic (24 words)"
       )
 
 serverOptions :: Parser ServerOptions
@@ -296,7 +296,7 @@ app opts@(Options {..}) = do
             either
               (const (error "Invalid mnemonic"))
               return
-              (mkSomeMnemonic @'[15] (words $ T.pack rootKeyOptionsMnemonic))
+              (mkSomeMnemonic @'[24] (words $ T.pack rootKeyOptionsMnemonic))
           writeRootKey optionsRootKeyFile $ genRootKeyFromMnemonic mw
         PrintInternalAddresses (InternalAddressesOptions {..}) -> do
           env <-

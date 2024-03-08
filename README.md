@@ -7,7 +7,8 @@ nix develop
 
 This will create the `root.key`
 ```
-cabal run elabs-backend:app -- genrootkey --mnemonic "ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal"
+cabal run elabs-backend:app -- genrootkey --mnemonic "brand scatter almost cattle reward guilt one sound embrace payment want brand april kiwi major novel orchard innocent interest sense alley deny main fit"
+
 ```
 This will create a test auth token:
 ```
