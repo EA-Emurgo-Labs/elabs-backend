@@ -78,7 +78,7 @@ withEASetup getUser ioSetup putLog kont =
           }
 
     -- Create db connection pool and run migrations
-    con <- getEnv "DB_CONNECTION"
+    con <- getEnv "DB_CONNECTION_TEST"
     pool <-
       runStderrLoggingT
         ( createPostgresqlPool
@@ -157,4 +157,4 @@ server env =
     hoistServer appRoutes (Handler . ExceptT . try . runEAApp env) routes
 
 cleanupSetup :: Setup -> IO ()
-cleanupSetup _ = return ()
+cleanupSetup _ = return () -- TODO: cleanup
