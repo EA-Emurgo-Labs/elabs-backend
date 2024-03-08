@@ -27,7 +27,7 @@ import Database.Persist (
     fieldType
   ),
  )
-import Database.Persist.Sqlite (
+import Database.Persist.Sql (
   BackendKey (SqlBackendKey),
  )
 import Database.Persist.TH (
