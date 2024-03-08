@@ -10,7 +10,7 @@ import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
-import Database.Persist.Postgresql (createPostgresqlPool)
+import Database.Persist.Postgresql (createPostgresqlPool, rawExecute)
 import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
 import EA.Routes (appRoutes, routes)
@@ -157,4 +157,24 @@ server env =
     hoistServer appRoutes (Handler . ExceptT . try . runEAApp env) routes
 
 cleanupSetup :: Setup -> IO ()
-cleanupSetup _ = return () -- TODO: cleanup
+cleanupSetup _ = do
+  loadFile defaultConfig
+
+  con <- getEnv "DB_CONNECTION_TEST"
+
+  pool <-
+    runStderrLoggingT
+      ( createPostgresqlPool
+          (fromString con)
+          20
+      )
+
+  void $
+    runSqlPool
+      cleanupDatabase
+      pool
+  where
+    cleanupDatabase = do
+      rawExecute "DROP TABLE IF EXISTS account CASCADE;" []
+      rawExecute "DROP TABLE IF EXISTS address CASCADE;" []
+      rawExecute "DROP TABLE IF EXISTS auth CASCADE;" []
