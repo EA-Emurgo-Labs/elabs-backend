@@ -36,8 +36,7 @@ import Database.Persist (
   SqlType (SqlInt64),
  )
 import Database.Persist.Class (PersistField (toPersistValue))
-import Database.Persist.Sql (PersistFieldSql)
-import Database.Persist.Sqlite (PersistFieldSql (sqlType))
+import Database.Persist.Sql (PersistFieldSql (sqlType))
 
 --------------------------------------------------------------------------------
 

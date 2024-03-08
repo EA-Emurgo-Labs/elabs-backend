@@ -49,7 +49,7 @@ common deps
     , mtl
     , newtype
     , persistent
-    , persistent-sqlite
+    , persistent-postgresql
     , plutus-ledger-api
     , plutus-tx
     , ply-core
@@ -152,7 +152,7 @@ library
     Internal.Ipfs.Types
     Internal.Wallet
     Internal.Wallet.DB.Schema
-    Internal.Wallet.DB.Sqlite
+    Internal.Wallet.DB.Sql
 
 library elabs-backend-testlib
   import:          lang, deps, test-deps

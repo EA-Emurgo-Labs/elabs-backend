@@ -12,10 +12,8 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.List qualified as List
 import Data.Text qualified as T
-import Database.Persist.Sqlite (
-  createSqlitePool,
-  runSqlPool,
- )
+import Database.Persist.Postgresql (createPostgresqlPool)
+import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, eaSubmitTx, runEAApp)
 import EA.Api (apiSwagger)
 import EA.Internal (fromLogLevel)
@@ -25,7 +23,11 @@ import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Script.Oracle (oracleNftAsset, utxoToOracleInfo)
 import EA.Tx.Changeblock.Marketplace (deployScript)
 import EA.Tx.Changeblock.Oracle (createOracle)
-import EA.Wallet (eaGetCollateralFromInternalWallet, eaGetInternalAddresses, eaSelectOref)
+import EA.Wallet (
+  eaGetCollateralFromInternalWallet,
+  eaGetInternalAddresses,
+  eaSelectOref,
+ )
 import GeniusYield.GYConfig (
   GYCoreConfig (cfgNetworkId),
   coreConfigIO,
@@ -40,7 +42,7 @@ import Internal.Wallet (
   writeRootKey,
  )
 import Internal.Wallet qualified as Wallet
-import Internal.Wallet.DB.Sqlite (
+import Internal.Wallet.DB.Sql (
   addToken,
   createAccount,
   getTokens,
@@ -127,8 +129,7 @@ data DeployMarketplaceScriptOptions = DeployMarketplaceScriptOptions
 
 data ServerOptions = ServerOptions
   { serverOptionsPort :: !Int
-  , serverOptionsSqliteFile :: !String
-  , serverOptionsSqlitePoolSize :: !Int
+  , serverOptionsDBPoolSize :: !Int
   }
   deriving stock (Show, Read)
 
@@ -236,15 +237,8 @@ serverOptions =
       )
     <*> option
       auto
-      ( long "sqlite"
-          <> help "Sqlite file"
-          <> showDefault
-          <> value "wallet.db"
-      )
-    <*> option
-      auto
-      ( long "sqlite-pool-size"
-          <> help "Sqlite pool size"
+      ( long "db-pool-size"
+          <> help "DB connection pool size"
           <> showDefault
           <> value 10
       )
@@ -401,12 +395,13 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
 
   metrics <- Metrics.initialize
 
-  -- Create Sqlite pool and run migrations
+  -- Create db connection pool and run migrations
+  con <- getEnv "DB_CONNECTION"
   pool <-
     runLoggingT
-      ( createSqlitePool
-          (T.pack serverOptionsSqliteFile)
-          serverOptionsSqlitePoolSize
+      ( createPostgresqlPool
+          (fromString con)
+          serverOptionsDBPoolSize
       )
       $ \_ _ lvl msg ->
         gyLog

@@ -20,7 +20,7 @@ import GeniusYield.Types (
   randomTxOutRef,
  )
 import Internal.Wallet (PaymentKey, deriveAddress)
-import Internal.Wallet.DB.Sqlite (
+import Internal.Wallet.DB.Sql (
   createWalletIndexPair,
   getInternalWalletIndexPairs',
   getWalletIndexPairs',

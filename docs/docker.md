@@ -8,7 +8,6 @@ Prepare the following configuration files:
  `config.json`
 `.env`
 `root. key`
-`wallet. db` (if you start from scratch, you can ignore this file)
 
 ## Step 2: Build the Docker Image
 

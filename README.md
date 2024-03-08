@@ -21,7 +21,7 @@ cabal run elabs-backend:app run
 ```
 
 ## DB Backend
-At the moment we are using SQLite, the database must be a relational database
+At the moment we are using PostgreSQL, the database must be a relational database
 with rollback functionality.
 
 ## Integration Testing with local Node

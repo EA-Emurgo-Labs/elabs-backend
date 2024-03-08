@@ -28,9 +28,6 @@ COPY ./contracts /app/contracts
 COPY ./config.json /app
 COPY ./.env /app
 COPY ./root.key /app
-COPY ./wallet.db /app
-COPY ./wallet.db-shm /app
-COPY ./wallet.db-wal /app
 
 EXPOSE 8081/tcp
 

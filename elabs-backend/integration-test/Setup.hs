@@ -10,9 +10,8 @@ import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
-import Data.List ((!!))
-import Data.Text qualified as T
-import Database.Persist.Sqlite (createSqlitePool, rawExecute, runSqlPool)
+import Database.Persist.Postgresql (createPostgresqlPool, rawExecute)
+import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..))
@@ -28,7 +27,7 @@ import GeniusYield.Test.Privnet.Ctx (
 import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (addressToPubKeyHashIO, mustHaveOutput)
 import GeniusYield.Types
-import Internal.Wallet.DB.Sqlite (
+import Internal.Wallet.DB.Sql (
   createAccount,
   runAutoMigration,
  )
@@ -39,10 +38,7 @@ import Servant (
   hoistServer,
   serve,
  )
-import System.Directory (doesFileExist, removeFile)
 import System.Environment (getEnv)
-import System.FilePath.Glob (glob)
-import System.Random (randomRIO)
 
 --------------------------------------------------------------------------------
 
@@ -62,8 +58,6 @@ withEASetup getUser ioSetup putLog kont =
     -- read .env file
     loadFile defaultConfig
 
-    id <- randomString 10
-
     metrics <- Metrics.initialize
     rootKey <- createRootKey
 
@@ -74,8 +68,6 @@ withEASetup getUser ioSetup putLog kont =
     mintingNftTypedScript <- readTypedScript "contracts/nft.json"
 
     let
-      optionsSqliteFile = "wallet.test." <> id <> ".db"
-
       scripts =
         Scripts
           { scriptCarbonNftPolicy = carbonNftTypedScript
@@ -85,11 +77,12 @@ withEASetup getUser ioSetup putLog kont =
           , scriptOracleValidator = oracleTypedScript
           }
 
-    -- Create Sqlite pool and run migrations
+    -- Create db connection pool and run migrations
+    con <- getEnv "DB_CONNECTION_TEST"
     pool <-
       runStderrLoggingT
-        ( createSqlitePool
-            (T.pack optionsSqliteFile)
+        ( createPostgresqlPool
+            (fromString con)
             20
         )
 
@@ -125,8 +118,7 @@ withEASetup getUser ioSetup putLog kont =
     -- DB migrations
     void $
       runSqlPool
-        ( rawExecute "PRAGMA busy_timeout=100000" []
-            >> runAutoMigration
+        ( runAutoMigration
             >> createAccount
         )
         pool
@@ -164,15 +156,25 @@ server env =
   serve appRoutes $
     hoistServer appRoutes (Handler . ExceptT . try . runEAApp env) routes
 
-randomString :: Int -> IO String
-randomString len = replicateM len randomChar
-  where
-    randomChar :: IO Char
-    randomChar = do
-      let chars = ['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0' .. '9']
-      randomRIO (0, length chars - 1) <&> (chars !!)
-
 cleanupSetup :: Setup -> IO ()
 cleanupSetup _ = do
-  files <- glob "wallet.test.*.db*" -- FIXME: check optionsSqliteFile
-  mapM_ (\file -> doesFileExist file >>= flip when (removeFile file)) files
+  loadFile defaultConfig
+
+  con <- getEnv "DB_CONNECTION_TEST"
+
+  pool <-
+    runStderrLoggingT
+      ( createPostgresqlPool
+          (fromString con)
+          20
+      )
+
+  void $
+    runSqlPool
+      cleanupDatabase
+      pool
+  where
+    cleanupDatabase = do
+      rawExecute "DROP TABLE IF EXISTS account CASCADE;" []
+      rawExecute "DROP TABLE IF EXISTS address CASCADE;" []
+      rawExecute "DROP TABLE IF EXISTS auth CASCADE;" []

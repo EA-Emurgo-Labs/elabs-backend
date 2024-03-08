@@ -1,4 +1,4 @@
-module Internal.Wallet.DB.Sqlite (
+module Internal.Wallet.DB.Sql (
   createWalletIndexPair,
   getWalletIndexPairs,
   getWalletIndexPairs',
@@ -12,7 +12,7 @@ module Internal.Wallet.DB.Sqlite (
 
 import Data.Tagged (Tagged (Tagged))
 import Data.Time (getCurrentTime)
-import Database.Persist.Sqlite (
+import Database.Persist.Sql (
   Entity (entityKey, entityVal),
   PersistStoreWrite (insert),
   SelectOpt (Desc),
