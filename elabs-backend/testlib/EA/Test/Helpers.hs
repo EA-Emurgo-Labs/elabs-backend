@@ -25,25 +25,34 @@ createRootKey =
   either
     (const (error "Something went wrong with the RootKey creation"))
     (return . genRootKeyFromMnemonic)
-    (mkSomeMnemonic @'[15] mnemonic)
+    (mkSomeMnemonic @'[24] mnemonic)
 
 mnemonic :: [Text]
 mnemonic =
-  [ "ripple"
-  , "scissors"
-  , "kick"
-  , "mammal"
-  , "hire"
-  , "column"
-  , "oak"
-  , "again"
-  , "sun"
-  , "offer"
-  , "wealth"
-  , "tomorrow"
-  , "wagon"
-  , "turn"
-  , "fatal"
+  [ "brand"
+  , "scatter"
+  , "almost"
+  , "cattle"
+  , "reward"
+  , "guilt"
+  , "one"
+  , "sound"
+  , "embrace"
+  , "payment"
+  , "want"
+  , "brand"
+  , "april"
+  , "kiwi"
+  , "major"
+  , "novel"
+  , "orchard"
+  , "innocent"
+  , "interest"
+  , "sense"
+  , "alley"
+  , "deny"
+  , "main"
+  , "fit"
   ]
 
 -- | Custom request with a body
