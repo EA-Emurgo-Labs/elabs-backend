@@ -50,7 +50,6 @@ common deps
     , newtype
     , persistent
     , persistent-postgresql
-    , persistent-sqlite
     , plutus-ledger-api
     , plutus-tx
     , ply-core
