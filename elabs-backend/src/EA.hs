@@ -19,11 +19,14 @@ module EA (
   eaGetCollateral',
   eaMarketplaceAtTxOutRef,
   eaMarketplaceInfos,
+  eaLiftMaybeServerError,
+  eaLiftEitherServerError,
 )
 where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
+import Data.ByteString.Lazy qualified as LB
 import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
@@ -38,6 +41,7 @@ import EA.Script.Oracle (OracleInfo)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
 import GeniusYield.Types
 import Internal.Wallet (RootKey)
+import Servant (ServerError (errBody))
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 --------------------------------------------------------------------------------
@@ -133,6 +137,21 @@ eaCatch action handle = withRunInIO $ \run -> run action `catch` (run . handle)
 
 eaHandle :: (Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 eaHandle = flip eaCatch
+
+--------------------------------------------------------------------------------
+-- Throw server error
+
+eaLiftMaybeServerError :: ServerError -> LB.ByteString -> Maybe a -> EAApp a
+eaLiftMaybeServerError error body Nothing = eaThrow $ error {errBody = body}
+eaLiftMaybeServerError _ _ (Just a) = pure a
+
+eaLiftEitherServerError ::
+  ServerError ->
+  (a -> LB.ByteString) ->
+  Either a b ->
+  EAApp b
+eaLiftEitherServerError error toBody =
+  either (\a -> eaThrow $ error {errBody = toBody a}) pure
 
 --------------------------------------------------------------------------------
 -- Provider functions

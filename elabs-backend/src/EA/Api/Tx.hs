@@ -6,7 +6,13 @@ module EA.Api.Tx (
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import Data.Text qualified as T
-import EA (EAApp, eaAppEnvGYProviders, eaCatch, eaLiftMaybe, eaSubmitTx)
+import EA (
+  EAApp,
+  eaAppEnvGYProviders,
+  eaCatch,
+  eaLiftMaybeServerError,
+  eaSubmitTx,
+ )
 import EA.Api.Types (
   SubmitTxParams (..),
   SubmitTxResponse,
@@ -32,6 +38,7 @@ import Servant (
   QueryParam,
   ReqBody,
   ToServantApi,
+  err400,
   type (:>),
  )
 import Servant.Swagger (HasSwagger (toSwagger))
@@ -88,7 +95,13 @@ handleTxSubmit SubmitTxParams {..} = do
 
 handleTxStatus :: Text -> Maybe Word64 -> EAApp TxStatusResponse
 handleTxStatus text confirmation = do
-  txid <- eaLiftMaybe "Wrong transaction id" . txIdFromHex . T.unpack $ text
+  txid <-
+    eaLiftMaybeServerError
+      err400
+      "Transaction ID not found"
+      $ txIdFromHex
+        . T.unpack
+      $ text
   eaCatch
     (getTxStatus txid (fromMaybe 3 confirmation))
     ( \(GYAwaitTxException _) -> return $ TxStatusResponse TX_PENDING
