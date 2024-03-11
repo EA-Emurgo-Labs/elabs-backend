@@ -47,3 +47,4 @@ root.key
 .env
 sample-ipfs-file.txt
 bin
+.db
