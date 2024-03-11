@@ -10,9 +10,19 @@ import Data.Text qualified as T
 import Data.Text.Encoding.Base16 (encodeBase16)
 import EA (
   EAApp,
-  EAAppEnv (eaAppEnvGYNetworkId, eaAppEnvGYProviders, eaAppEnvMarketplaceEscrowPubKeyHash, eaAppEnvMarketplaceVersion, eaAppEnvOracleNftMintingPolicyId, eaAppEnvOracleNftTokenName, eaAppEnvOracleOperatorPubKeyHash, eaAppEnvScripts),
-  eaLiftEither,
+  EAAppEnv (
+    eaAppEnvGYNetworkId,
+    eaAppEnvGYProviders,
+    eaAppEnvMarketplaceEscrowPubKeyHash,
+    eaAppEnvMarketplaceVersion,
+    eaAppEnvOracleNftMintingPolicyId,
+    eaAppEnvOracleNftTokenName,
+    eaAppEnvOracleOperatorPubKeyHash,
+    eaAppEnvScripts
+  ),
+  eaLiftEitherServerError,
   eaLiftMaybe,
+  eaLiftMaybeServerError,
   eaSubmitTx,
  )
 import EA.Api.Types (
@@ -44,7 +54,7 @@ import GeniusYield.Types.Address (addressToPubKeyHash)
 import Internal.Ipfs (ipfsAddFile, ipfsPinObject)
 import Internal.Ipfs.Types (IpfsAddResponse (..), IpfsPin (..))
 import Internal.Wallet qualified as Wallet
-import Servant (JSON, Post, Tagged, type (:>))
+import Servant (JSON, Post, Tagged, err400, type (:>))
 import Servant.Multipart (
   MultipartData,
   Tmp,
@@ -93,11 +103,15 @@ handleCarbonApi ::
   MultipartData Tmp ->
   EAApp CarbonMintResponse
 handleCarbonApi multipartData = do
-  filePart <- eaLiftEither id $ lookupFile "file" multipartData
-  dataPart <- eaLiftEither id $ lookupInput "data" multipartData
+  filePart <-
+    eaLiftEitherServerError err400 fromString $
+      lookupFile "file" multipartData
+  dataPart <-
+    eaLiftEitherServerError err400 fromString $
+      lookupInput "data" multipartData
 
   request <-
-    eaLiftMaybe "Cannot decode JSON data" $
+    eaLiftMaybeServerError err400 "Cannot decode JSON data" $
       Aeson.decode @CarbonMintRequest $
         encodeUtf8 dataPart
 
