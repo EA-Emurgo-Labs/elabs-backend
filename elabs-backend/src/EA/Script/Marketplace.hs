@@ -43,6 +43,8 @@ data MarketplaceScriptParams = MarketplaceScriptParams
   -- ^ The policyId of Oracle Token
   , mktSpOracleTokenName :: TokenName
   -- ^ The TokenName of Oracle Token
+  , mktSpBackdoor :: PubKeyHash
+  -- ^ The PubKeyHash of Backdoor
   }
   deriving stock (Show)
 
