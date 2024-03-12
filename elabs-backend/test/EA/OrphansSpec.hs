@@ -1,8 +1,8 @@
 module EA.OrphansSpec (spec) where
 
-import Test.Hspec (Spec, describe, it, shouldBe)
-import Database.Persist (PersistField(toPersistValue, fromPersistValue))
+import Database.Persist (PersistField (fromPersistValue, toPersistValue))
 import EA.Orphans (GYPubKeyHash)
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 --------------------------------------------------------------------------------
 

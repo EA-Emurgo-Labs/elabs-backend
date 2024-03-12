@@ -6,6 +6,7 @@ module EA.Orphans (
   GYPubKeyHash,
 ) where
 
+import Cardano.Api qualified as Api
 import Control.Lens ((%~), (.~), (?~))
 import Data.Aeson
 import Data.Swagger (
@@ -26,7 +27,7 @@ import Database.Persist.Class.PersistField (PersistField (fromPersistValue))
 import Database.Persist.Postgresql (PersistFieldSql (sqlType))
 import Database.Persist.Sql (PersistField (toPersistValue))
 import EA.Api.Types (CarbonMintRequest (..), UserId (..))
-import GeniusYield.Types (GYPubKeyHash)
+import GeniusYield.Types (GYPubKeyHash, pubKeyHashToApi)
 import Network.HTTP.Media (MediaType)
 import Servant (Tagged, (:>))
 import Servant.Multipart (MultipartData, MultipartForm, Tmp)
@@ -89,7 +90,10 @@ carbonMintRequestExample = CarbonMintRequest (UserId 14) 100000 1000
 
 instance PersistField GYPubKeyHash where
   toPersistValue =
-    (toPersistValue :: String -> PersistValue) . show
+    (toPersistValue :: String -> PersistValue)
+      . T.unpack
+      . Api.serialiseToRawBytesHexText
+      . pubKeyHashToApi
 
   fromPersistValue x = case (fromPersistValue x :: Either Text String) of
     Left err -> Left $ T.replace "String" "GYPubKeyHash" err
