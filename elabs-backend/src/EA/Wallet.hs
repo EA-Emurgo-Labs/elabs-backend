@@ -14,12 +14,14 @@ import EA (
   eaAppEnvSqlPool,
   eaGetCollateral,
   eaLiftEither,
+  eaLiftMaybe,
  )
 import EA.Api.Types (UserId)
 import GeniusYield.Types (
   GYAddress,
   GYTxOutRef,
   GYUTxO (utxoRef),
+  addressToPubKeyHash,
   filterUTxOs,
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
@@ -28,6 +30,7 @@ import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sql (
   getInternalWalletIndexPairs',
   getWalletIndexPairs',
+  saveToUserLookup,
  )
 
 --------------------------------------------------------------------------------
@@ -50,16 +53,20 @@ eaGetAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetAddresses userId = do
   nid <- asks eaAppEnvGYNetworkId
   rootK <- asks eaAppEnvRootKey
+  pool <- asks eaAppEnvSqlPool
   indexPairs <-
-    asks eaAppEnvSqlPool
-      >>= ( liftIO
-              . runSqlPool
-                (getWalletIndexPairs' userId 1)
-          )
+    liftIO $ runSqlPool (getWalletIndexPairs' userId 1) pool
   -- \^ Need to be 1 because how ChangeBlock smart contract v1 is implemented
 
-  eaLiftEither id $
-    mapM (uncurry $ deriveAddress nid rootK) indexPairs
+  -- Save derived pub key hash
+  pairs <-
+    eaLiftEither id $
+      mapM (uncurry $ deriveAddress nid rootK) indexPairs
+  pkh <- eaLiftMaybe "cannot get pub key hash from address" $ do
+    (addr, _) <- listToMaybe pairs
+    addressToPubKeyHash addr
+  void . liftIO $ runSqlPool (saveToUserLookup userId pkh) pool
+  return pairs
 
 -- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::

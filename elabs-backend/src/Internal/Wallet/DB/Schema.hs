@@ -8,6 +8,7 @@ module Internal.Wallet.DB.Schema (
   Address (..),
   Wallet (..),
   Auth (..),
+  UserLookup (..),
   migrateAll,
 ) where
 
@@ -39,6 +40,7 @@ import Database.Persist.TH (
   sqlSettings,
  )
 import EA.Api.Types (UserId)
+import EA.Orphans (GYPubKeyHash)
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -58,6 +60,14 @@ Wallet
   addressId AddressId
   UniqueAddress addressId
   user UserId Maybe
+  created UTCTime default=CURRENT_TIMESTAMP
+  deriving Show
+
+UserLookup
+  user UserId
+  UniqueUser user
+  pubkeyhash GYPubKeyHash
+  UniquePubkeyhash pubkeyhash
   created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 

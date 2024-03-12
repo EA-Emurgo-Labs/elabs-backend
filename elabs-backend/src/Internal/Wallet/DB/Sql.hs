@@ -8,6 +8,8 @@ module Internal.Wallet.DB.Sql (
   createAccount,
   getTokens,
   addToken,
+  getUserId,
+  saveToUserLookup,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -26,11 +28,13 @@ import Database.Persist.Sql (
   (==.),
  )
 import EA.Api.Types (UserId)
+import GeniusYield.Types (GYPubKeyHash)
 import Internal.Wallet.DB.Schema (
   Account (Account),
   Address (..),
   Auth (..),
   EntityField (..),
+  UserLookup (..),
   Wallet (..),
   migrateAll,
  )
@@ -162,3 +166,22 @@ addToken :: (MonadIO m) => Text -> Text -> ReaderT SqlBackend m ()
 addToken token notes = do
   time <- liftIO getCurrentTime
   void $ insert (Auth token notes time)
+
+-- | Save derived addresses to user lookup
+saveToUserLookup :: (MonadIO m) => UserId -> GYPubKeyHash -> ReaderT SqlBackend m ()
+saveToUserLookup userId pkh = do
+  muserId <- getUserId pkh
+  when (isNothing muserId) $ do
+    time <- liftIO getCurrentTime
+    void $ insert (UserLookup userId pkh time)
+
+-- | Get user ID from public key hash
+getUserId :: (MonadIO m) => GYPubKeyHash -> ReaderT SqlBackend m (Maybe UserId)
+getUserId pkh = do
+  user <-
+    listToMaybe
+      <$> selectList
+        [ UserLookupPubkeyhash ==. pkh
+        ]
+        []
+  return $ userLookupUser . entityVal <$> user
