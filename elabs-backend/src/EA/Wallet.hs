@@ -1,6 +1,5 @@
 module EA.Wallet (
   eaGetCollateral,
-  eaCreateAddresses,
   eaGetInternalAddresses,
   eaGetCollateralFromInternalWallet,
   eaGetAddresses,
@@ -9,7 +8,13 @@ module EA.Wallet (
 where
 
 import Database.Persist.Sql (runSqlPool)
-import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaGetCollateral, eaLiftEither)
+import EA (
+  EAApp,
+  EAAppEnv (..),
+  eaAppEnvSqlPool,
+  eaGetCollateral,
+  eaLiftEither,
+ )
 import EA.Api.Types (UserId)
 import GeniusYield.Types (
   GYAddress,
@@ -21,7 +26,6 @@ import GeniusYield.Types (
  )
 import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sql (
-  createWalletIndexPair,
   getInternalWalletIndexPairs',
   getWalletIndexPairs',
  )
@@ -38,6 +42,7 @@ eaGetInternalAddresses collateral = do
               . runSqlPool
                 (getInternalWalletIndexPairs' 1 collateral)
           )
+  -- \^ Need to be 1 because how ChangeBlock smart contract v1 is implemented
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
@@ -49,18 +54,12 @@ eaGetAddresses userId = do
     asks eaAppEnvSqlPool
       >>= ( liftIO
               . runSqlPool
-                (getWalletIndexPairs' userId 5)
+                (getWalletIndexPairs' userId 1)
           )
+  -- \^ Need to be 1 because how ChangeBlock smart contract v1 is implemented
+
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
-
-eaCreateAddresses :: UserId -> Int -> EAApp ()
-eaCreateAddresses userId n = do
-  asks eaAppEnvSqlPool
-    >>= ( liftIO
-            . runSqlPool
-              (createWalletIndexPair (Just userId) n False)
-        )
 
 -- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::

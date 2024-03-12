@@ -6,6 +6,7 @@ module Internal.Wallet.DB.Schema (
   EntityField (..),
   Account (..),
   Address (..),
+  Wallet (..),
   Auth (..),
   migrateAll,
 ) where
@@ -37,8 +38,7 @@ import Database.Persist.TH (
   share,
   sqlSettings,
  )
-
-import EA.Api.Types (UserId (..))
+import EA.Api.Types (UserId)
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -50,8 +50,14 @@ Account
 
 Address
   accountId AccountId
-  user UserId Maybe
   collateral Bool default=False
+  created UTCTime default=CURRENT_TIMESTAMP
+  deriving Show
+
+Wallet
+  addressId AddressId
+  UniqueAddress addressId
+  user UserId Maybe
   created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 

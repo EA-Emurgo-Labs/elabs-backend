@@ -21,6 +21,7 @@ import Database.Persist.Sql (
   runMigration,
   selectKeysList,
   selectList,
+  (<-.),
   (==.),
  )
 import EA.Api.Types (UserId)
@@ -29,6 +30,7 @@ import Internal.Wallet.DB.Schema (
   Address (..),
   Auth (..),
   EntityField (..),
+  Wallet (..),
   migrateAll,
  )
 
@@ -44,13 +46,19 @@ createWalletIndexPair ::
   -- | Collateral
   Bool ->
   ReaderT SqlBackend m ()
-createWalletIndexPair userId n collateral = do
+createWalletIndexPair userId 1 collateral = do
+  -- n need to be 1 because how ChangeBlock smart contract v1 is implemented
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
     >>= \case
       [] -> error "No account record found"
       (key : _) ->
-        replicateM_ n $ insert (Address key userId collateral time)
+        -- replicateM_ n $ do
+        do
+          addressId <- insert (Address key collateral time)
+          void $ insert (Wallet addressId userId time)
+createWalletIndexPair _ _ _ =
+  error "Only 1 address can be created at a time"
 
 -- | Get wallet index pairs
 getWalletIndexPairs ::
@@ -59,7 +67,11 @@ getWalletIndexPairs ::
   UserId ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs userId = do
-  addrs <- selectList [AddressUser ==. Just userId] []
+  wallets <- selectList [WalletUser ==. Just userId] []
+  addrs <-
+    selectList
+      [AddressId <-. (walletAddressId . entityVal <$> wallets)]
+      []
   return $ map getIndexPair addrs
 
 -- | Get wallet index pairs, create if not exist
@@ -82,7 +94,13 @@ getInternalWalletIndexPairs ::
   Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs collateral = do
-  addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. collateral] []
+  wallets <- selectList [WalletUser ==. Nothing] []
+  addrs <-
+    selectList
+      [ AddressId <-. (walletAddressId . entityVal <$> wallets)
+      , AddressCollateral ==. collateral
+      ]
+      []
   return $ map getIndexPair addrs
 
 -- | Get internal wallet index pairs, create if not exist
