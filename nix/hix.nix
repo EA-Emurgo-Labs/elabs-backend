@@ -17,8 +17,20 @@
         -o "-c log_connections=on"                            \
         start
 
+      echo "create postgres user"
+      createuser postgres -s --host $PGDATA      
+      
+      echo "initializing Changeblock Dev & Test db"
+      createdb cbl --host $PGDATA
+      createdb cbl_test --host $PGDATA
       
     '';
+
+    resetTestDb = pkgs.writeScriptBin "resetTestDb" ''
+      dropdb cbl_test --host $PGDATA
+      createdb cbl_test --host $PGDATA
+    '';
+
 in {
   # name = "project-name";
   compiler-nix-name = "ghc928"; # Version of GHC to use
@@ -55,6 +67,11 @@ in {
     shellHook = ''
       mkdir -p $PWD/.db
       export PGDATA=$PWD/.db
+
+    
+      export DB_CONNECTION=postgres://postgres:postgres@localhost:5432/cbl
+      export DB_CONNECTION_TEST=postgres://postgres:postgres@localhost:5432/cbl_test
+
       trap \
         "
           # Stop PostgreSQL

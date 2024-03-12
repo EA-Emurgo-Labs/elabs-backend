@@ -74,6 +74,7 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvOracleRefInputUtxo :: !(Maybe OracleInfo)
   , eaAppEnvMarketplaceRefScriptUtxo :: !(Maybe GYTxOutRef)
   , eaAppEnvMarketplaceEscrowPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvMarketplaceBackdoorPubKeyHash :: !GYPubKeyHash
   , eaAppEnvMarketplaceVersion :: !GYTokenName
   , eaAppEnvOracleOperatorPubKeyHash :: !GYPubKeyHash
   , eaAppEnvOracleNftMintingPolicyId :: !(Maybe GYMintingPolicyId)

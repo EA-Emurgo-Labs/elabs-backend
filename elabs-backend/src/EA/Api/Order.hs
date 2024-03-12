@@ -161,6 +161,7 @@ withMarketplaceApiCtx f = do
   escrowPubkeyHash <- asks eaAppEnvMarketplaceEscrowPubKeyHash
   version <- asks eaAppEnvMarketplaceVersion
   scripts <- asks eaAppEnvScripts
+  markertplaceBackdoor <- asks eaAppEnvMarketplaceBackdoorPubKeyHash
 
   let oracleNftAssetClass = GYToken oracleNftPolicyId oracleNftTknName
       oracleValidatorHash = validatorHash $ oracleValidator oracleNftAssetClass oracleOperatorPubKeyHash scripts
@@ -171,6 +172,7 @@ withMarketplaceApiCtx f = do
           , mktPrmVersion = version
           , mktPrmOracleSymbol = oracleNftPolicyId
           , mktPrmOracleTokenName = oracleNftTknName
+          , mktPrmBackdoor = markertplaceBackdoor
           }
   -- Get the collateral address and its signing key.
   (collateral, colKey) <-
