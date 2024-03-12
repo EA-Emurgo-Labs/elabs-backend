@@ -21,6 +21,7 @@ import Database.Persist.Sql (
   runMigration,
   selectKeysList,
   selectList,
+  transactionSave,
   (<-.),
   (==.),
  )
@@ -48,6 +49,7 @@ createWalletIndexPair ::
   ReaderT SqlBackend m ()
 createWalletIndexPair userId 1 collateral = do
   -- n need to be 1 because how ChangeBlock smart contract v1 is implemented
+  transactionSave
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
     >>= \case
@@ -57,6 +59,7 @@ createWalletIndexPair userId 1 collateral = do
         do
           addressId <- insert (Address key collateral time)
           void $ insert (Wallet addressId userId time)
+  transactionSave
 createWalletIndexPair _ _ _ =
   error "Only 1 address can be created at a time"
 
