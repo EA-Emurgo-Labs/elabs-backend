@@ -5,7 +5,7 @@ module EA.Api.Order (
 
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
-import EA (EAApp, EAAppEnv (..), eaLiftEither, eaLiftMaybe, eaMarketplaceAtTxOutRef, eaMarketplaceInfos, eaSubmitTx)
+import EA (EAApp, EAAppEnv (..), eaLiftEitherServerError, eaLiftMaybeServerError, eaMarketplaceAtTxOutRef, eaMarketplaceInfos, eaSubmitTx)
 import EA.Api.Types (SubmitTxResponse, UserId (UserId), txBodySubmitTxResponse)
 import Servant (
   GenericMode ((:-)),
@@ -17,6 +17,7 @@ import Servant (
   QueryParam,
   ReqBody,
   ToServantApi,
+  err400,
   type (:>),
  )
 import Servant.Swagger (HasSwagger (toSwagger))
@@ -146,21 +147,22 @@ withMarketplaceApiCtx f = do
 
   oracleInfo <-
     asks eaAppEnvOracleRefInputUtxo
-      >>= eaLiftMaybe "No Oracle found"
+      >>= eaLiftMaybeServerError err400 "No Oracle found"
 
   oracleNftPolicyId <-
     asks eaAppEnvOracleNftMintingPolicyId
-      >>= eaLiftMaybe "No Oracle PolicyId"
+      >>= eaLiftMaybeServerError err400 "No Oracle PolicyId"
 
   oracleNftTknName <-
     asks eaAppEnvOracleNftTokenName
-      >>= eaLiftMaybe "No Oracle TokenName"
+      >>= eaLiftMaybeServerError err400 "No Oracle TokenName"
 
   marketplaceRefScript <- asks eaAppEnvMarketplaceRefScriptUtxo
   oracleOperatorPubKeyHash <- asks eaAppEnvOracleOperatorPubKeyHash
   escrowPubkeyHash <- asks eaAppEnvMarketplaceEscrowPubKeyHash
   version <- asks eaAppEnvMarketplaceVersion
   scripts <- asks eaAppEnvScripts
+  markertplaceBackdoor <- asks eaAppEnvMarketplaceBackdoorPubKeyHash
 
   let oracleNftAssetClass = GYToken oracleNftPolicyId oracleNftTknName
       oracleValidatorHash = validatorHash $ oracleValidator oracleNftAssetClass oracleOperatorPubKeyHash scripts
@@ -171,10 +173,11 @@ withMarketplaceApiCtx f = do
           , mktPrmVersion = version
           , mktPrmOracleSymbol = oracleNftPolicyId
           , mktPrmOracleTokenName = oracleNftTknName
+          , mktPrmBackdoor = markertplaceBackdoor
           }
   -- Get the collateral address and its signing key.
   (collateral, colKey) <-
-    eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
+    eaGetCollateralFromInternalWallet >>= eaLiftMaybeServerError err400 "No collateral found"
 
   f $
     MarketplaceApiCtx
@@ -198,11 +201,11 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
   marketplaceInfo <- eaMarketplaceAtTxOutRef sellReqOrderUtxoRef
 
   -- validate if user can request to sell order
-  void $ eaLiftEither show $ validateRequestSale marketplaceInfo
+  void $ eaLiftEitherServerError err400 show $ validateRequestSale marketplaceInfo
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddresses ownerUserId
 
@@ -221,15 +224,15 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
   marketplaceInfo <- eaMarketplaceAtTxOutRef orderUtxo
 
   -- validate if buyer can buy order
-  void $ eaLiftEither show $ validateRequest marketplaceInfo
+  void $ eaLiftEitherServerError err400 show $ validateRequest marketplaceInfo
 
   -- Get the user address & signing key  from user ID
   (buyerAddr, buyerKey) <-
-    eaLiftMaybe "No addresses found"
+    eaLiftMaybeServerError err400 "No addresses found"
       . listToMaybe
       =<< eaGetAddresses buyerUserId
 
-  buyerPubkeyHash <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash buyerAddr)
+  buyerPubkeyHash <- eaLiftMaybeServerError err400 "Cannot decode address" (addressToPubKeyHash buyerAddr)
   let tx =
         if isPartial marketplaceInfo
           then -- Partial buy
@@ -253,11 +256,11 @@ handleOrderCancel OrderCancelRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   marketplaceInfo <- eaMarketplaceAtTxOutRef cancelOrderUtxo
 
   -- validate if user can cancel order
-  void $ eaLiftEither show $ validateCancelOrder marketplaceInfo
+  void $ eaLiftEitherServerError err400 show $ validateCancelOrder marketplaceInfo
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddresses ownerUserId
 
@@ -272,11 +275,11 @@ handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   marketplaceInfo <- eaMarketplaceAtTxOutRef orderUtxoRef
 
   -- validate if user can cancel order
-  void $ eaLiftEither show $ validateUpdateOrder marketplaceInfo
+  void $ eaLiftEitherServerError err400 show $ validateUpdateOrder marketplaceInfo
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybe ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddresses ownerUserId
 

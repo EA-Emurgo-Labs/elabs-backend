@@ -43,6 +43,8 @@ data MarketplaceScriptParams = MarketplaceScriptParams
   -- ^ The policyId of Oracle Token
   , mktSpOracleTokenName :: TokenName
   -- ^ The TokenName of Oracle Token
+  , mktSpBackdoor :: PubKeyHash
+  -- ^ The PubKeyHash of Backdoor
   }
   deriving stock (Show)
 
@@ -74,6 +76,7 @@ data MarketplaceParams = MarketplaceParams
   , mktPrmVersion :: GYTokenName
   , mktPrmOracleSymbol :: GYMintingPolicyId
   , mktPrmOracleTokenName :: GYTokenName
+  , mktPrmBackdoor :: GYPubKeyHash
   }
   deriving stock (Show)
 
@@ -85,6 +88,7 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
     , mktSpVersion = tokenNameToPlutus mktPrmVersion
     , mktSpOracleSymbol = mintingPolicyIdCurrencySymbol mktPrmOracleSymbol
     , mktSpOracleTokenName = tokenNameToPlutus mktPrmOracleTokenName
+    , mktSpBackdoor = pubKeyHashToPlutus mktPrmBackdoor
     }
 
 data MarketplaceOrderType = M_BUY | M_SELL

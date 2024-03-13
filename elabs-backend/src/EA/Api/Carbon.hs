@@ -13,6 +13,7 @@ import EA (
   EAAppEnv (
     eaAppEnvGYNetworkId,
     eaAppEnvGYProviders,
+    eaAppEnvMarketplaceBackdoorPubKeyHash,
     eaAppEnvMarketplaceEscrowPubKeyHash,
     eaAppEnvMarketplaceVersion,
     eaAppEnvOracleNftMintingPolicyId,
@@ -120,6 +121,7 @@ handleCarbonApi multipartData = do
   scripts <- asks eaAppEnvScripts
   marketplaceVersion <- asks eaAppEnvMarketplaceVersion
   escrowPubkeyHash <- asks eaAppEnvMarketplaceEscrowPubKeyHash
+  backdoorPubkeyHash <- asks eaAppEnvMarketplaceBackdoorPubKeyHash
   operatorPubkeyHash <- asks eaAppEnvOracleOperatorPubKeyHash
   oracleAssetName <- asks eaAppEnvOracleNftTokenName >>= eaLiftMaybe "No Oracle NFT token name"
   oraclePolicyId <- asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybe "No Oracle NFT minting policy ID"
@@ -157,6 +159,7 @@ handleCarbonApi multipartData = do
           , mktPrmVersion = marketplaceVersion
           , mktPrmOracleSymbol = oraclePolicyId
           , mktPrmOracleTokenName = oracleAssetName
+          , mktPrmBackdoor = backdoorPubkeyHash
           }
 
   marketplaceAddress <-

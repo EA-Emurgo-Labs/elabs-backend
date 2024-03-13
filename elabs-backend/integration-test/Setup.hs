@@ -91,6 +91,8 @@ withEASetup getUser ioSetup putLog kont =
     oracleOperatorPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
     -- TODO: Use valid escrow address
     escrowPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
+    -- TODO: Use valid Backdoor address
+    backdoorPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
 
     let
       tokens = ["AAAA"]
@@ -108,6 +110,7 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvAuthTokens = tokens
           , eaAppEnvOracleRefInputUtxo = Nothing
           , eaAppEnvMarketplaceRefScriptUtxo = Nothing
+          , eaAppEnvMarketplaceBackdoorPubKeyHash = backdoorPubkeyHash
           , eaAppEnvOracleOperatorPubKeyHash = oracleOperatorPubkeyHash
           , eaAppEnvMarketplaceEscrowPubKeyHash = escrowPubkeyHash
           , eaAppEnvOracleNftMintingPolicyId = Just orcPolicy

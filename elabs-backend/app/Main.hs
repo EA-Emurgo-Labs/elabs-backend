@@ -345,6 +345,8 @@ app opts@(Options {..}) = do
           oracleNftPolicyId <- runEAApp env $ asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybe "No Oracle NFT Policy Id"
           oracleNftTknName <- runEAApp env $ asks eaAppEnvOracleNftTokenName >>= eaLiftMaybe "No Oracle NFT Token Name"
           escrowPubkeyHash <- runEAApp env $ asks eaAppEnvMarketplaceEscrowPubKeyHash
+          backdoorPubkeyHash <- runEAApp env $ asks eaAppEnvMarketplaceBackdoorPubKeyHash
+
           version <- runEAApp env $ asks eaAppEnvMarketplaceVersion
           networkId <- runEAApp env $ asks eaAppEnvGYNetworkId
 
@@ -362,6 +364,7 @@ app opts@(Options {..}) = do
                   , mktPrmVersion = version
                   , mktPrmOracleSymbol = oracleNftPolicyId
                   , mktPrmOracleTokenName = oracleNftTknName
+                  , mktPrmBackdoor = backdoorPubkeyHash
                   }
               skeleton = deployScript (unsafeAddressFromText dplMktplaceAddress) marketplaceParams scripts
 
@@ -435,6 +438,7 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
   -- Oracle Operator and Escrow PubkeyHash
   operatorPubkeyHash <- addressToPubKeyHashIO $ oracleOperatorAddress (cfgNetworkId conf)
   escrowPubkeyHash <- addressToPubKeyHashIO $ escrowAddress (cfgNetworkId conf)
+  backdoorPubkeyHash <- backdoorPubkeyHashIO $ cfgNetworkId conf
 
   -- Get Marketplace Utxo for reference script
   marketplaceRefScriptUtxo <-
@@ -453,6 +457,7 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvAuthTokens = tokens
       , eaAppEnvOracleRefInputUtxo = oracleRefInputUtxo
       , eaAppEnvMarketplaceRefScriptUtxo = utxoRef <$> marketplaceRefScriptUtxo
+      , eaAppEnvMarketplaceBackdoorPubKeyHash = backdoorPubkeyHash
       , eaAppEnvOracleOperatorPubKeyHash = operatorPubkeyHash
       , eaAppEnvOracleNftMintingPolicyId = oracleNftPolicyId
       , eaAppEnvOracleNftTokenName = oracleNftTokenName
@@ -464,12 +469,15 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
     oracleNftPolicyIdAndTokenName (Just (GYToken policyId tokename)) = (Just policyId, Just tokename)
     oracleNftPolicyIdAndTokenName _ = (Nothing, Nothing)
 
-    -- TODO: Use valid Escrow & oracle Operator  address
+    -- TODO: Use valid Escrow,  oracle Operator  address & backdoor
     escrowAddress :: GYNetworkId -> GYAddress
     escrowAddress _ = unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
 
     oracleOperatorAddress :: GYNetworkId -> GYAddress
     oracleOperatorAddress _ = unsafeAddressFromText "addr_test1qruxukp4fdncrcnxds6ze2afcufs8w4a6m02a0u7yucppwfx23xw3uj9gkatk450ac7hec80ujfyvk3c97f7n8eljjrq74zl3e"
+
+    backdoorPubkeyHashIO :: GYNetworkId -> IO GYPubKeyHash
+    backdoorPubkeyHashIO = addressToPubKeyHashIO . escrowAddress
 
 server :: EAAppEnv -> Application
 server env =

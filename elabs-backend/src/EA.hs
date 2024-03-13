@@ -41,7 +41,7 @@ import EA.Script.Oracle (OracleInfo)
 import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
 import GeniusYield.Types
 import Internal.Wallet (RootKey)
-import Servant (ServerError (errBody))
+import Servant (ServerError (errBody), err400)
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 --------------------------------------------------------------------------------
@@ -74,6 +74,7 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvOracleRefInputUtxo :: !(Maybe OracleInfo)
   , eaAppEnvMarketplaceRefScriptUtxo :: !(Maybe GYTxOutRef)
   , eaAppEnvMarketplaceEscrowPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvMarketplaceBackdoorPubKeyHash :: !GYPubKeyHash
   , eaAppEnvMarketplaceVersion :: !GYTokenName
   , eaAppEnvOracleOperatorPubKeyHash :: !GYPubKeyHash
   , eaAppEnvOracleNftMintingPolicyId :: !(Maybe GYMintingPolicyId)
@@ -195,7 +196,7 @@ eaMarketplaceAtTxOutRef :: GYTxOutRef -> EAApp MarketplaceInfo
 eaMarketplaceAtTxOutRef oref = do
   providers <- asks eaAppEnvGYProviders
   utxos <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
-  utxo <- eaLiftMaybe "No UTXO found" $ listToMaybe utxos
+  utxo <- eaLiftMaybeServerError err400 "No UTXO found" $ listToMaybe utxos
   (addr, val, datum) <-
     eaLiftEither (const "Cannot extract data from UTXO") $
       utxoDatumPure @MarketplaceDatum utxo

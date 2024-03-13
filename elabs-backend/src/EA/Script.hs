@@ -44,6 +44,7 @@ data Scripts = Scripts
            , AsData TokenName
            , AsData CurrencySymbol
            , AsData TokenName
+           , AsData PubKeyHash
            ]
        )
   , scriptOracleValidator ::
@@ -80,6 +81,7 @@ marketplaceValidator mktParam scripts =
           # AsData mktSpVersion
           # AsData mktSpOracleSymbol
           # AsData mktSpOracleTokenName
+          # AsData mktSpBackdoor
 
 oracleValidator ::
   GYAssetClass -> GYPubKeyHash -> Scripts -> GYValidator 'PlutusV2
