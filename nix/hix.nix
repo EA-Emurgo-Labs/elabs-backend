@@ -15,14 +15,15 @@
         -o "-c log_min_messages=info"                         \
         -o "-c log_min_error_statement=info"                  \
         -o "-c log_connections=on"                            \
+        -o "-F -p 5321"                                       \
         start
 
       echo "create postgres user"
-      createuser postgres -s --host $PGDATA      
+      createuser postgres -s --host $PGDATA -p 5321     
       
       echo "initializing Changeblock Dev & Test db"
-      createdb cbl --host $PGDATA
-      createdb cbl_test --host $PGDATA
+      createdb cbl --host $PGDATA -p 5321
+      createdb cbl_test --host $PGDATA -p 5321
       
     '';
 
@@ -68,9 +69,10 @@ in {
       mkdir -p $PWD/.db
       export PGDATA=$PWD/.db
 
-    
-      export DB_CONNECTION=postgres://postgres:postgres@localhost:5432/cbl
-      export DB_CONNECTION_TEST=postgres://postgres:postgres@localhost:5432/cbl_test
+      export DB_CONNECTION=postgres://postgres:postgres@localhost:5321/cbl
+      export DB_CONNECTION_TEST=postgres://postgres:postgres@localhost:5321/cbl_test
+
+      startDb
 
       trap \
         "
