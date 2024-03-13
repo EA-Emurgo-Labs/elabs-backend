@@ -8,6 +8,8 @@ module Internal.Wallet.DB.Sql (
   createAccount,
   getTokens,
   addToken,
+  getUserId,
+  saveToUserLookup,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -21,14 +23,19 @@ import Database.Persist.Sql (
   runMigration,
   selectKeysList,
   selectList,
+  transactionSave,
+  (<-.),
   (==.),
  )
 import EA.Api.Types (UserId)
+import GeniusYield.Types (GYPubKeyHash)
 import Internal.Wallet.DB.Schema (
   Account (Account),
   Address (..),
   Auth (..),
   EntityField (..),
+  UserLookup (..),
+  Wallet (..),
   migrateAll,
  )
 
@@ -44,13 +51,21 @@ createWalletIndexPair ::
   -- | Collateral
   Bool ->
   ReaderT SqlBackend m ()
-createWalletIndexPair userId n collateral = do
+createWalletIndexPair userId 1 collateral = do
+  -- n need to be 1 because how ChangeBlock smart contract v1 is implemented
+  transactionSave
   time <- liftIO getCurrentTime
   selectKeysList [] [Desc AccountId]
     >>= \case
       [] -> error "No account record found"
       (key : _) ->
-        replicateM_ n $ insert (Address key userId collateral time)
+        -- replicateM_ n $ do
+        do
+          addressId <- insert (Address key collateral time)
+          void $ insert (Wallet addressId userId time)
+  transactionSave
+createWalletIndexPair _ _ _ =
+  error "Only 1 address can be created at a time"
 
 -- | Get wallet index pairs
 getWalletIndexPairs ::
@@ -59,7 +74,11 @@ getWalletIndexPairs ::
   UserId ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs userId = do
-  addrs <- selectList [AddressUser ==. Just userId] []
+  wallets <- selectList [WalletUser ==. Just userId] []
+  addrs <-
+    selectList
+      [AddressId <-. (walletAddressId . entityVal <$> wallets)]
+      []
   return $ map getIndexPair addrs
 
 -- | Get wallet index pairs, create if not exist
@@ -82,7 +101,13 @@ getInternalWalletIndexPairs ::
   Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs collateral = do
-  addrs <- selectList [AddressUser ==. Nothing, AddressCollateral ==. collateral] []
+  wallets <- selectList [WalletUser ==. Nothing] []
+  addrs <-
+    selectList
+      [ AddressId <-. (walletAddressId . entityVal <$> wallets)
+      , AddressCollateral ==. collateral
+      ]
+      []
   return $ map getIndexPair addrs
 
 -- | Get internal wallet index pairs, create if not exist
@@ -141,3 +166,22 @@ addToken :: (MonadIO m) => Text -> Text -> ReaderT SqlBackend m ()
 addToken token notes = do
   time <- liftIO getCurrentTime
   void $ insert (Auth token notes time)
+
+-- | Save derived addresses to user lookup
+saveToUserLookup :: (MonadIO m) => UserId -> GYPubKeyHash -> ReaderT SqlBackend m ()
+saveToUserLookup userId pkh = do
+  muserId <- getUserId pkh
+  when (isNothing muserId) $ do
+    time <- liftIO getCurrentTime
+    void $ insert (UserLookup userId pkh time)
+
+-- | Get user ID from public key hash
+getUserId :: (MonadIO m) => GYPubKeyHash -> ReaderT SqlBackend m (Maybe UserId)
+getUserId pkh = do
+  user <-
+    listToMaybe
+      <$> selectList
+        [ UserLookupPubkeyhash ==. pkh
+        ]
+        []
+  return $ userLookupUser . entityVal <$> user

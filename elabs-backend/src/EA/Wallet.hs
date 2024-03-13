@@ -1,6 +1,5 @@
 module EA.Wallet (
   eaGetCollateral,
-  eaCreateAddresses,
   eaGetInternalAddresses,
   eaGetCollateralFromInternalWallet,
   eaGetAddresses,
@@ -9,21 +8,29 @@ module EA.Wallet (
 where
 
 import Database.Persist.Sql (runSqlPool)
-import EA (EAApp, EAAppEnv (..), eaAppEnvSqlPool, eaGetCollateral, eaLiftEither)
+import EA (
+  EAApp,
+  EAAppEnv (..),
+  eaAppEnvSqlPool,
+  eaGetCollateral,
+  eaLiftEither,
+  eaLiftMaybe,
+ )
 import EA.Api.Types (UserId)
 import GeniusYield.Types (
   GYAddress,
   GYTxOutRef,
   GYUTxO (utxoRef),
+  addressToPubKeyHash,
   filterUTxOs,
   gyQueryUtxosAtAddresses,
   randomTxOutRef,
  )
 import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sql (
-  createWalletIndexPair,
   getInternalWalletIndexPairs',
   getWalletIndexPairs',
+  saveToUserLookup,
  )
 
 --------------------------------------------------------------------------------
@@ -38,6 +45,7 @@ eaGetInternalAddresses collateral = do
               . runSqlPool
                 (getInternalWalletIndexPairs' 1 collateral)
           )
+  -- \^ Need to be 1 because how ChangeBlock smart contract v1 is implemented
   eaLiftEither id $
     mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
@@ -45,22 +53,20 @@ eaGetAddresses :: UserId -> EAApp [(GYAddress, PaymentKey)]
 eaGetAddresses userId = do
   nid <- asks eaAppEnvGYNetworkId
   rootK <- asks eaAppEnvRootKey
+  pool <- asks eaAppEnvSqlPool
   indexPairs <-
-    asks eaAppEnvSqlPool
-      >>= ( liftIO
-              . runSqlPool
-                (getWalletIndexPairs' userId 5)
-          )
-  eaLiftEither id $
-    mapM (uncurry $ deriveAddress nid rootK) indexPairs
+    liftIO $ runSqlPool (getWalletIndexPairs' userId 1) pool
+  -- \^ Need to be 1 because how ChangeBlock smart contract v1 is implemented
 
-eaCreateAddresses :: UserId -> Int -> EAApp ()
-eaCreateAddresses userId n = do
-  asks eaAppEnvSqlPool
-    >>= ( liftIO
-            . runSqlPool
-              (createWalletIndexPair (Just userId) n False)
-        )
+  -- Save derived pub key hash
+  pairs <-
+    eaLiftEither id $
+      mapM (uncurry $ deriveAddress nid rootK) indexPairs
+  pkh <- eaLiftMaybe "cannot get pub key hash from address" $ do
+    (addr, _) <- listToMaybe pairs
+    addressToPubKeyHash addr
+  void . liftIO $ runSqlPool (saveToUserLookup userId pkh) pool
+  return pairs
 
 -- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::

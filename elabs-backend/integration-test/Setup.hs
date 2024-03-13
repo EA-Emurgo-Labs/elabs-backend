@@ -179,5 +179,6 @@ cleanupSetup _ = do
   where
     cleanupDatabase = do
       rawExecute "DROP TABLE IF EXISTS account CASCADE;" []
+      rawExecute "DROP TABLE IF EXISTS wallet CASCADE;" []
       rawExecute "DROP TABLE IF EXISTS address CASCADE;" []
       rawExecute "DROP TABLE IF EXISTS auth CASCADE;" []

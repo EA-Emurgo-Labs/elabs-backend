@@ -178,7 +178,10 @@ test-suite spec
     , elabs-backend
     , elabs-backend-testlib
 
-  other-modules:      EA.Internal.WalletSpec
+  other-modules:
+    EA.Internal.WalletSpec
+    EA.OrphansSpec
+
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
 
 executable integration-test

@@ -41,3 +41,4 @@ To run the integration test, please ensure that `cardano-cli` and `cardano-node`
 - [Authorization header](docs/auth.md)
 - [Deployig a docker image](docs/docker.md)
 - [Infrastructure](docs/aws.md)
+- [ChangeBlock related notes](docs/changeblock.md)
