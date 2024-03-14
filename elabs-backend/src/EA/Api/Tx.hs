@@ -11,20 +11,12 @@ import EA (
   eaAppEnvGYProviders,
   eaCatch,
   eaLiftMaybeServerError,
-  eaSubmitTx,
- )
-import EA.Api.Types (
-  SubmitTxParams (..),
-  SubmitTxResponse,
-  txBodySubmitTxResponse,
  )
 import GeniusYield.Types (
   GYAwaitTxException (GYAwaitTxException),
   GYAwaitTxParameters (GYAwaitTxParameters),
   GYProviders (gyAwaitTxConfirmed),
   GYTxId,
-  getTxBody,
-  makeSignedTransaction,
   txIdFromHex,
  )
 import Servant (
@@ -34,9 +26,7 @@ import Servant (
   HasServer (ServerT),
   JSON,
   NamedRoutes,
-  Post,
   QueryParam,
-  ReqBody,
   ToServantApi,
   err400,
   type (:>),
@@ -47,7 +37,6 @@ import Servant.Swagger (HasSwagger (toSwagger))
 
 data TxApi mode = TxApi
   { txStatus :: mode :- TxStatus
-  , txSubmit :: mode :- TxSubmit
   }
   deriving stock (Generic)
 
@@ -58,7 +47,6 @@ handleTxApi :: ServerT (NamedRoutes TxApi) EAApp
 handleTxApi =
   TxApi
     { txStatus = handleTxStatus
-    , txSubmit = handleTxSubmit
     }
 
 type TxStatus =
@@ -67,12 +55,6 @@ type TxStatus =
     :> "status"
     :> QueryParam "confirmation" Word64
     :> Get '[JSON] TxStatusResponse
-
-type TxSubmit =
-  "tx"
-    :> "submit"
-    :> ReqBody '[JSON] SubmitTxParams
-    :> Post '[JSON] SubmitTxResponse
 
 data TxStatusResponse = TxStatusResponse
   { txStatus :: TxStatusCode
@@ -85,13 +67,6 @@ data TxStatusCode = TX_CONFIRMED | TX_PENDING | TX_FAILED
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
 
 --------------------------------------------------------------------------------
-
-handleTxSubmit :: SubmitTxParams -> EAApp SubmitTxResponse
-handleTxSubmit SubmitTxParams {..} = do
-  void $ eaSubmitTx $ makeSignedTransaction txWit txBody
-  return $ txBodySubmitTxResponse txBody
-  where
-    txBody = getTxBody txUnsigned
 
 handleTxStatus :: Text -> Maybe Word64 -> EAApp TxStatusResponse
 handleTxStatus text confirmation = do

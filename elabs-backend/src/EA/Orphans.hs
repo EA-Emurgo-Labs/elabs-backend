@@ -7,17 +7,12 @@ module EA.Orphans (
 ) where
 
 import Cardano.Api qualified as Api
-import Control.Lens ((%~), (.~), (?~))
+import Control.Lens ((.~), (?~))
 import Data.Aeson
 import Data.Swagger (
-  MimeList (MimeList),
-  Param,
   ParamAnySchema (ParamOther),
   ParamLocation (ParamFormData),
-  Referenced (Inline),
-  Swagger,
   SwaggerType (..),
-  allOperations,
   toParamSchema,
  )
 import Data.Swagger.Lens
@@ -27,8 +22,8 @@ import Database.Persist.Class.PersistField (PersistField (fromPersistValue))
 import Database.Persist.Postgresql (PersistFieldSql (sqlType))
 import Database.Persist.Sql (PersistField (toPersistValue))
 import EA.Api.Types (CarbonMintRequest (..), UserId (..))
+import EA.Internal (addConsumes, addDescription, addParam)
 import GeniusYield.Types (GYPubKeyHash, pubKeyHashToApi)
-import Network.HTTP.Media (MediaType)
 import Servant (Tagged, (:>))
 import Servant.Multipart (MultipartData, MultipartForm, Tmp)
 import Servant.Swagger (HasSwagger (..))
@@ -36,14 +31,6 @@ import Servant.Swagger (HasSwagger (..))
 --------------------------------------------------------------------------------
 
 type MultipartFormDataTmp = MultipartForm Tmp (MultipartData Tmp)
-
--- | Add parameter to every operation in the spec.
-addParam :: Param -> Swagger -> Swagger
-addParam param = allOperations . parameters %~ (Inline param :)
-
--- | Add accepted content types to every operation in the spec.
-addConsumes :: [MediaType] -> Swagger -> Swagger
-addConsumes cs = allOperations . consumes %~ (<> Just (MimeList cs))
 
 instance
   (HasSwagger api) =>
@@ -54,6 +41,10 @@ instance
       & addConsumes ["multipart/form-data"]
       & addParam fileParam
       & addParam jsonParam
+      & addDescription
+        ( "This call creates new carbon tokens for the user, creates a buy "
+            <> "order, and creates an NFT for the user."
+        )
     where
       fileParam =
         mempty
