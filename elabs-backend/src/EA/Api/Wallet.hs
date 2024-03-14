@@ -19,4 +19,4 @@ type WalletApi =
 handleWalletApi :: UserId -> EAApp WalletResponse
 handleWalletApi userid = do
   addrs <- eaGetAddresses userid
-  return $ WalletResponse $ map (walletAddressWithPubKeyHash . fst) addrs
+  return $ WalletResponse (map (walletAddressWithPubKeyHash . fst) addrs) userid
