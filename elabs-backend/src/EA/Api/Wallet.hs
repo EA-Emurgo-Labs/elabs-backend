@@ -6,7 +6,7 @@ module EA.Api.Wallet (
 import Servant (Capture, Get, JSON, type (:>))
 
 import EA (EAApp)
-import EA.Api.Types (UserId, WalletResponse (WalletResponse))
+import EA.Api.Types (UserId, WalletResponse (WalletResponse), walletAddressWithPubKeyHash)
 import EA.Wallet (eaGetAddresses)
 
 --------------------------------------------------------------------------------
@@ -19,4 +19,4 @@ type WalletApi =
 handleWalletApi :: UserId -> EAApp WalletResponse
 handleWalletApi userid = do
   addrs <- eaGetAddresses userid
-  return $ WalletResponse $ map fst addrs
+  return $ WalletResponse $ map (walletAddressWithPubKeyHash . fst) addrs

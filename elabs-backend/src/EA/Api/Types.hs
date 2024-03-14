@@ -9,6 +9,7 @@ module EA.Api.Types (
   CarbonMintRequest (..),
   txBodySubmitTxResponse,
   unSignedTxWithFee,
+  walletAddressWithPubKeyHash,
 ) where
 
 import Data.Aeson qualified as Aeson
@@ -18,11 +19,15 @@ import Data.Text.Class qualified as TC
 
 import GeniusYield.Types (
   GYAddress,
+  GYAddressBech32,
+  GYPubKeyHash,
   GYTx,
   GYTxBody,
   GYTxId,
   GYTxOutRefCbor,
   GYTxWitness,
+  addressToBech32,
+  addressToPubKeyHash,
   txBodyFee,
   txBodyTxId,
   txToHex,
@@ -128,10 +133,20 @@ instance PersistFieldSql UserId where
 -- Wallet
 
 data WalletResponse = WalletResponse
-  { addresses :: ![GYAddress]
+  { addresses :: ![WalletAddressWithPubKeyHash]
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+data WalletAddressWithPubKeyHash = WalletResponseWithPubKeyHash
+  { address :: !GYAddressBech32
+  , pubKeyHash :: !(Maybe GYPubKeyHash)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+walletAddressWithPubKeyHash :: GYAddress -> WalletAddressWithPubKeyHash
+walletAddressWithPubKeyHash addr = WalletResponseWithPubKeyHash (addressToBech32 addr) (addressToPubKeyHash addr)
 
 --------------------------------------------------------------------------------
 -- Headers
