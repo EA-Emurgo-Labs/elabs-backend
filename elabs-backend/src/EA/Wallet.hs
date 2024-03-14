@@ -3,6 +3,7 @@ module EA.Wallet (
   eaGetInternalAddresses,
   eaGetCollateralFromInternalWallet,
   eaGetAddresses,
+  eaGetAddressFromPubkeyhash,
   eaSelectOref,
 )
 where
@@ -19,6 +20,7 @@ import EA (
 import EA.Api.Types (UserId)
 import GeniusYield.Types (
   GYAddress,
+  GYPubKeyHash,
   GYTxOutRef,
   GYUTxO (utxoRef),
   addressToPubKeyHash,
@@ -30,6 +32,7 @@ import Internal.Wallet (PaymentKey, deriveAddress)
 import Internal.Wallet.DB.Sql (
   getInternalWalletIndexPairs',
   getWalletIndexPairs',
+  getWalletIndexPairsFromPubkeyhash,
   saveToUserLookup,
  )
 
@@ -62,11 +65,23 @@ eaGetAddresses userId = do
   pairs <-
     eaLiftEither id $
       mapM (uncurry $ deriveAddress nid rootK) indexPairs
+
   pkh <- eaLiftMaybe "cannot get pub key hash from address" $ do
     (addr, _) <- listToMaybe pairs
     addressToPubKeyHash addr
   void . liftIO $ runSqlPool (saveToUserLookup userId pkh) pool
   return pairs
+
+eaGetAddressFromPubkeyhash :: GYPubKeyHash -> EAApp (Maybe (GYAddress, PaymentKey))
+eaGetAddressFromPubkeyhash pkh = do
+  nid <- asks eaAppEnvGYNetworkId
+  rootK <- asks eaAppEnvRootKey
+  pool <- asks eaAppEnvSqlPool
+  indexPairs <-
+    liftIO $ runSqlPool (getWalletIndexPairsFromPubkeyhash pkh) pool
+
+  eaLiftEither id $
+    mapM (uncurry $ deriveAddress nid rootK) indexPairs
 
 -- FIXME: Maybe Maybe??
 eaGetCollateralFromInternalWallet ::

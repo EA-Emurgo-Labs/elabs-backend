@@ -27,7 +27,7 @@ import EA.Script.Marketplace (MarketplaceInfo (MarketplaceInfo, mktInfoAmount, m
 import EA.Script.Marketplace qualified as Marketplace
 import EA.Script.Oracle (OracleInfo)
 import EA.Tx.Changeblock.Marketplace (adjustOrders, buy, cancel, partialBuy, sell)
-import EA.Wallet (eaGetAddresses, eaGetCollateralFromInternalWallet)
+import EA.Wallet (eaGetAddressFromPubkeyhash, eaGetAddresses, eaGetCollateralFromInternalWallet)
 import GeniusYield.TxBuilder (GYTxSkeleton, runGYTxMonadNode)
 import GeniusYield.Types
 import Internal.Wallet qualified as Wallet
@@ -89,7 +89,7 @@ type OrderUpdate =
 --------------------------------------------------------------------------------
 
 data OrderSellRequest = OrderSellRequest
-  { ownerUserId :: !UserId
+  { owner :: !GYPubKeyHash
   -- ^ The user ID. The owner of the order.
   , sellReqAmount :: !Natural
   -- ^ The amount of carbon to mint.
@@ -101,7 +101,7 @@ data OrderSellRequest = OrderSellRequest
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 data OrderUpdateRequest = OrderUpdateRequest
-  { ownerUserId :: !UserId
+  { owner :: !GYPubKeyHash
   -- ^ The user ID. The owner of the order.
   , updatedPrice :: !Natural
   -- ^ The sell price per unit of carbon.
@@ -112,7 +112,7 @@ data OrderUpdateRequest = OrderUpdateRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderCancelRequest = OrderCancelRequest
-  { ownerUserId :: !UserId
+  { owner :: !GYPubKeyHash
   -- ^ The user ID who is owner of the order.
   , cancelOrderUtxo :: !GYTxOutRef
   -- ^ The order UTXO reference.
@@ -121,7 +121,7 @@ data OrderCancelRequest = OrderCancelRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderBuyRequest = OrderBuyRequest
-  { buyerUserId :: !UserId
+  { buyer :: !GYPubKeyHash
   -- ^ The user ID.
   , buyAmount :: !Natural
   -- ^ The amount of carbon to buy.
@@ -207,7 +207,7 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
   (ownerAddr, ownerKey) <-
     eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses ownerUserId
+      =<< eaGetAddressFromPubkeyhash owner
 
   handleTx mCtx ownerAddr ownerKey $
     adjustOrders mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger sellReqPrice) (toInteger sellReqAmount) Marketplace.M_SELL mktCtxParams mktCtxScripts
@@ -229,8 +229,7 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
   -- Get the user address & signing key  from user ID
   (buyerAddr, buyerKey) <-
     eaLiftMaybeServerError err400 "No addresses found"
-      . listToMaybe
-      =<< eaGetAddresses buyerUserId
+      =<< eaGetAddressFromPubkeyhash buyer
 
   buyerPubkeyHash <- eaLiftMaybeServerError err400 "Cannot decode address" (addressToPubKeyHash buyerAddr)
   let tx =
@@ -262,7 +261,7 @@ handleOrderCancel OrderCancelRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   (ownerAddr, ownerKey) <-
     eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses ownerUserId
+      =<< eaGetAddressFromPubkeyhash owner
 
   handleTx mCtx ownerAddr ownerKey $ cancel mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript mktCtxParams mktCtxScripts
   where
@@ -281,7 +280,7 @@ handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   (ownerAddr, ownerKey) <-
     eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
-      =<< eaGetAddresses ownerUserId
+      =<< eaGetAddressFromPubkeyhash owner
 
   handleTx mCtx ownerAddr ownerKey $ sell mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger updatedPrice) mktCtxParams mktCtxScripts
   where
