@@ -121,7 +121,7 @@ data OrderCancelRequest = OrderCancelRequest
   deriving anyclass (Aeson.FromJSON, Swagger.ToSchema)
 
 data OrderBuyRequest = OrderBuyRequest
-  { buyerUserId :: !UserId
+  { buyer :: !GYPubKeyHash
   -- ^ The user ID.
   , buyAmount :: !Natural
   -- ^ The amount of carbon to buy.
@@ -229,8 +229,7 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
   -- Get the user address & signing key  from user ID
   (buyerAddr, buyerKey) <-
     eaLiftMaybeServerError err400 "No addresses found"
-      . listToMaybe
-      =<< eaGetAddresses buyerUserId
+      =<< eaGetAddressFromPubkeyhash buyer
 
   buyerPubkeyHash <- eaLiftMaybeServerError err400 "Cannot decode address" (addressToPubKeyHash buyerAddr)
   let tx =
