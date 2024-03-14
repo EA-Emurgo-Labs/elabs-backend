@@ -36,6 +36,7 @@ common deps
     , containers
     , directory
     , dotenv
+    , esqueleto
     , filepath
     , Glob
     , http-client

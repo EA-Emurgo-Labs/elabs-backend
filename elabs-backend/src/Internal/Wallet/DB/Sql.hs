@@ -2,6 +2,7 @@ module Internal.Wallet.DB.Sql (
   createWalletIndexPair,
   getWalletIndexPairs,
   getWalletIndexPairs',
+  getWalletIndexPairsFromPubkeyhash,
   getInternalWalletIndexPairs,
   getInternalWalletIndexPairs',
   runAutoMigration,
@@ -24,11 +25,8 @@ import Database.Persist.Sql (
   selectKeysList,
   selectList,
   transactionSave,
-  (<-.),
-  (==.),
  )
 import EA.Api.Types (UserId)
-import GeniusYield.Types (GYPubKeyHash)
 import Internal.Wallet.DB.Schema (
   Account (Account),
   Address (..),
@@ -38,6 +36,11 @@ import Internal.Wallet.DB.Schema (
   Wallet (..),
   migrateAll,
  )
+
+import Database.Esqueleto.Experimental (InnerJoin (InnerJoin), select, val, where_, (&&.), (==.), (?.), (^.))
+import Database.Esqueleto.Experimental qualified as E
+import Database.Esqueleto.Legacy qualified as EL
+import GeniusYield.Types (GYPubKeyHash)
 
 --------------------------------------------------------------------------------
 
@@ -74,11 +77,11 @@ getWalletIndexPairs ::
   UserId ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getWalletIndexPairs userId = do
-  wallets <- selectList [WalletUser ==. Just userId] []
-  addrs <-
-    selectList
-      [AddressId <-. (walletAddressId . entityVal <$> wallets)]
-      []
+  addrs <- EL.select $ EL.from $ \(w `InnerJoin` a) -> do
+    EL.on (w ^. WalletAddressId ==. a ^. AddressId)
+    where_ (w ^. WalletUser ==. val (Just userId))
+    return a
+
   return $ map getIndexPair addrs
 
 -- | Get wallet index pairs, create if not exist
@@ -94,6 +97,18 @@ getWalletIndexPairs' userId n = do
   when (null pairs) $ createWalletIndexPair (Just userId) n False
   getWalletIndexPairs userId
 
+getWalletIndexPairsFromPubkeyhash :: (MonadIO m) => GYPubKeyHash -> ReaderT SqlBackend m (Maybe (Tagged "Account" Int64, Tagged "Address" Int64))
+getWalletIndexPairsFromPubkeyhash pkh = do
+  address <- EL.select $
+    EL.from $ \(ul `InnerJoin` w `InnerJoin` addr) -> do
+      EL.on (ul ?. UserLookupUser ==. w ^. WalletUser)
+      EL.on (w ^. WalletAddressId ==. addr ^. AddressId)
+      where_ (E.not_ (EL.isNothing (w ^. WalletUser)) &&. ul ?. UserLookupPubkeyhash ==. val (Just pkh))
+      EL.limit 1
+      return addr
+
+  return $ getIndexPair <$> listToMaybe address
+
 -- | Get internal wallet index pairs
 getInternalWalletIndexPairs ::
   (MonadIO m) =>
@@ -101,13 +116,13 @@ getInternalWalletIndexPairs ::
   Bool ->
   ReaderT SqlBackend m [(Tagged "Account" Int64, Tagged "Address" Int64)]
 getInternalWalletIndexPairs collateral = do
-  wallets <- selectList [WalletUser ==. Nothing] []
   addrs <-
-    selectList
-      [ AddressId <-. (walletAddressId . entityVal <$> wallets)
-      , AddressCollateral ==. collateral
-      ]
-      []
+    select $
+      EL.from $ \(a `InnerJoin` w) -> do
+        EL.on (a ^. AddressId ==. w ^. WalletAddressId)
+        where_ (EL.isNothing (w ^. WalletUser) &&. a ^. AddressCollateral ==. val collateral)
+        return a
+
   return $ map getIndexPair addrs
 
 -- | Get internal wallet index pairs, create if not exist
@@ -171,17 +186,16 @@ addToken token notes = do
 saveToUserLookup :: (MonadIO m) => UserId -> GYPubKeyHash -> ReaderT SqlBackend m ()
 saveToUserLookup userId pkh = do
   muserId <- getUserId pkh
-  when (isNothing muserId) $ do
+  when (Prelude.isNothing muserId) $ do
     time <- liftIO getCurrentTime
     void $ insert (UserLookup userId pkh time)
 
 -- | Get user ID from public key hash
 getUserId :: (MonadIO m) => GYPubKeyHash -> ReaderT SqlBackend m (Maybe UserId)
 getUserId pkh = do
-  user <-
-    listToMaybe
-      <$> selectList
-        [ UserLookupPubkeyhash ==. pkh
-        ]
-        []
-  return $ userLookupUser . entityVal <$> user
+  user <- EL.select $ EL.from $ \ul -> do
+    where_ (ul ^. UserLookupPubkeyhash ==. val pkh)
+    EL.limit 1
+    return ul
+
+  return $ userLookupUser . entityVal <$> listToMaybe user
