@@ -136,6 +136,7 @@ library
     EA.Api
     EA.Api.Carbon
     EA.Api.Order
+    EA.Api.Order.Types
     EA.Api.Tx
     EA.Api.Types
     EA.Api.Wallet
