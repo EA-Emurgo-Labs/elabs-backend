@@ -52,7 +52,7 @@ instance Swagger.ToSchema OrderSellRequest where
     naturalSchema <- Swagger.declareSchemaRef @Natural Proxy
     gytxOutRefSchema <- Swagger.declareSchemaRef @GYTxOutRef Proxy
     return $
-      Swagger.named "Sell Order request params" $
+      Swagger.named "OrderSellRequestParam" $
         mempty
           & Swagger.type_ ?~ Swagger.SwaggerObject
           & Swagger.properties
@@ -62,7 +62,7 @@ instance Swagger.ToSchema OrderSellRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack amountTag, T.pack priceTag, T.pack utxoTag]
-          & Swagger.description ?~ "Param to put order in sale"
+          & Swagger.description ?~ "This call allows owner to sell carbon tokens. It creates new sell order for provided amount and price."
           & Swagger.maxProperties ?~ 4
           & Swagger.minProperties ?~ 4
 
@@ -92,7 +92,7 @@ instance Swagger.ToSchema OrderUpdateRequest where
     naturalSchema <- Swagger.declareSchemaRef @Natural Proxy
     gytxOutRefSchema <- Swagger.declareSchemaRef @GYTxOutRef Proxy
     return $
-      Swagger.named "Update Order request params" $
+      Swagger.named "OrderUpdateRequestParam" $
         mempty
           & Swagger.type_ ?~ Swagger.SwaggerObject
           & Swagger.properties
@@ -101,7 +101,7 @@ instance Swagger.ToSchema OrderUpdateRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack newPriceTag, T.pack utxoTag]
-          & Swagger.description ?~ "Param to update price order in sale"
+          & Swagger.description ?~ "This Api allows owner to update price of sell oreder."
           & Swagger.maxProperties ?~ 3
           & Swagger.minProperties ?~ 3
 
@@ -126,7 +126,7 @@ instance Swagger.ToSchema OrderCancelRequest where
     gypubkeyhashSchema <- Swagger.declareSchemaRef @GYPubKeyHash Proxy
     gytxOutRefSchema <- Swagger.declareSchemaRef @GYTxOutRef Proxy
     return $
-      Swagger.named "Cancel Order request params" $
+      Swagger.named "OrderCancelRequestParam" $
         mempty
           & Swagger.type_ ?~ Swagger.SwaggerObject
           & Swagger.properties
@@ -134,7 +134,7 @@ instance Swagger.ToSchema OrderCancelRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack utxoTag]
-          & Swagger.description ?~ "Param to cancel order in sale"
+          & Swagger.description ?~ "This Api allows owner to cancel sell order."
           & Swagger.maxProperties ?~ 2
           & Swagger.minProperties ?~ 2
 
@@ -163,7 +163,7 @@ instance Swagger.ToSchema OrderBuyRequest where
     naturalSchema <- Swagger.declareSchemaRef @Natural Proxy
     gytxOutRefSchema <- Swagger.declareSchemaRef @GYTxOutRef Proxy
     return $
-      Swagger.named "Buy Order request params" $
+      Swagger.named "OrderBuyRequestParam" $
         mempty
           & Swagger.type_ ?~ Swagger.SwaggerObject
           & Swagger.properties
@@ -172,6 +172,6 @@ instance Swagger.ToSchema OrderBuyRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack amountTag, T.pack utxoTag]
-          & Swagger.description ?~ "Param to buy order in sale"
+          & Swagger.description ?~ "This api allows buyer to buy carbon token. Buyer will be able to partial buy by providing less amount than what order contains."
           & Swagger.maxProperties ?~ 3
           & Swagger.minProperties ?~ 3
