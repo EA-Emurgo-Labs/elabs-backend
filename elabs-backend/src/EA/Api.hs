@@ -1,3 +1,5 @@
+{-# LANGUAGE NoOverloadedRecordDot #-}
+
 module EA.Api (
   Api,
   appApi,
@@ -5,7 +7,14 @@ module EA.Api (
   apiServer,
 ) where
 
-import Data.Swagger (Swagger)
+import Control.Lens ((.~), (?~))
+import Data.Swagger (
+  HasDescription (description),
+  HasInfo (info),
+  HasTitle (title),
+  HasVersion (version),
+  Swagger,
+ )
 import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
 import EA.Api.Carbon (CarbonApi, handleCarbonApi)
 import EA.Api.Order (OrderApi, handleOrderApi)
@@ -43,7 +52,11 @@ instance HasSwagger (NamedRoutes ChangeblockApi) where
   toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi ChangeblockApi))
 
 apiSwagger :: Swagger
-apiSwagger = toSwagger appApi
+apiSwagger =
+  toSwagger appApi
+    & info . title .~ "ChangeBlock API"
+    & info . version .~ "1.0"
+    & info . description ?~ "The ChangeBlock API."
 
 appApi :: Proxy Api
 appApi = Proxy

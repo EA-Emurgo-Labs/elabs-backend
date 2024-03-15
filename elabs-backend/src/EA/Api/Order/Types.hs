@@ -38,13 +38,13 @@ instance Aeson.FromJSON OrderSellRequest where
   parseJSON = Aeson.withObject "OrderSellRequest" $ \v ->
     OrderSellRequest
       <$> v
-      Aeson..: fromString ownerTag
+        Aeson..: fromString ownerTag
       <*> v
-      Aeson..: fromString amountTag
+        Aeson..: fromString amountTag
       <*> v
-      Aeson..: fromString priceTag
+        Aeson..: fromString priceTag
       <*> v
-      Aeson..: fromString utxoTag
+        Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderSellRequest where
   declareNamedSchema _ = do
@@ -62,7 +62,7 @@ instance Swagger.ToSchema OrderSellRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack amountTag, T.pack priceTag, T.pack utxoTag]
-          & Swagger.description ?~ "This call allows owner to sell carbon tokens. It creates new sell order for provided amount and price."
+          & Swagger.description ?~ "Param to put order in sale"
           & Swagger.maxProperties ?~ 4
           & Swagger.minProperties ?~ 4
 
@@ -80,11 +80,11 @@ instance Aeson.FromJSON OrderUpdateRequest where
   parseJSON = Aeson.withObject "OrderUpdateRequest" $ \v ->
     OrderUpdateRequest
       <$> v
-      Aeson..: fromString ownerTag
+        Aeson..: fromString ownerTag
       <*> v
-      Aeson..: fromString newPriceTag
+        Aeson..: fromString newPriceTag
       <*> v
-      Aeson..: fromString utxoTag
+        Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderUpdateRequest where
   declareNamedSchema _ = do
@@ -101,7 +101,7 @@ instance Swagger.ToSchema OrderUpdateRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack newPriceTag, T.pack utxoTag]
-          & Swagger.description ?~ "This Api allows owner to update price of sell oreder."
+          & Swagger.description ?~ "Param to update price order in sale"
           & Swagger.maxProperties ?~ 3
           & Swagger.minProperties ?~ 3
 
@@ -117,9 +117,9 @@ instance Aeson.FromJSON OrderCancelRequest where
   parseJSON = Aeson.withObject "OrderCancelRequest" $ \v ->
     OrderCancelRequest
       <$> v
-      Aeson..: fromString ownerTag
+        Aeson..: fromString ownerTag
       <*> v
-      Aeson..: fromString utxoTag
+        Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderCancelRequest where
   declareNamedSchema _ = do
@@ -134,7 +134,7 @@ instance Swagger.ToSchema OrderCancelRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack utxoTag]
-          & Swagger.description ?~ "This Api allows owner to cancel sell order."
+          & Swagger.description ?~ "Param to cancel order in sale"
           & Swagger.maxProperties ?~ 2
           & Swagger.minProperties ?~ 2
 
@@ -151,11 +151,11 @@ instance Aeson.FromJSON OrderBuyRequest where
   parseJSON = Aeson.withObject "OrderBuyRequest" $ \v ->
     OrderBuyRequest
       <$> v
-      Aeson..: fromString ownerTag
+        Aeson..: fromString ownerTag
       <*> v
-      Aeson..: fromString amountTag
+        Aeson..: fromString amountTag
       <*> v
-      Aeson..: fromString utxoTag
+        Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderBuyRequest where
   declareNamedSchema _ = do
@@ -172,6 +172,6 @@ instance Swagger.ToSchema OrderBuyRequest where
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
           & Swagger.required .~ [T.pack ownerTag, T.pack amountTag, T.pack utxoTag]
-          & Swagger.description ?~ "This api allows buyer to buy carbon token. Buyer will be able to partial buy by providing less amount than what order contains."
+          & Swagger.description ?~ "Param to buy order in sale"
           & Swagger.maxProperties ?~ 3
           & Swagger.minProperties ?~ 3

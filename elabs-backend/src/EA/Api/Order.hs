@@ -3,19 +3,51 @@ module EA.Api.Order (
   handleOrderApi,
 ) where
 
-import EA (EAApp, EAAppEnv (..), eaLiftEitherServerError, eaLiftMaybeServerError, eaMarketplaceAtTxOutRef, eaMarketplaceInfos, eaSubmitTx)
+import EA (
+  EAApp,
+  EAAppEnv (..),
+  eaLiftEitherServerError,
+  eaLiftMaybeServerError,
+  eaMarketplaceAtTxOutRef,
+  eaMarketplaceInfos,
+  eaSubmitTx,
+ )
 import EA.Api.Order.Types
-import EA.Api.Types (SubmitTxResponse, UserId (UserId), txBodySubmitTxResponse)
+import EA.Api.Types (
+  SubmitTxResponse,
+  UserId (UserId),
+  txBodySubmitTxResponse,
+ )
 import EA.Script (Scripts, oracleValidator)
-import EA.Script.Marketplace (MarketplaceInfo (MarketplaceInfo, mktInfoAmount, mktInfoIsSell, mktInfoOwner), MarketplaceOrderType (..), MarketplaceParams (..))
+import EA.Script.Marketplace (
+  MarketplaceInfo (
+    MarketplaceInfo,
+    mktInfoAmount,
+    mktInfoIsSell,
+    mktInfoOwner
+  ),
+  MarketplaceOrderType (..),
+  MarketplaceParams (..),
+ )
 import EA.Script.Marketplace qualified as Marketplace
 import EA.Script.Oracle (OracleInfo)
-import EA.Tx.Changeblock.Marketplace (adjustOrders, buy, cancel, partialBuy, sell)
-import EA.Wallet (eaGetAddressFromPubkeyhash, eaGetAddresses, eaGetCollateralFromInternalWallet)
+import EA.Tx.Changeblock.Marketplace (
+  adjustOrders,
+  buy,
+  cancel,
+  partialBuy,
+  sell,
+ )
+import EA.Wallet (
+  eaGetAddressFromPubkeyhash,
+  eaGetAddresses,
+  eaGetCollateralFromInternalWallet,
+ )
 import GeniusYield.TxBuilder (GYTxSkeleton, runGYTxMonadNode)
 import GeniusYield.Types
 import Internal.Wallet qualified as Wallet
 import Servant (
+  Description,
   GenericMode ((:-)),
   Get,
   HasServer (ServerT),
@@ -61,25 +93,29 @@ type OrderList =
     :> Get '[JSON] [MarketplaceInfo]
 
 type OrderCreate =
-  "orders"
+  Description "This call allows owner to sell carbon tokens. It creates new sell order for provided amount and price."
+    :> "orders"
     :> ReqBody '[JSON] OrderSellRequest
     :> "create"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderBuy =
-  "orders"
+  Description "This api allows buyer to buy carbon token. Buyer will be able to partial buy by providing less amount than what order contains."
+    :> "orders"
     :> ReqBody '[JSON] OrderBuyRequest
     :> "buy"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderCancel =
-  "orders"
+  Description "This Api allows owner to cancel sell order."
+    :> "orders"
     :> ReqBody '[JSON] OrderCancelRequest
     :> "cancel"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderUpdate =
-  "orders"
+  Description "This Api allows owner to update price of sell oreder."
+    :> "orders"
     :> ReqBody '[JSON] OrderUpdateRequest
     :> "update-sale-price"
     :> Post '[JSON] SubmitTxResponse
