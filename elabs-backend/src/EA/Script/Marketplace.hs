@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module EA.Script.Marketplace (
@@ -12,8 +13,10 @@ module EA.Script.Marketplace (
   marketplaceDatumToInfo,
 ) where
 
+import Control.Lens ((.~), (?~))
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
+import Data.Swagger.Internal.Schema qualified as Swagger
 import Data.Text qualified as T
 import GeniusYield.Types
 import PlutusLedgerApi.V1.Value (assetClass)
@@ -125,7 +128,52 @@ data MarketplaceInfo = MarketplaceInfo
   , mktInfoIsSell :: MarketplaceOrderType
   }
   deriving stock (Show, Generic)
-  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
+
+instance Aeson.ToJSON MarketplaceInfo where
+  toJSON MarketplaceInfo {..} =
+    Aeson.object
+      [ "tx_ref" Aeson..= mktInfoTxOutRef
+      , "address" Aeson..= mktInfoAddress
+      , "value" Aeson..= mktInfoValue
+      , "owner" Aeson..= mktInfoOwner
+      , "price" Aeson..= mktInfoSalePrice
+      , "carbon-token-id" Aeson..= mktInfoCarbonPolicyId
+      , "carbon-token-name" Aeson..= mktInfoCarbonAssetName
+      , "amount" Aeson..= mktInfoAmount
+      , "issuer" Aeson..= mktInfoIssuer
+      , "order_type" Aeson..= mktInfoIsSell
+      ]
+
+instance Swagger.ToSchema MarketplaceInfo where
+  declareNamedSchema _ = do
+    txOutRefSchema <- Swagger.declareSchemaRef @GYTxOutRef Proxy
+    addressSchema <- Swagger.declareSchemaRef @GYAddress Proxy
+    valueSchema <- Swagger.declareSchemaRef @GYValue Proxy
+    pubKeyHashSchema <- Swagger.declareSchemaRef @GYPubKeyHash Proxy
+    mintingPolicyIdSchema <- Swagger.declareSchemaRef @GYMintingPolicyId Proxy
+    tokenNameSchema <- Swagger.declareSchemaRef @GYTokenName Proxy
+    orderTypeSchema <- Swagger.declareSchemaRef @MarketplaceOrderType Proxy
+    integerSchema <- Swagger.declareSchemaRef @Integer Proxy
+    return $
+      Swagger.named "MarketplaceInfo" $
+        mempty
+          & Swagger.type_ ?~ Swagger.SwaggerObject
+          & Swagger.properties
+            .~ [ (T.pack "tx_ref", txOutRefSchema)
+               , (T.pack "address", addressSchema)
+               , (T.pack "value", valueSchema)
+               , (T.pack "owner", pubKeyHashSchema)
+               , (T.pack "price", integerSchema)
+               , (T.pack "carbon-token-id", mintingPolicyIdSchema)
+               , (T.pack "carbon-token-name", tokenNameSchema)
+               , (T.pack "amount", integerSchema)
+               , (T.pack "issuer", pubKeyHashSchema)
+               , (T.pack "order_type", orderTypeSchema)
+               ]
+          & Swagger.required .~ [T.pack "tx_ref", T.pack "address", T.pack "value", T.pack "owner", T.pack "price", T.pack "carbon-token-id", T.pack "carbon-token-name", T.pack "amount", T.pack "issuer", T.pack "order_type"]
+          & Swagger.description ?~ "Marketplace Order Info"
+          & Swagger.maxProperties ?~ 10
+          & Swagger.minProperties ?~ 10
 
 marketplaceInfoToDatum :: MarketplaceInfo -> MarketplaceDatum
 marketplaceInfoToDatum MarketplaceInfo {..} =
