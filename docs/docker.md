@@ -7,7 +7,7 @@ This guide will walk you through setting up a Docker image for the Changeblock b
 Prepare the following configuration files:
  `config.json`
 `.env`
-`root. key`
+`root.key`
 
 ## Step 2: Build the Docker Image
 
