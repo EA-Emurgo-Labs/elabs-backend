@@ -42,3 +42,4 @@ To run the integration test, please ensure that `cardano-cli` and `cardano-node`
 - [Deployig a docker image](docs/docker.md)
 - [Infrastructure](docs/aws.md)
 - [ChangeBlock related notes](docs/changeblock.md)
+- [AWS EC2 instance](docs/aws-ec2.md)
