@@ -61,6 +61,7 @@ in
       gnumake
       postgresql_14
       startDb
+      awsebcli
     ];
 
 
