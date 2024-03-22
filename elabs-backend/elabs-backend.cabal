@@ -29,27 +29,39 @@ common deps
     , aeson-pretty
     , atlas-cardano
     , base
+    , base16
     , bytestring
     , cardano-addresses
     , cardano-api
     , containers
     , directory
+    , dotenv
+    , esqueleto
+    , filepath
     , Glob
+    , http-client
+    , http-client-tls
+    , http-media
     , http-types
+    , lens
     , memory
     , monad-logger
     , monad-metrics
     , mtl
     , newtype
-    , optics
     , persistent
-    , persistent-sqlite
+    , persistent-postgresql
     , plutus-ledger-api
+    , plutus-tx
     , ply-core
     , random
     , relude
     , resource-pool
     , serialise
+    , servant-auth-server
+    , servant-client
+    , servant-multipart
+    , servant-multipart-client
     , servant-server
     , servant-swagger
     , swagger2
@@ -122,17 +134,27 @@ library
   exposed-modules:
     EA
     EA.Api
-    EA.Api.Mint
+    EA.Api.Carbon
+    EA.Api.Order
+    EA.Api.Order.Types
     EA.Api.Tx
     EA.Api.Types
     EA.Api.Wallet
     EA.Internal
+    EA.Orphans
+    EA.Routes
     EA.Script
-    EA.Tx.OneShotMint
+    EA.Script.Marketplace
+    EA.Script.Oracle
+    EA.Tx.Changeblock.Marketplace
+    EA.Tx.Changeblock.MintIpfsNftCarbonToken
+    EA.Tx.Changeblock.Oracle
     EA.Wallet
+    Internal.Ipfs
+    Internal.Ipfs.Types
     Internal.Wallet
     Internal.Wallet.DB.Schema
-    Internal.Wallet.DB.Sqlite
+    Internal.Wallet.DB.Sql
 
 library elabs-backend-testlib
   import:          lang, deps, test-deps
@@ -158,7 +180,10 @@ test-suite spec
     , elabs-backend
     , elabs-backend-testlib
 
-  other-modules:      EA.Internal.WalletSpec
+  other-modules:
+    EA.Internal.WalletSpec
+    EA.OrphansSpec
+
   build-tool-depends: hspec-discover:hspec-discover >=2 && <3
 
 executable integration-test
@@ -166,7 +191,7 @@ executable integration-test
   hs-source-dirs: integration-test
   main-is:        Main.hs
   other-modules:
-    EA.Api.MintTests
+    EA.Api.CarbonTests
     EA.Api.WalletTests
     Setup
 

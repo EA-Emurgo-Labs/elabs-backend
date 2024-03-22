@@ -18,8 +18,8 @@ TEST_CASE_TIMEOUT ?= 100
 hoogle: haddock
 	pkill hoogle || true
 	hoogle generate --local=haddock --database=hoo/local.hoo
-	hoogle server --local -p 8081 >> /dev/null &
-	hoogle server --local --database=hoo/local.hoo -p 8082 >> /dev/null &
+	hoogle server --local -p 8082 >> /dev/null &
+	hoogle server --local --database=hoo/local.hoo -p 8083 >> /dev/null &
 
 format: format_haskell format_nix
 
@@ -36,7 +36,7 @@ format_check:
 	cabal-fmt --check $(CABAL_SOURCES)
 
 haddock:
-	cabal haddock --haddock-html --haddock-hoogle --builddir=haddock
+	cabal haddock elabs-backend --haddock-html --haddock-hoogle --builddir=haddock
 
 test:
 	cabal test elabs-backend -j$(THREADS)
@@ -54,3 +54,12 @@ swagger:
 
 run:
 	cabal run elabs-backend:app -j$(THREADS) -- run
+
+show-internal-address:
+	cabal run elabs-backend:app -- internaladdresses
+
+show-internal-collateral-address:
+	cabal run elabs-backend:app -- internaladdresses --collateral
+
+create-oracle:
+	cabal run elabs-backend:app -- createOracle --rate 500000

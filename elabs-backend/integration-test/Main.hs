@@ -1,6 +1,6 @@
 module Main (main) where
 
-import EA.Api.MintTests qualified
+import EA.Api.CarbonTests qualified
 import EA.Api.WalletTests qualified
 import GeniusYield.Test.Privnet.Setup (makeSetup)
 import Setup (cleanupSetup)
@@ -16,7 +16,7 @@ main = do
           [ EA.Api.WalletTests.tests setup
           ]
       , testGroup
-          "Mint"
-          [ EA.Api.MintTests.tests setup
+          "Mint carbon"
+          [ EA.Api.CarbonTests.tests setup
           ]
       ]

@@ -3,28 +3,90 @@ module EA.Api.Tx (
   handleTxApi,
 ) where
 
+import Data.Aeson qualified as Aeson
+import Data.Swagger qualified as Swagger
+import Data.Text qualified as T
+import EA (
+  EAApp,
+  eaAppEnvGYProviders,
+  eaCatch,
+  eaLiftMaybeServerError,
+ )
 import GeniusYield.Types (
-  getTxBody,
-  makeSignedTransaction,
+  GYAwaitTxException (GYAwaitTxException),
+  GYAwaitTxParameters (GYAwaitTxParameters),
+  GYProviders (gyAwaitTxConfirmed),
+  GYTxId,
+  txIdFromHex,
  )
-
-import Servant (JSON, Post, ReqBody, type (:>))
-
-import EA (EAApp, eaSubmitTx)
-import EA.Api.Types (
-  SubmitTxParams (..),
-  SubmitTxResponse,
-  txBodySubmitTxResponse,
+import Servant (
+  Capture,
+  GenericMode ((:-)),
+  Get,
+  HasServer (ServerT),
+  JSON,
+  NamedRoutes,
+  QueryParam,
+  ToServantApi,
+  err400,
+  type (:>),
  )
+import Servant.Swagger (HasSwagger (toSwagger))
 
-type TxApi =
-  "submit"
-    :> ReqBody '[JSON] SubmitTxParams
-    :> Post '[JSON] SubmitTxResponse
+--------------------------------------------------------------------------------
 
-handleTxApi :: SubmitTxParams -> EAApp SubmitTxResponse
-handleTxApi SubmitTxParams {..} = do
-  void $ eaSubmitTx $ makeSignedTransaction txWit txBody
-  return $ txBodySubmitTxResponse txBody
-  where
-    txBody = getTxBody txUnsigned
+data TxApi mode = TxApi
+  { txStatus :: mode :- TxStatus
+  }
+  deriving stock (Generic)
+
+instance HasSwagger (NamedRoutes TxApi) where
+  toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi TxApi))
+
+handleTxApi :: ServerT (NamedRoutes TxApi) EAApp
+handleTxApi =
+  TxApi
+    { txStatus = handleTxStatus
+    }
+
+type TxStatus =
+  "tx"
+    :> Capture "id" Text
+    :> "status"
+    :> QueryParam "confirmation" Word64
+    :> Get '[JSON] TxStatusResponse
+
+data TxStatusResponse = TxStatusResponse
+  { txStatus :: TxStatusCode
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+data TxStatusCode = TX_CONFIRMED | TX_PENDING | TX_FAILED
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+--------------------------------------------------------------------------------
+
+handleTxStatus :: Text -> Maybe Word64 -> EAApp TxStatusResponse
+handleTxStatus text confirmation = do
+  txid <-
+    eaLiftMaybeServerError
+      err400
+      "Transaction ID not found"
+      $ txIdFromHex
+        . T.unpack
+      $ text
+  eaCatch
+    (getTxStatus txid (fromMaybe 3 confirmation))
+    ( \(GYAwaitTxException _) -> return $ TxStatusResponse TX_PENDING
+    )
+
+getTxStatus :: GYTxId -> Word64 -> EAApp TxStatusResponse
+getTxStatus txid n = do
+  awaitTx <- asks (gyAwaitTxConfirmed . eaAppEnvGYProviders)
+  liftIO $
+    awaitTx
+      (GYAwaitTxParameters 1 0 n)
+      txid
+  return $ TxStatusResponse TX_CONFIRMED

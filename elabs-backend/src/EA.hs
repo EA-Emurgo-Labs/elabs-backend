@@ -10,7 +10,6 @@ module EA (
   eaThrow,
   eaCatch,
   eaHandle,
-  getOneShotMintingPolicy,
   eaLiftMaybe,
   eaLiftEither,
   eaLiftEither',
@@ -18,35 +17,31 @@ module EA (
   eaGetAdaOnlyUTxO,
   eaGetCollateral,
   eaGetCollateral',
+  eaMarketplaceAtTxOutRef,
+  eaMarketplaceInfos,
+  eaLiftMaybeServerError,
+  eaLiftEitherServerError,
 )
 where
 
 import Control.Exception (ErrorCall (ErrorCall), catch, throwIO)
 import Control.Monad.Metrics (Metrics, MonadMetrics (getMetrics))
+import Data.ByteString.Lazy qualified as LB
 import Data.Foldable (minimumBy)
 import Data.Pool (Pool)
 import Database.Persist.Sql (SqlBackend)
-import EA.Script (Scripts (..), oneShotMintingPolicy)
-import GeniusYield.TxBuilder (adaOnlyUTxOPure)
-import GeniusYield.Types (
-  GYAddress,
-  GYLogNamespace,
-  GYLogSeverity (..),
-  GYMintingPolicy,
-  GYNetworkId,
-  GYProviders (..),
-  GYQueryUTxO (..),
-  GYTx,
-  GYTxId,
-  GYTxOutRef,
-  PlutusVersion (PlutusV2),
-  gyLog,
-  gyLogDebug,
-  gyLogError,
-  gyLogInfo,
-  gyLogWarning,
+import EA.Script (Scripts (..), marketplaceValidator)
+import EA.Script.Marketplace (
+  MarketplaceDatum,
+  MarketplaceInfo,
+  MarketplaceParams,
+  marketplaceDatumToInfo,
  )
+import EA.Script.Oracle (OracleInfo)
+import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
+import GeniusYield.Types
 import Internal.Wallet (RootKey)
+import Servant (ServerError (errBody), err400)
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 --------------------------------------------------------------------------------
@@ -57,6 +52,7 @@ newtype EAApp a = EAApp
   deriving newtype
     ( Functor
     , Applicative
+    , Alternative
     , Monad
     , MonadIO
     , MonadReader EAAppEnv
@@ -73,6 +69,16 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvScripts :: !Scripts
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
   , eaAppEnvRootKey :: !RootKey
+  , eaAppEnvBlockfrostIpfsProjectId :: !String
+  , eaAppEnvAuthTokens :: ![Text]
+  , eaAppEnvOracleRefInputUtxo :: !(Maybe OracleInfo)
+  , eaAppEnvMarketplaceRefScriptUtxo :: !(Maybe GYTxOutRef)
+  , eaAppEnvMarketplaceEscrowPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvMarketplaceBackdoorPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvMarketplaceVersion :: !GYTokenName
+  , eaAppEnvOracleOperatorPubKeyHash :: !GYPubKeyHash
+  , eaAppEnvOracleNftMintingPolicyId :: !(Maybe GYMintingPolicyId)
+  , eaAppEnvOracleNftTokenName :: !(Maybe GYTokenName)
   }
 
 runEAApp :: EAAppEnv -> EAApp a -> IO a
@@ -134,10 +140,19 @@ eaHandle :: (Exception e) => (e -> EAApp a) -> EAApp a -> EAApp a
 eaHandle = flip eaCatch
 
 --------------------------------------------------------------------------------
--- Reader helpers
+-- Throw server error
 
-getOneShotMintingPolicy :: GYTxOutRef -> EAApp (GYMintingPolicy 'PlutusV2)
-getOneShotMintingPolicy oref = asks (oneShotMintingPolicy oref . eaAppEnvScripts)
+eaLiftMaybeServerError :: ServerError -> LB.ByteString -> Maybe a -> EAApp a
+eaLiftMaybeServerError error body Nothing = eaThrow $ error {errBody = body}
+eaLiftMaybeServerError _ _ (Just a) = pure a
+
+eaLiftEitherServerError ::
+  ServerError ->
+  (a -> LB.ByteString) ->
+  Either a b ->
+  EAApp b
+eaLiftEitherServerError error toBody =
+  either (\a -> eaThrow $ error {errBody = toBody a}) pure
 
 --------------------------------------------------------------------------------
 -- Provider functions
@@ -176,3 +191,40 @@ eaGetCollateral' (addr : addrs) n = do
   eaGetCollateral addr n >>= \case
     Nothing -> eaGetCollateral' addrs n
     Just oref -> return $ Just oref
+
+eaMarketplaceAtTxOutRef :: GYTxOutRef -> EAApp MarketplaceInfo
+eaMarketplaceAtTxOutRef oref = do
+  providers <- asks eaAppEnvGYProviders
+  utxos <- liftIO $ gyQueryUtxosAtTxOutRefsWithDatums providers [oref]
+  utxo <- eaLiftMaybeServerError err400 "No UTXO found" $ listToMaybe utxos
+  (addr, val, datum) <-
+    eaLiftEither (const "Cannot extract data from UTXO") $
+      utxoDatumPure @MarketplaceDatum utxo
+
+  eaLiftEither (const "Cannot create market place info") $
+    marketplaceDatumToInfo oref val addr datum
+
+eaMarketplaceInfos :: MarketplaceParams -> EAApp [MarketplaceInfo]
+eaMarketplaceInfos mktPlaceParams = do
+  providers <- asks eaAppEnvGYProviders
+  nid <- asks eaAppEnvGYNetworkId
+  scripts <- asks eaAppEnvScripts
+
+  let mktPlaceValidator = marketplaceValidator mktPlaceParams scripts
+      marketplaceAddr = addressFromValidator nid mktPlaceValidator
+
+  utxos <-
+    liftIO $
+      gyQueryUtxosAtAddressesWithDatums providers [marketplaceAddr]
+
+  eaLiftEither (const "No marketplace infos found.") $
+    sequence $
+      filter isRight $
+        map utxoToMarketplaceInfo utxos
+  where
+    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Either String MarketplaceInfo
+    utxoToMarketplaceInfo t@(utxo, _) = do
+      (addr, value, datum) <-
+        either (Left . show) Right $
+          utxoDatumPure @MarketplaceDatum t
+      marketplaceDatumToInfo (utxoRef utxo) value addr datum

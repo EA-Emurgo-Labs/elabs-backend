@@ -25,7 +25,6 @@ Usage: app [--core-config ARG] [--scripts ARG] [--root-key ARG] COMMAND
 
 Available options:
   --core-config ARG        Core config file path (default: "config.json")
-  --scripts ARG            Scripts file (default: "scripts.json")
   --root-key ARG           Root key file (default: "root.key")
   -h,--help                Show this help text
 
@@ -33,6 +32,9 @@ Available commands:
   run                      Run backend server
   swagger                  Export swagger api
   genrootkey               Root key generation
+  internaladdresses        Print internal addresses
+  tokens                   Print available auth tokens
+  addtoken                 Add new token
 ```
 
 ## `EAApp` layer - The reader monad
@@ -101,7 +103,7 @@ They are all in the form of `... -> GYTxSkeleton 'PlutusV2`. We don't use any ef
 
 ## DB transaction layer
 
-We use the internal modules to write db transactions found here: `Internal.Wallet.DB.Sqlite`.
+We use the internal modules to write db transactions found here: `Internal.Wallet.DB.Sql`.
 We write transactions within the `ReaderT SqlBackend m a` monad reader. Everything inside the reader is atomic, and the transaction would roll back in case of an exception.
 Because of this property, we don't mix logic within the transaction logic and are thoughtful about how to use exceptions.
 

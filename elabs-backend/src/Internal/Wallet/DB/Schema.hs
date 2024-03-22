@@ -6,6 +6,9 @@ module Internal.Wallet.DB.Schema (
   EntityField (..),
   Account (..),
   Address (..),
+  Wallet (..),
+  Auth (..),
+  UserLookup (..),
   migrateAll,
 ) where
 
@@ -26,7 +29,7 @@ import Database.Persist (
     fieldType
   ),
  )
-import Database.Persist.Sqlite (
+import Database.Persist.Sql (
   BackendKey (SqlBackendKey),
  )
 import Database.Persist.TH (
@@ -36,21 +39,42 @@ import Database.Persist.TH (
   share,
   sqlSettings,
  )
-
-import EA.Api.Types (UserId (..))
+import EA.Api.Types (UserId)
+import EA.Orphans (GYPubKeyHash)
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
 
 Account
-  created UTCTime default=CURRENT_TIME
+  created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 
 Address
   accountId AccountId
+  collateral Bool default=False
+  created UTCTime default=CURRENT_TIMESTAMP
+  deriving Show
+
+Wallet
+  addressId AddressId
+  UniqueAddress addressId
   user UserId Maybe
-  created UTCTime default=CURRENT_TIME
+  created UTCTime default=CURRENT_TIMESTAMP
+  deriving Show
+
+UserLookup
+  user UserId
+  UniqueUser user
+  pubkeyhash GYPubKeyHash
+  UniquePubkeyhash pubkeyhash
+  created UTCTime default=CURRENT_TIMESTAMP
+  deriving Show
+
+Auth
+  token Text
+  notes Text
+  created UTCTime default=CURRENT_TIMESTAMP
   deriving Show
 
 |]

@@ -42,7 +42,7 @@ echo " -> Starting privnet-tests..."
 echo "=====================[RUN PRIVNET TESTS]========================"
 echo
 set -x
-KUPO_URL=http://localhost:1442 GENIUSYIELD_PRIVNET_DIR=$TESTNET/private-testnet cabal run elabs-backend:integration-test -- --color always --hide-successes
+KUPO_URL=http://localhost:1442 GENIUSYIELD_PRIVNET_DIR=$TESTNET/private-testnet cabal run elabs-backend:integration-test -- --color always --hide-successes +RTS -N1 -RTS
 set +x
 echo
 if [ "$CI" = false ]

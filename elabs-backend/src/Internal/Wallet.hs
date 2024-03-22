@@ -6,22 +6,8 @@ module Internal.Wallet (
   writeRootKey,
   genRootKeyFromMnemonic,
   signTx,
-) where
-
-import GHC.Show (Show (show))
-
-import Data.ByteString qualified as BS
-import Data.Tagged (Tagged)
-
-import GeniusYield.Types (
-  GYAddress,
-  GYNetworkId (GYMainnet),
-  GYTx,
-  GYTxBody,
-  addressFromTextMaybe,
-  txBodyToApi,
-  txFromApi,
- )
+)
+where
 
 import Cardano.Address (
   HasNetworkDiscriminant (NetworkDiscriminant),
@@ -41,13 +27,24 @@ import Cardano.Address.Derivation (
  )
 import Cardano.Address.Style.Shelley (Shelley, getKey, liftXPrv)
 import Cardano.Address.Style.Shelley qualified as S
-
 import Cardano.Api.Shelley (
   ShelleyWitnessSigningKey (WitnessPaymentExtendedKey),
   SigningKey (PaymentExtendedSigningKey),
  )
 import Cardano.Api.Shelley qualified as Api
 import Cardano.Mnemonic (SomeMnemonic)
+import Data.ByteString qualified as BS
+import Data.Tagged (Tagged)
+import GHC.Show (Show (show))
+import GeniusYield.Types (
+  GYAddress,
+  GYNetworkId (GYMainnet),
+  GYTx,
+  GYTxBody,
+  addressFromTextMaybe,
+  txBodyToApi,
+  txFromApi,
+ )
 
 --------------------------------------------------------------------------------
 
@@ -81,14 +78,13 @@ deriveAddress nid (RootKey rootK) acc addr = do
               )
           )
 
-  let
-    acctK = deriveAccountPrivateKey rootK accI
-    addrK = deriveAddressPrivateKey acctK S.UTxOExternal addrI
-    stakeK = S.deriveDelegationPrivateKey acctK
-    paymentCredential = S.PaymentFromExtendedKey (toXPub <$> addrK)
-    delegationCredential = S.DelegationFromExtendedKey (toXPub <$> stakeK)
-    addr =
-      S.delegationAddress (network nid) paymentCredential delegationCredential
+  let acctK = deriveAccountPrivateKey rootK accI
+      addrK = deriveAddressPrivateKey acctK S.UTxOExternal addrI
+      stakeK = S.deriveDelegationPrivateKey acctK
+      paymentCredential = S.PaymentFromExtendedKey (toXPub <$> addrK)
+      delegationCredential = S.DelegationFromExtendedKey (toXPub <$> stakeK)
+      addr =
+        S.delegationAddress (network nid) paymentCredential delegationCredential
 
   maybe
     (Left "Cannot decode beck to GYAddress")

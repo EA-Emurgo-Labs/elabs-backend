@@ -1,12 +1,15 @@
 module EA.Api.Types (
+  AuthorizationHeader (..),
   UserId (..),
   SubmitTxParams (..),
   SubmitTxResponse (..),
   WalletParams (..),
   UnsignedTxResponse (..),
   WalletResponse (..),
+  CarbonMintRequest (..),
   txBodySubmitTxResponse,
   unSignedTxWithFee,
+  walletAddressWithPubKeyHash,
 ) where
 
 import Data.Aeson qualified as Aeson
@@ -16,11 +19,15 @@ import Data.Text.Class qualified as TC
 
 import GeniusYield.Types (
   GYAddress,
+  GYAddressBech32,
+  GYPubKeyHash,
   GYTx,
   GYTxBody,
   GYTxId,
   GYTxOutRefCbor,
   GYTxWitness,
+  addressToBech32,
+  addressToPubKeyHash,
   txBodyFee,
   txBodyTxId,
   txToHex,
@@ -34,8 +41,7 @@ import Database.Persist (
   SqlType (SqlInt64),
  )
 import Database.Persist.Class (PersistField (toPersistValue))
-import Database.Persist.Sql (PersistFieldSql)
-import Database.Persist.Sqlite (PersistFieldSql (sqlType))
+import Database.Persist.Sql (PersistFieldSql (sqlType))
 
 --------------------------------------------------------------------------------
 
@@ -82,12 +88,29 @@ unSignedTxWithFee txBody =
     , txFee = Just $ txBodyFee txBody
     }
 
+data CarbonMintRequest = CarbonMintRequest
+  { userId :: !UserId
+  -- ^ The user ID.
+  , amount :: !Natural
+  -- ^ The amount of carbon to mint.
+  , sell :: !Natural
+  -- ^ The sell price per unit of carbon.
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
 --------------------------------------------------------------------------------
 -- UserId
 
 newtype UserId = UserId {unUserId :: Natural}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Aeson.FromJSON, Swagger.ToParamSchema)
+  deriving anyclass (Swagger.ToSchema, Swagger.ToParamSchema)
+
+instance Aeson.FromJSON UserId where
+  parseJSON = fmap UserId . Aeson.parseJSON
+
+instance Aeson.ToJSON UserId where
+  toJSON = Aeson.toJSON . unUserId
 
 instance FromHttpApiData UserId where
   parseUrlPiece = bimap (T.pack . TC.getTextDecodingError) UserId . TC.fromText
@@ -110,7 +133,38 @@ instance PersistFieldSql UserId where
 -- Wallet
 
 data WalletResponse = WalletResponse
-  { addresses :: ![GYAddress]
+  { addresses :: ![WalletAddressWithPubKeyHash]
+  , userId :: !UserId
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+data WalletAddressWithPubKeyHash = WalletResponseWithPubKeyHash
+  { address :: !GYAddressBech32
+  , pubKeyHash :: !(Maybe GYPubKeyHash)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+walletAddressWithPubKeyHash :: GYAddress -> WalletAddressWithPubKeyHash
+walletAddressWithPubKeyHash addr = WalletResponseWithPubKeyHash (addressToBech32 addr) (addressToPubKeyHash addr)
+
+--------------------------------------------------------------------------------
+-- Headers
+
+data AuthorizationHeader = AuthorizationHeader
+  { unAuthorizationHeader :: T.Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass
+    ( Aeson.FromJSON
+    , Aeson.ToJSON
+    , Swagger.ToSchema
+    , Swagger.ToParamSchema
+    )
+
+instance FromHttpApiData AuthorizationHeader where
+  parseUrlPiece = Right . AuthorizationHeader
+
+instance ToHttpApiData AuthorizationHeader where
+  toUrlPiece = unAuthorizationHeader
