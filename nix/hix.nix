@@ -62,6 +62,7 @@ in
       postgresql_14
       startDb
       awsebcli
+      awscli
     ];
 
 
