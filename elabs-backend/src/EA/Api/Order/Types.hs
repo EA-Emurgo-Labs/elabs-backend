@@ -168,7 +168,7 @@ instance Swagger.ToSchema OrderBuyRequest where
         mempty
           & Swagger.type_ ?~ Swagger.SwaggerObject
           & Swagger.properties
-            .~ [ (T.pack ownerTag, gypubkeyhashSchema)
+            .~ [ (T.pack buyerTag, gypubkeyhashSchema)
                , (T.pack amountTag, naturalSchema)
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
