@@ -5,10 +5,12 @@ module EA.Api (
   appApi,
   apiSwagger,
   apiServer,
+  apiSwaggerUI,
 ) where
 
 import Control.Lens ((.~), (?~))
 import Data.Swagger (
+  HasBasePath (basePath),
   HasDescription (description),
   HasInfo (info),
   HasTitle (title),
@@ -26,9 +28,11 @@ import Servant (
   HasServer (ServerT),
   Header,
   NamedRoutes,
+  Raw,
   ToServantApi,
   err401,
   hoistServer,
+  serveDirectoryFileServer,
   (:>),
  )
 import Servant.Swagger (HasSwagger, toSwagger)
@@ -57,12 +61,16 @@ apiSwagger =
     & info . title .~ "ChangeBlock API"
     & info . version .~ "1.0"
     & info . description ?~ "The ChangeBlock API."
+    & (basePath ?~ "/api")
 
 appApi :: Proxy Api
 appApi = Proxy
 
 apiServer :: ServerT Api EAApp
 apiServer = changeblockServer'
+
+apiSwaggerUI :: ServerT Raw EAApp
+apiSwaggerUI = serveDirectoryFileServer "swagger-ui"
 
 changeblockServer ::
   Maybe AuthorizationHeader ->
