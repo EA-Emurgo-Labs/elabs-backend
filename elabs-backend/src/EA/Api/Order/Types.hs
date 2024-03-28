@@ -27,24 +27,25 @@ data OrderSellRequest = OrderSellRequest
   }
   deriving stock (Show, Generic)
 
-ownerTag, amountTag, priceTag, utxoTag, newPriceTag :: String
+ownerTag, amountTag, priceTag, utxoTag, newPriceTag, buyerTag :: String
 ownerTag = "owner"
 amountTag = "amount"
 priceTag = "price"
 utxoTag = "tx_ref"
 newPriceTag = "new_price"
+buyerTag = "buyer"
 
 instance Aeson.FromJSON OrderSellRequest where
   parseJSON = Aeson.withObject "OrderSellRequest" $ \v ->
     OrderSellRequest
       <$> v
-        Aeson..: fromString ownerTag
+      Aeson..: fromString ownerTag
       <*> v
-        Aeson..: fromString amountTag
+      Aeson..: fromString amountTag
       <*> v
-        Aeson..: fromString priceTag
+      Aeson..: fromString priceTag
       <*> v
-        Aeson..: fromString utxoTag
+      Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderSellRequest where
   declareNamedSchema _ = do
@@ -80,11 +81,11 @@ instance Aeson.FromJSON OrderUpdateRequest where
   parseJSON = Aeson.withObject "OrderUpdateRequest" $ \v ->
     OrderUpdateRequest
       <$> v
-        Aeson..: fromString ownerTag
+      Aeson..: fromString ownerTag
       <*> v
-        Aeson..: fromString newPriceTag
+      Aeson..: fromString newPriceTag
       <*> v
-        Aeson..: fromString utxoTag
+      Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderUpdateRequest where
   declareNamedSchema _ = do
@@ -117,9 +118,9 @@ instance Aeson.FromJSON OrderCancelRequest where
   parseJSON = Aeson.withObject "OrderCancelRequest" $ \v ->
     OrderCancelRequest
       <$> v
-        Aeson..: fromString ownerTag
+      Aeson..: fromString ownerTag
       <*> v
-        Aeson..: fromString utxoTag
+      Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderCancelRequest where
   declareNamedSchema _ = do
@@ -151,11 +152,11 @@ instance Aeson.FromJSON OrderBuyRequest where
   parseJSON = Aeson.withObject "OrderBuyRequest" $ \v ->
     OrderBuyRequest
       <$> v
-        Aeson..: fromString ownerTag
+      Aeson..: fromString buyerTag
       <*> v
-        Aeson..: fromString amountTag
+      Aeson..: fromString amountTag
       <*> v
-        Aeson..: fromString utxoTag
+      Aeson..: fromString utxoTag
 
 instance Swagger.ToSchema OrderBuyRequest where
   declareNamedSchema _ = do
@@ -171,7 +172,7 @@ instance Swagger.ToSchema OrderBuyRequest where
                , (T.pack amountTag, naturalSchema)
                , (T.pack utxoTag, gytxOutRefSchema)
                ]
-          & Swagger.required .~ [T.pack ownerTag, T.pack amountTag, T.pack utxoTag]
+          & Swagger.required .~ [T.pack buyerTag, T.pack amountTag, T.pack utxoTag]
           & Swagger.description ?~ "Param to buy order in sale"
           & Swagger.maxProperties ?~ 3
           & Swagger.minProperties ?~ 3
