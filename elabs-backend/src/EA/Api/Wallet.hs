@@ -1,22 +1,51 @@
 module EA.Api.Wallet (
   WalletApi,
   handleWalletApi,
+  handleWalletBalanceApi,
 ) where
 
-import Servant (Capture, Get, JSON, type (:>))
+import Servant (Capture, GenericMode ((:-)), Get, HasServer (ServerT), JSON, NamedRoutes, ToServantApi, type (:>))
 
-import EA (EAApp)
-import EA.Api.Types (UserId, WalletResponse (WalletResponse), walletAddressWithPubKeyHash)
+import EA (EAApp, eaGetAddressValue)
+import EA.Api.Types (UserId, WalletResponse (WalletResponse), WalletValueResp (WalletValueResp), walletAddressWithPubKeyHash)
 import EA.Wallet (eaGetAddresses)
+import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
+data WalletApi mode = WalletApi
+  { getWalletAddress :: mode :- WalletResp
+  , getWalletBalance :: mode :- WalletBalance
+  }
+  deriving stock (Generic)
 
-type WalletApi =
+instance HasSwagger (NamedRoutes WalletApi) where
+  toSwagger _ = toSwagger (Proxy :: Proxy (ToServantApi WalletApi))
+
+handleWalletApi :: ServerT (NamedRoutes WalletApi) EAApp
+handleWalletApi =
+  WalletApi
+    { getWalletAddress = handleWalletAddressApi
+    , getWalletBalance = handleWalletBalanceApi
+    }
+
+type WalletResp =
   "wallet"
     :> Capture "user" UserId
     :> Get '[JSON] WalletResponse
 
-handleWalletApi :: UserId -> EAApp WalletResponse
-handleWalletApi userid = do
+type WalletBalance =
+  "wallet"
+    :> Capture "user" UserId
+    :> "balance"
+    :> Get '[JSON] WalletValueResp
+
+handleWalletAddressApi :: UserId -> EAApp WalletResponse
+handleWalletAddressApi userid = do
   addrs <- eaGetAddresses userid
   return $ WalletResponse (map (walletAddressWithPubKeyHash . fst) addrs) userid
+
+handleWalletBalanceApi :: UserId -> EAApp WalletValueResp
+handleWalletBalanceApi userid = do
+  addrs <- eaGetAddresses userid
+  value <- eaGetAddressValue (map fst addrs)
+  return $ WalletValueResp value
