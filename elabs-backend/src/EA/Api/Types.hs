@@ -6,6 +6,7 @@ module EA.Api.Types (
   WalletParams (..),
   UnsignedTxResponse (..),
   WalletResponse (..),
+  WalletValueResp (..),
   CarbonMintRequest (..),
   txBodySubmitTxResponse,
   unSignedTxWithFee,
@@ -26,6 +27,7 @@ import GeniusYield.Types (
   GYTxId,
   GYTxOutRefCbor,
   GYTxWitness,
+  GYValue,
   addressToBech32,
   addressToPubKeyHash,
   txBodyFee,
@@ -135,6 +137,12 @@ instance PersistFieldSql UserId where
 data WalletResponse = WalletResponse
   { addresses :: ![WalletAddressWithPubKeyHash]
   , userId :: !UserId
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)
+
+data WalletValueResp = WalletValueResp
+  { value :: !GYValue
   }
   deriving stock (Show, Generic)
   deriving anyclass (Aeson.FromJSON, Aeson.ToJSON, Swagger.ToSchema)

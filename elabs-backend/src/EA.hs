@@ -17,6 +17,7 @@ module EA (
   eaGetAdaOnlyUTxO,
   eaGetCollateral,
   eaGetCollateral',
+  eaGetAddressValue,
   eaMarketplaceAtTxOutRef,
   eaMarketplaceInfos,
   eaLiftMaybeServerError,
@@ -174,6 +175,15 @@ eaGetAdaOnlyUTxO addr = do
       (gyQueryUtxosAtAddress' . gyQueryUTxO . eaAppEnvGYProviders)
   utxos <- liftIO $ utxosAtAddress addr Nothing
   return $ adaOnlyUTxOPure utxos
+
+eaGetAddressValue :: [GYAddress] -> EAApp GYValue
+eaGetAddressValue addrs = do
+  utxosAtAddresses <-
+    asks
+      (gyQueryUtxosAtAddresses' . gyQueryUTxO . eaAppEnvGYProviders)
+
+  utxos <- liftIO $ utxosAtAddresses addrs
+  return $ foldlUTxOs' (\acc utxo -> acc <> utxoValue utxo) (valueFromList []) utxos
 
 eaGetCollateral ::
   GYAddress ->
