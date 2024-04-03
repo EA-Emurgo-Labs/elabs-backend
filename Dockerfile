@@ -28,6 +28,7 @@ COPY ./contracts /app/contracts
 COPY ./config.json /app
 COPY ./.env /app
 COPY ./root.key /app
+ADD swagger-ui /app/swagger-ui
 
 EXPOSE 8081/tcp
 

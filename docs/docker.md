@@ -20,7 +20,7 @@ docker build --build-arg CACHIX_AUTHTOKEN=<AUTHTOKEN> -t elabs-backend .
 Try running it
 
 ```bash
-docker run labs-backend
+docker run elabs-backend
 ```
 
 That's it! You have now successfully set up the Changeblock backend using Docker.
@@ -30,7 +30,8 @@ That's it! You have now successfully set up the Changeblock backend using Docker
 On AWS, we have a private registry repository called `emurgo-labs-changeblock`. We will push the image to this repository.
 
 ### Step 3. 1 Install the AWS CLI
-We must install the AWS Command Line Interface to interact with our AWS account. https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+
+We must install the AWS Command Line Interface to interact with our AWS account. <https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html>
 
 ### Step 3.2 Login using the CLI
 
@@ -46,6 +47,7 @@ aws configure
 aws ecr get-login-password --region us-east-1 | \
   docker login --username AWS --password-stdin 724240871965.dkr.ecr.us-east-1.amazonaws.com
 ```
+
 ### Step 3.4 Tag and push your docker image
 
 ```bash
@@ -57,6 +59,7 @@ docker push 724240871965.dkr.ecr.us-east-1.amazonaws.com/emurgo-labs-changeblock
 Use `mainnet-latest` for the mainnet image.
 
 ## Step 4 Deploying it via Beanstalk
+
 After you update the Docker image, you can deploy it to the environment.
 
 ```bash
@@ -70,7 +73,9 @@ For mainnet
 cd remote-mainnet
 eb deploy
 ```
+
 # See also
-* https://mmhaskell.com/blog/2023/2/20/pushing-our-container-to-aws-ecr
-* https://mmhaskell.com/blog/2023/2/23/deploying-a-haskell-server-to-aws
-* https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/GettingStarted.Cleanup.html
+
+* <https://mmhaskell.com/blog/2023/2/20/pushing-our-container-to-aws-ecr>
+* <https://mmhaskell.com/blog/2023/2/23/deploying-a-haskell-server-to-aws>
+* <https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/GettingStarted.Cleanup.html>
