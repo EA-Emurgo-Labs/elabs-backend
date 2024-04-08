@@ -8,7 +8,9 @@ import Control.Monad.Logger (
   fromLogStr,
  )
 import Control.Monad.Metrics qualified as Metrics
+import Crypto.Hash.SHA256 (hash)
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.ByteString.Char8 qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BL8
 import Data.List qualified as List
 import Data.Text qualified as T
@@ -305,7 +307,7 @@ app opts@(Options {..}) = do
           env <- initEAApp conf providers opts authtokenOptionsServerOptions
           pool <- runEAApp env $ asks eaAppEnvSqlPool
           runSqlPool
-            (addToken (T.pack authtokenOptionsToken) (T.pack authtokenOptionsNotes))
+            (addToken (decodeUtf8 $ hash $ BS.pack authtokenOptionsToken) (T.pack authtokenOptionsNotes))
             pool
         CreateOracle (CreateOracleOptions {..}) -> do
           env <- initEAApp conf providers opts createOracleServerOptions
