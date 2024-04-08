@@ -10,28 +10,55 @@ type EAddress = GYAddress
 
 type MinterPkh = GYPubKeyHash
 
-mkTokenValue :: EMintInfo -> Integer -> GYValue 
-mkTokenValue EMintInfo {..} = valueSingleton (GYToken eInfoPolicyId eInfoTokenName)
+mkTokenValue :: ESpendInfo -> Integer -> GYValue 
+mkTokenValue ESpendInfo {..} = valueSingleton (GYToken eInfoPolicyId eInfoTokenName)
 
 updateEval :: 
-
-spendEval :: 
-
-mintEMint :: 
   GYNetworkId ->
   EMintInfo -> 
-  Scripts -> 
+  Scripts ->
+  GYTxOutRef -> 
   GYTxSkeleton 'PlutusV2
-mintEMint nid info@EMintInfo {..} scripts = 
-
+updateEval nid info@ESpendInfo {..} scripts oref =
   let policy = eMintingPolicy scripts 
-      action = redeemerFromPlutusData EAction.Alpha
+      action = redeemerFromPlutusData EAction.Beta
       tn = eInfoTokenName
-      vAddr = eInfoAddress
-      outValue = mkTokenValue info eInfoAmt
-      outDatum = 
+      inDatum = 
         EDatum { a = eInfoDatum }
+      outDatum =
+        EDatum { a = eInfoDatum + 1 }
+      input = GYTxIn 
+              { gyTxInTxOutRef = oref 
+              , gyTxInWitness = GYTxInWitnessScript 
+                  (GYInScript (validatorToScript $ eSpendingValidator params scripts))
+                  (datumFromPlutusData inDatum)
+                  (action)
+              }
+      output = mkGYTxOut eInfoAddress (mkTokenValue info eInfoAmt) (datumFromPlutus outDatum)
 
-  in mustMint policy action tn 1
-    <> mustHaveOutput (mkGYTxOut vAddr outValue outDatum)
+  in mustHaveInput input
+    <> mustHaveOutput output 
+
+spendEval :: 
+  GYNetworkId ->
+  EMintInfo -> 
+  Scripts ->
+  GYTxOutRef -> 
+  GYTxSkeleton 'PlutusV2
+spendEval nid info@ESpendInfo {..} scripts oref = 
+  let policy = eMintingPolicy scripts 
+      action = redeemerFromPlutusData EAction.Beta
+      tn = eInfoTokenName
+      inDatum = 
+        EDatum { a = eInfoDatum }
+      input = GYTxIn 
+              { gyTxInTxOutRef = oref 
+              , gyTxInWitness = GYTxInWitnessScript 
+                  (GYInScript (validatorToScript $ eSpendingValidator params scripts))
+                  (datumFromPlutusData inDatum)
+                  (action)
+              }
+
+  in mustMint policy action tn (-1)
+    <> mustHaveInput input
 
