@@ -9,6 +9,7 @@ module EA.Api (
 ) where
 
 import Control.Lens ((.~), (?~))
+import Crypto.Hash.SHA256 (hash)
 import Data.Swagger (
   HasBasePath (basePath),
   HasDescription (description),
@@ -96,8 +97,9 @@ changeblockServer' maybeAuthHeader =
     run action = case maybeAuthHeader of
       Nothing -> eaThrow err401
       Just token -> do
+        let hashedToken = decodeUtf8 $ hash $ encodeUtf8 $ unAuthorizationHeader token
         tokens <- asks eaAppEnvAuthTokens
         unless
-          (unAuthorizationHeader token `elem` tokens)
+          (hashedToken `elem` tokens)
           (eaThrow err401)
         action
