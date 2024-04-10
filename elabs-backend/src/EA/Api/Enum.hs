@@ -31,8 +31,12 @@ import EA.Api.Types (
   txBodySubmitTxResponse,
  )
 import EA.Orphans (MultipartFormDataTmp)
-import EA.Script (marketplaceValidator, oracleValidator)
-import EA.Script.Marketplace (MarketplaceParams (..))
+import EA.EScript (
+  Scripts (..),
+  eMintingPolicy,
+  eSpendingValidator
+ )
+import EA.Script.Enum (EParams (..))
 import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
 import EA.Wallet (
   eaGetAddresses,
@@ -114,6 +118,7 @@ data EnumApiCtx = EnumApiCtx
   , eCtxParams :: !Params
   }
 
+-- applies the EnumApiCtx to the EAApp
 withEnumApiCtx :: (EnumApiCtx -> EAApp a) -> EAApp a
 withENumApiCtx f = do 
   nid <- asks eaAppEnvGYNetworkId
@@ -121,9 +126,9 @@ withENumApiCtx f = do
 
   scripts <- asks eaAppEnvScripts
 
-  let eMintPolicyId =
-      eMintTokenName = 
-      eValAddress = 
+  -- let eMintPolicyId =
+  --     eMintTokenName = 
+  --     eValAddress = 
       
     
   -- Get the collateral address and its signing key.
@@ -146,12 +151,56 @@ handleTx EnumApiCtx {..} addr addrKey tx = do
   return $ txBodySubmitTxResponse txBody
 
 handleEnumMint :: EnumMintRequest -> EAApp SubmitTxResponse
-handleENumMint = do 
+handleENumMint EnumMintRequest {..} = withEnumApiCtx $ \mCtx@EnumApiCtx {..} -> do 
 
+  void $ eaLiftEitherServerError err400 show $ validateRequest eInfo
+
+  (buyerAddr, buyerKey) <- 
+    eaLiftMaybeServerError err400 "No Addresses Found" =<< eaGetAddressFromPubKeyhash buyer
+
+  buyerPubkeyHash <- eaLiftEitherServerError err400 "Cannot Decode Address" (addressToPubKeyHash eMintBuyerAddr)
+
+  handleTx mCtx userAddr userKey tx
+
+  where 
+
+    validateRequest :: EnumInfo -> Either String () 
+    validateRequest EnumInfo {..} = do 
+      when (eInfoAction /= E_Alpha) $ Left "Invalid Redeemer Action"
 
 handleEnumUpdate :: EnumUpdateRequest -> EAApp SubmitTxResponse
+handleEnumUpdate EnumUpdateRequest {..} = withEnumApiCtx $ \mCtx@EnumApiCtx {..} -> do 
+
+  void $ eaLiftEitherServerError err400 show $ validateRequest eInfo
+
+  (buyerAddr, buyerKey) <- 
+    eaLiftMaybeServerError err400 "No Addresses Found" =<< eaGetAddressFromPubKeyhash buyer
+
+  buyerPubkeyHash <- eaLiftEitherServerError err400 "Cannot Decode Address" (addressToPubKeyHash eMintBuyerAddr)
+
+  handleTx mCtx userAddr userKey tx
+
+  where 
+
+    validateRequest :: EnumInfo -> Either String () 
+    validateRequest EnumInfo {..} = do 
+      when (eInfoAction /= E_Alpha) $ Left "Invalid Redeemer Action"
 
 handleEnumBurn :: EnumBurnRequest -> EAApp SubmitTxResponse
+handleEnumBurn EnumBurnRequest {..} = withEnumApiCtx $ \mCtx@EnumApiCtx {..} -> do 
 
-handleListOrders :: Maybe Natural -> Maybe EnumOrderType -> EAApp [EnumInfo]
+  void $ eaLiftEitherServerError err400 show $ validateRequest eInfo
+
+  (buyerAddr, buyerKey) <- 
+    eaLiftMaybeServerError err400 "No Addresses Found" =<< eaGetAddressFromPubKeyhash buyer
+
+  buyerPubkeyHash <- eaLiftEitherServerError err400 "Cannot Decode Address" (addressToPubKeyHash eMintBuyerAddr)
+
+  handleTx mCtx userAddr userKey tx
+
+  where 
+
+    validateRequest :: EnumInfo -> Either String () 
+    validateRequest EnumInfo {..} = do 
+      when (eInfoAction /= E_Beta) $ Left "Invalid Redeemer Action"
 

@@ -32,7 +32,7 @@ updateEval nid info@ESpendInfo {..} scripts oref =
               , gyTxInWitness = GYTxInWitnessScript 
                   (GYInScript (validatorToScript $ eSpendingValidator params scripts))
                   (datumFromPlutusData inDatum)
-                  (action)
+                  action
               }
       output = mkGYTxOut eInfoAddress (mkTokenValue info eInfoAmt) (datumFromPlutus outDatum)
 
@@ -56,7 +56,7 @@ spendEval nid info@ESpendInfo {..} scripts oref =
               , gyTxInWitness = GYTxInWitnessScript 
                   (GYInScript (validatorToScript $ eSpendingValidator params scripts))
                   (datumFromPlutusData inDatum)
-                  (action)
+                  action
               }
 
   in mustMint policy action tn (-1)

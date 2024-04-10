@@ -50,7 +50,7 @@ mintEMint nid oref info@EMintInfo {..} params scripts =
               , gyTxInWitness = GYTxInWitnessScript 
                   (GYInScript (validatorToScript $ eSpendingValidator params scripts))
                   (datumFromPlutusData outDatum)
-                  (action)
+                  action
               }
 
   in mustMint policy action tn (-1)

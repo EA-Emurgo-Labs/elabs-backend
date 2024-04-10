@@ -13,10 +13,10 @@ type Params
 
 -- | Generates MintingPolicy given params.
 mkMintingValidator :: Params -> PlutusTx.CompiledCode -> PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
-mintingValidator params script =
+mkMintingValidator params script =
     $$ script `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 params
 
 -- | Generates validator given params.
 mkSpendingValidator :: Params -> PlutusTx.CompiledCode -> PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
-spendingValidator params script =
+mkSpendingValidator params script =
     $$ script `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 params
