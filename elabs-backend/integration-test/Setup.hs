@@ -10,6 +10,8 @@ import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
+import Crypto.Hash.SHA256 (hash)
+import Data.Text qualified as T
 import Database.Persist.Postgresql (createPostgresqlPool, rawExecute)
 import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
@@ -28,6 +30,7 @@ import GeniusYield.Test.Privnet.Setup (Setup, withSetup)
 import GeniusYield.TxBuilder (addressToPubKeyHashIO, mustHaveOutput)
 import GeniusYield.Types
 import Internal.Wallet.DB.Sql (
+  addToken,
   createAccount,
   runAutoMigration,
  )
@@ -45,6 +48,7 @@ import System.Environment (getEnv)
 data EACtx = EACtx
   { eaCtxCtx :: Ctx
   , eaCtxEnv :: EAAppEnv
+  , eaCtxToken :: !Text
   }
 
 withEASetup ::
@@ -95,7 +99,6 @@ withEASetup getUser ioSetup putLog kont =
     backdoorPubkeyHash <- addressToPubKeyHashIO $ unsafeAddressFromText "addr_test1qpyfg6h3hw8ffqpf36xd73700mkhzk2k7k4aam5jeg9zdmj6k4p34kjxrlgugcktj6hzp3r8es2nv3lv3quyk5nmhtqqexpysh"
 
     let
-      tokens = ["AAAA"]
       providers = ctxProviders ctx
       (orcPolicy, orcTn) = (fromString "492335da5d8eb86f076717211c3e7e4711eedf8c358923e925b3c3b5", unsafeTokenNameFromHex "6f72636c65")
       env =
@@ -107,7 +110,6 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvSqlPool = pool
           , eaAppEnvRootKey = rootKey
           , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-          , eaAppEnvAuthTokens = tokens
           , eaAppEnvOracleRefInputUtxo = Nothing
           , eaAppEnvMarketplaceRefScriptUtxo = Nothing
           , eaAppEnvMarketplaceBackdoorPubKeyHash = backdoorPubkeyHash
@@ -118,11 +120,14 @@ withEASetup getUser ioSetup putLog kont =
           , eaAppEnvMarketplaceVersion = unsafeTokenNameFromHex "76312e302e30"
           }
 
+      hashedToken = decodeUtf8 $ hash $ encodeUtf8 $ T.pack "test"
+
     -- DB migrations
     void $
       runSqlPool
         ( runAutoMigration
             >> createAccount
+            >> addToken hashedToken "test Notes"
         )
         pool
 
@@ -152,7 +157,7 @@ withEASetup getUser ioSetup putLog kont =
 
     putLog $ "Send funds to the internal addresses: " <> show txId
 
-    kont $ EACtx ctx env
+    kont $ EACtx ctx env "test"
 
 server :: EAAppEnv -> Application
 server env =

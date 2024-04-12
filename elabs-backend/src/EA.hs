@@ -71,7 +71,6 @@ data EAAppEnv = EAAppEnv
   , eaAppEnvSqlPool :: !(Pool SqlBackend)
   , eaAppEnvRootKey :: !RootKey
   , eaAppEnvBlockfrostIpfsProjectId :: !String
-  , eaAppEnvAuthTokens :: ![Text]
   , eaAppEnvOracleRefInputUtxo :: !(Maybe OracleInfo)
   , eaAppEnvMarketplaceRefScriptUtxo :: !(Maybe GYTxOutRef)
   , eaAppEnvMarketplaceEscrowPubKeyHash :: !GYPubKeyHash

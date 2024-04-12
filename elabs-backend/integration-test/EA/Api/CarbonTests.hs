@@ -1,8 +1,7 @@
 module EA.Api.CarbonTests (tests) where
 
 import Data.ByteString.Lazy qualified as BL
-import Data.Maybe (fromJust)
-import EA (eaAppEnvAuthTokens, eaLiftMaybe, runEAApp)
+import EA (eaLiftMaybe, runEAApp)
 import EA.Test.Helpers qualified as Helpers
 import EA.Wallet (eaGetInternalAddresses)
 import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2, ctxUser3), ctxRunI, submitTx)
@@ -48,11 +47,7 @@ tests setup =
 
             step "2. Sending POST request to /api/v0/carbon/mint"
             flip runSession (server eaCtxEnv) $ do
-              let token =
-                    encodeUtf8
-                      . fromJust
-                      . viaNonEmpty head
-                      $ eaAppEnvAuthTokens eaCtxEnv
+              let token = encodeUtf8 eaCtxToken
                   filePath = "sample-ipfs-file.txt"
                   fileContent = "IPFS file content"
                   boundary = "EalabsBackendBoundary"
