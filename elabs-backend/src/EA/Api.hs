@@ -18,12 +18,14 @@ import Data.Swagger (
   HasVersion (version),
   Swagger,
  )
-import EA (EAApp, EAAppEnv (eaAppEnvAuthTokens), eaThrow)
+import Database.Persist.Sql (runSqlPool)
+import EA (EAApp, EAAppEnv (eaAppEnvSqlPool), eaThrow)
 import EA.Api.Carbon (CarbonApi, handleCarbonApi)
 import EA.Api.Order (OrderApi, handleOrderApi)
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import Internal.Wallet.DB.Sql (checkToken)
 import Servant (
   GenericMode ((:-)),
   HasServer (ServerT),
@@ -97,9 +99,11 @@ changeblockServer' maybeAuthHeader =
     run action = case maybeAuthHeader of
       Nothing -> eaThrow err401
       Just token -> do
+        pool <- asks eaAppEnvSqlPool
         let hashedToken = decodeUtf8 $ hash $ encodeUtf8 $ unAuthorizationHeader token
-        tokens <- asks eaAppEnvAuthTokens
+
+        isValidToken <- liftIO $ runSqlPool (checkToken hashedToken) pool
         unless
-          (hashedToken `elem` tokens)
+          isValidToken
           (eaThrow err401)
         action

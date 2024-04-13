@@ -47,7 +47,7 @@ import Internal.Wallet qualified as Wallet
 import Internal.Wallet.DB.Sql (
   addToken,
   createAccount,
-  getTokens,
+  listTokens,
   runAutoMigration,
  )
 import Network.HTTP.Types qualified as HttpTypes
@@ -302,7 +302,9 @@ app opts@(Options {..}) = do
           putTextLn . show $ fst <$> addrs
         PrintAuthTokens srvOpts -> do
           env <- initEAApp conf providers opts srvOpts
-          putTextLn . show $ env.eaAppEnvAuthTokens
+          pool <- runEAApp env $ asks eaAppEnvSqlPool
+          tokens <- runSqlPool listTokens pool
+          putTextLn $ show tokens
         AddAuthTokens (AuthTokenOptions {..}) -> do
           env <- initEAApp conf providers opts authtokenOptionsServerOptions
           pool <- runEAApp env $ asks eaAppEnvSqlPool
@@ -415,11 +417,8 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
           (fromLogLevel lvl)
           (decodeUtf8 $ fromLogStr msg)
 
-  -- migrate tables
-  tokens <-
-    runSqlPool
-      (runAutoMigration >> createAccount >> getTokens)
-      pool
+  -- migrate and Create Account tables
+  void $ runSqlPool (runAutoMigration >> createAccount) pool
 
   rootKey <- Unsafe.fromJust <$> readRootKey optionsRootKeyFile
 
@@ -456,7 +455,6 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
       , eaAppEnvSqlPool = pool
       , eaAppEnvRootKey = rootKey
       , eaAppEnvBlockfrostIpfsProjectId = bfIpfsToken
-      , eaAppEnvAuthTokens = tokens
       , eaAppEnvOracleRefInputUtxo = oracleRefInputUtxo
       , eaAppEnvMarketplaceRefScriptUtxo = utxoRef <$> marketplaceRefScriptUtxo
       , eaAppEnvMarketplaceBackdoorPubKeyHash = backdoorPubkeyHash

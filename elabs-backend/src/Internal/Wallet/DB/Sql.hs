@@ -7,8 +7,9 @@ module Internal.Wallet.DB.Sql (
   getInternalWalletIndexPairs',
   runAutoMigration,
   createAccount,
-  getTokens,
+  listTokens,
   addToken,
+  checkToken,
   getUserId,
   saveToUserLookup,
 ) where
@@ -168,13 +169,21 @@ runAutoMigration :: (MonadIO m) => ReaderT SqlBackend m ()
 runAutoMigration = runMigration migrateAll
 
 -- | Get all tokens
-getTokens ::
+listTokens ::
   (MonadIO m) =>
   ReaderT SqlBackend m [Text]
-getTokens = do
+listTokens = do
   auths :: [Entity Auth] <- selectList [] []
   return $
     authToken . entityVal <$> auths
+
+checkToken :: (MonadIO m) => Text -> ReaderT SqlBackend m Bool
+checkToken token = do
+  auth <- EL.select $ EL.from $ \a -> do
+    where_ (a ^. AuthToken ==. val token)
+    EL.limit 1
+
+  return $ not $ null auth
 
 -- | Add a new token
 addToken :: (MonadIO m) => Text -> Text -> ReaderT SqlBackend m ()

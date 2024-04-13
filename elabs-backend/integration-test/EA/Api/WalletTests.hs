@@ -1,7 +1,5 @@
 module EA.Api.WalletTests (tests) where
 
-import Data.Maybe (fromJust)
-import EA (eaAppEnvAuthTokens)
 import EA.Test.Helpers qualified as Helpers
 import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2))
 import GeniusYield.Test.Privnet.Setup (Setup)
@@ -20,11 +18,7 @@ tests setup =
           \EACtx {..} -> do
             step "Sending GET request to /api/v0/wallet/1"
             flip runSession (server eaCtxEnv) $ do
-              let token =
-                    encodeUtf8
-                      . fromJust
-                      . viaNonEmpty head
-                      $ eaAppEnvAuthTokens eaCtxEnv
+              let token = encodeUtf8 eaCtxToken
               response <-
                 Helpers.request
                   methodGet
