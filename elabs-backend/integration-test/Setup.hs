@@ -6,6 +6,7 @@ module Setup (
   cleanupSetup,
   createTestCarbonToken,
   sendFundsToAddress,
+  checkResponseTxConfirmed,
 )
 where
 
@@ -14,12 +15,14 @@ import Control.Exception (try)
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Metrics qualified as Metrics
 import Crypto.Hash.SHA256 (hash)
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Lazy qualified as BL
 import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
 import Database.Persist.Postgresql (createPostgresqlPool, rawExecute)
 import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, runEAApp)
-import EA.Api.Types (UserId (UserId))
+import EA.Api.Types (SubmitTxResponse (SubmitTxResponse, submitTxId), UserId (UserId))
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..), marketplaceValidator, nftMintingPolicy, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
@@ -293,4 +296,12 @@ sendFundsToAddress addr value ctx = do
         (GYTxOut addr value Nothing Nothing)
 
   txBody <- liftIO $ ctxRunI ctx funder $ return tx
-  submitTx ctx funder txBody
+  txid <- submitTx ctx funder txBody
+  gyAwaitTxConfirmed (ctxProviders ctx) (GYAwaitTxParameters 5 5_000_000 1) txid
+  pure txid
+
+checkResponseTxConfirmed :: Ctx -> BL.ByteString -> IO GYTxId
+checkResponseTxConfirmed ctx resp = do
+  SubmitTxResponse {..} <- maybe (fail "Invalid Response") pure $ Aeson.decode @SubmitTxResponse resp
+  gyAwaitTxConfirmed (ctxProviders ctx) (GYAwaitTxParameters 5 5_000_000 1) submitTxId
+  pure submitTxId
