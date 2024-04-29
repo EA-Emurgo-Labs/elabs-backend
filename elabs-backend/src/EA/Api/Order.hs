@@ -220,7 +220,7 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
 
   -- Get the user address & signing key  from user ID
   (buyerAddr, buyerKey) <-
-    eaLiftMaybeServerError err400 "No addresses found"
+    eaLiftMaybeServerError err400 "No Buyer addresses found"
       =<< eaGetAddressFromPubkeyhash buyer
 
   buyerPubkeyHash <- eaLiftMaybeServerError err400 "Cannot decode address" (addressToPubKeyHash buyerAddr)

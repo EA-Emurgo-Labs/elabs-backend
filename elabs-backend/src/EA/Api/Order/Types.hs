@@ -47,6 +47,18 @@ instance Aeson.FromJSON OrderSellRequest where
       <*> v
       Aeson..: fromString utxoTag
 
+instance Aeson.ToJSON OrderSellRequest where
+  toEncoding OrderSellRequest {..} =
+    Aeson.pairs $
+      fromString ownerTag
+        Aeson..= owner
+        <> fromString amountTag
+        Aeson..= sellReqAmount
+        <> fromString priceTag
+        Aeson..= sellReqPrice
+        <> fromString utxoTag
+        Aeson..= sellReqOrderUtxoRef
+
 instance Swagger.ToSchema OrderSellRequest where
   declareNamedSchema _ = do
     gypubkeyhashSchema <- Swagger.declareSchemaRef @GYPubKeyHash Proxy
@@ -86,6 +98,16 @@ instance Aeson.FromJSON OrderUpdateRequest where
       Aeson..: fromString newPriceTag
       <*> v
       Aeson..: fromString utxoTag
+
+instance Aeson.ToJSON OrderUpdateRequest where
+  toEncoding OrderUpdateRequest {..} =
+    Aeson.pairs $
+      fromString ownerTag
+        Aeson..= owner
+        <> fromString newPriceTag
+        Aeson..= updatedPrice
+        <> fromString utxoTag
+        Aeson..= orderUtxoRef
 
 instance Swagger.ToSchema OrderUpdateRequest where
   declareNamedSchema _ = do
@@ -158,6 +180,15 @@ instance Aeson.FromJSON OrderBuyRequest where
       <*> v
       Aeson..: fromString utxoTag
 
+instance Aeson.ToJSON OrderBuyRequest where
+  toEncoding OrderBuyRequest {..} =
+    Aeson.pairs $
+      fromString buyerTag
+        Aeson..= buyer
+        <> fromString amountTag
+        Aeson..= buyAmount
+        <> fromString utxoTag
+        Aeson..= orderUtxo
 instance Swagger.ToSchema OrderBuyRequest where
   declareNamedSchema _ = do
     gypubkeyhashSchema <- Swagger.declareSchemaRef @GYPubKeyHash Proxy

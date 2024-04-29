@@ -194,6 +194,10 @@ executable integration-test
   other-modules:
     EA.Api.CarbonTests
     EA.Api.WalletTests
+    EA.Api.Orders.BuyOrderTests
+    EA.Api.Orders.ListOrderTests
+    EA.Api.Orders.SellOrderTests
+    EA.Api.Orders.UpdateOrderSellPriceTests
     Setup
 
   build-depends:

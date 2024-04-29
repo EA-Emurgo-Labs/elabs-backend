@@ -1,20 +1,18 @@
 module EA.Api.WalletTests (tests) where
 
 import EA.Test.Helpers qualified as Helpers
-import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2))
-import GeniusYield.Test.Privnet.Setup (Setup)
 import Network.HTTP.Types (methodGet)
-import Setup (EACtx (..), server, withEASetup)
+import Setup (EACtx (..), server, withEaCtx)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertStatus, runSession)
 
-tests :: IO Setup -> TestTree
-tests setup =
+tests :: IO EACtx -> TestTree
+tests eaCtx =
   testGroup
     "Wallet tests"
     [ testCaseSteps "Test /api/v0/wallet endpoint" $
-        \step -> withEASetup ctxUser2 setup step $
+        \step -> withEaCtx eaCtx $
           \EACtx {..} -> do
             step "Sending GET request to /api/v0/wallet/1"
             flip runSession (server eaCtxEnv) $ do

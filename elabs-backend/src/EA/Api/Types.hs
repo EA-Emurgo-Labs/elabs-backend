@@ -59,7 +59,7 @@ data SubmitTxResponse = SubmitTxResponse
   , submitTxId :: !GYTxId
   }
   deriving stock (Show, Generic)
-  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema)
+  deriving anyclass (Aeson.ToJSON, Swagger.ToSchema, Aeson.FromJSON)
 
 txBodySubmitTxResponse :: GYTxBody -> SubmitTxResponse
 txBodySubmitTxResponse txBody =

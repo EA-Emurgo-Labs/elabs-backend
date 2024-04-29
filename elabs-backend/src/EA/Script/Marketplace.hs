@@ -14,6 +14,7 @@ module EA.Script.Marketplace (
 ) where
 
 import Control.Lens ((.~), (?~))
+import Data.Aeson (FromJSON (parseJSON))
 import Data.Aeson qualified as Aeson
 import Data.Swagger qualified as Swagger
 import Data.Swagger.Internal.Schema qualified as Swagger
@@ -143,6 +144,30 @@ instance Aeson.ToJSON MarketplaceInfo where
       , "issuer" Aeson..= mktInfoIssuer
       , "order_type" Aeson..= mktInfoIsSell
       ]
+
+instance Aeson.FromJSON MarketplaceInfo where
+  parseJSON = Aeson.withObject "MarketplaceInfo" $ \v ->
+    MarketplaceInfo
+      <$> v
+      Aeson..: "tx_ref"
+      <*> v
+      Aeson..: "address"
+      <*> v
+      Aeson..: "value"
+      <*> v
+      Aeson..: "owner"
+      <*> v
+      Aeson..: "price"
+      <*> v
+      Aeson..: "carbon-token-id"
+      <*> v
+      Aeson..: "carbon-token-name"
+      <*> v
+      Aeson..: "amount"
+      <*> v
+      Aeson..: "issuer"
+      <*> v
+      Aeson..: "order_type"
 
 instance Swagger.ToSchema MarketplaceInfo where
   declareNamedSchema _ = do

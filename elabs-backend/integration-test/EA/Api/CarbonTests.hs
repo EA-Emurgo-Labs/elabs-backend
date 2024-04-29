@@ -4,12 +4,11 @@ import Data.ByteString.Lazy qualified as BL
 import EA (eaLiftMaybe, runEAApp)
 import EA.Test.Helpers qualified as Helpers
 import EA.Wallet (eaGetInternalAddresses)
-import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2, ctxUser3), ctxRunI, submitTx)
-import GeniusYield.Test.Privnet.Setup (Setup)
+import GeniusYield.Test.Privnet.Ctx (Ctx (ctxUser2), ctxRunI, submitTx)
 import GeniusYield.TxBuilder (mustHaveOutput)
 import GeniusYield.Types (GYTxOut (GYTxOut), valueFromLovelace)
 import Network.HTTP.Types (methodPost)
-import Setup (EACtx (..), server, withEASetup)
+import Setup (EACtx (..), server, withEaCtx)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCaseSteps)
 import Test.Tasty.Wai (assertStatus, runSession)
@@ -23,12 +22,12 @@ curl -X POST 'http://localhost:8081/api/v0/carbon/mint' \
 -}
 
 -- | Tests for the /api/v0/carbon/mint endpoint
-tests :: IO Setup -> TestTree
-tests setup =
+tests :: IO EACtx -> TestTree
+tests eaCtx =
   testGroup
     "Mint tests"
     [ testCaseSteps "Test /api/v0/carbon/mint endpoint" $
-        \step -> withEASetup ctxUser3 setup step $
+        \step -> withEaCtx eaCtx $
           \EACtx {..} -> do
             step "1. Creating a UTXO on one the internal address"
             flip runSession (server eaCtxEnv) $ do
