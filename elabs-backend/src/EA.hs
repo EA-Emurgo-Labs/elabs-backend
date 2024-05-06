@@ -39,7 +39,7 @@ import EA.Script.Marketplace (
   marketplaceDatumToInfo,
  )
 import EA.Script.Oracle (OracleInfo)
-import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
+import GeniusYield.TxBuilder (GYTxMonadException, MonadError (catchError, throwError), adaOnlyUTxOPure, utxoDatumPure)
 import GeniusYield.Types
 import Internal.Wallet (RootKey)
 import Servant (ServerError (errBody), err400)
@@ -62,6 +62,10 @@ newtype EAApp a = EAApp
 
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
+
+instance MonadError GYTxMonadException EAApp where
+  throwError = eaThrow
+  catchError = eaCatch
 
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
