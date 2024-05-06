@@ -18,6 +18,7 @@ import Database.Persist.Postgresql (createPostgresqlPool)
 import Database.Persist.Sql (runSqlPool)
 import EA (EAAppEnv (..), eaLiftMaybe, eaSubmitTx, runEAApp)
 import EA.Api (apiSwagger)
+import EA.ErrorMiddleware (apiErrorToServerError, exceptionHandler)
 import EA.Internal (fromLogLevel)
 import EA.Routes (appRoutes, routes)
 import EA.Script (Scripts (..), nftMintingPolicy, oracleValidator)
@@ -25,6 +26,8 @@ import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Script.Oracle (oracleNftAsset, utxoToOracleInfo)
 import EA.Tx.Changeblock.Marketplace (deployScript)
 import EA.Tx.Changeblock.Oracle (createOracle)
+import           Data.String.Conversions                    (cs)
+
 import EA.Wallet (
   eaGetCollateralFromInternalWallet,
   eaGetInternalAddresses,
@@ -79,12 +82,7 @@ import Options.Applicative (
  )
 import Ply (readTypedScript)
 import Relude.Unsafe qualified as Unsafe
-import Servant (
-  Application,
-  Handler (Handler),
-  hoistServer,
-  serve,
- )
+import Servant
 import System.Environment (getEnv)
 
 --------------------------------------------------------------------------------
@@ -479,6 +477,17 @@ initEAApp conf providers (Options {..}) (ServerOptions {..}) = do
     backdoorPubkeyHashIO :: GYNetworkId -> IO GYPubKeyHash
     backdoorPubkeyHashIO = addressToPubKeyHashIO . escrowAddress
 
+newtype ReadError = ReadError String
+  deriving stock (Show)
+  deriving anyclass (Exception)
+
+context :: Context '[ErrorFormatter]
+context = errorFormatter :. EmptyContext
+  where
+
+    errorFormatter :: ErrorFormatter
+    errorFormatter _ _ err = err400 {errBody = cs err}
+
 server :: EAAppEnv -> Application
 server env =
   cors
@@ -488,5 +497,8 @@ server env =
             { corsRequestHeaders = [HttpTypes.hContentType] -- FIXME: better CORS policy
             }
     )
-    $ serve appRoutes
-    $ hoistServer appRoutes (Handler . ExceptT . try . runEAApp env) routes
+    $ serveWithContext appRoutes context
+    $ hoistServer
+      appRoutes
+      (\ioAct -> Handler . ExceptT $ first (apiErrorToServerError . exceptionHandler) <$> try (runEAApp env ioAct))
+    $ routes
