@@ -6,8 +6,9 @@ module EA.Api.Order (
 import EA (
   EAApp,
   EAAppEnv (..),
+  eaLiftEitherApiError',
   eaLiftEitherServerError,
-  eaLiftMaybeServerError,
+  eaLiftMaybeApiError,
   eaMarketplaceAtTxOutRef,
   eaMarketplaceInfos,
   eaSubmitTx,
@@ -62,6 +63,9 @@ import Servant (
  )
 import Servant.Swagger (HasSwagger (toSwagger))
 
+import EA.Api.Order.Exception (OrderApiException (..))
+import EA.CommonException (CommonException (..))
+
 --------------------------------------------------------------------------------
 
 data OrderApi mode = OrderApi
@@ -114,7 +118,7 @@ type OrderCancel =
     :> Post '[JSON] SubmitTxResponse
 
 type OrderUpdate =
-  Description "This Api allows owner to update price of sell oreder."
+  Description "This Api allows owner to update price of sell order."
     :> "orders"
     :> ReqBody '[JSON] OrderUpdateRequest
     :> "update-sale-price"
@@ -139,15 +143,15 @@ withMarketplaceApiCtx f = do
 
   oracleInfo <-
     asks eaAppEnvOracleRefInputUtxo
-      >>= eaLiftMaybeServerError err400 "No Oracle found"
+      >>= eaLiftMaybeApiError OrderNoOracleUtxo
 
   oracleNftPolicyId <-
     asks eaAppEnvOracleNftMintingPolicyId
-      >>= eaLiftMaybeServerError err400 "No Oracle PolicyId"
+      >>= eaLiftMaybeApiError (OrderNoOraclePolicyId oracleInfo)
 
   oracleNftTknName <-
     asks eaAppEnvOracleNftTokenName
-      >>= eaLiftMaybeServerError err400 "No Oracle TokenName"
+      >>= eaLiftMaybeApiError (OrderNoOracleToken oracleInfo)
 
   marketplaceRefScript <- asks eaAppEnvMarketplaceRefScriptUtxo
   oracleOperatorPubKeyHash <- asks eaAppEnvOracleOperatorPubKeyHash
@@ -169,7 +173,7 @@ withMarketplaceApiCtx f = do
           }
   -- Get the collateral address and its signing key.
   (collateral, colKey) <-
-    eaGetCollateralFromInternalWallet >>= eaLiftMaybeServerError err400 "No collateral found"
+    eaGetCollateralFromInternalWallet >>= eaLiftMaybeApiError EaNoCollateral
 
   f $
     MarketplaceApiCtx
@@ -197,7 +201,7 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeApiError (OrderInvalidOwner marketplaceInfo)
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddressFromPubkeyhash owner
 
@@ -205,10 +209,11 @@ handleOrderRequestSell OrderSellRequest {..} = withMarketplaceApiCtx $ \mCtx@Mar
     adjustOrders mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger sellReqPrice) (toInteger sellReqAmount) Marketplace.M_SELL mktCtxParams mktCtxScripts
   where
     -- TODO: Better error handling
-    validateRequestSale :: MarketplaceInfo -> Either String ()
-    validateRequestSale MarketplaceInfo {..} = do
-      when (mktInfoIsSell == M_SELL && sellReqAmount <= fromInteger mktInfoAmount) $ Left "Order is already on sell"
-      when (sellReqAmount > fromInteger mktInfoAmount) $ Left "Cannot request sell more than amount in order"
+    validateRequestSale :: MarketplaceInfo -> Either OrderApiException ()
+    validateRequestSale mInfo@MarketplaceInfo {..} = do
+      when (mktInfoIsSell == M_SELL && sellReqAmount <= fromInteger mktInfoAmount) $
+        Left (OrderAlreadyOnSell mInfo)
+      when (sellReqAmount > fromInteger mktInfoAmount) $ Left (OrderAmountExceeds mInfo mktInfoAmount)
 
 -- API to handle buying an order
 handleOrderBuy :: OrderBuyRequest -> EAApp SubmitTxResponse
@@ -216,14 +221,14 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
   marketplaceInfo <- eaMarketplaceAtTxOutRef orderUtxo
 
   -- validate if buyer can buy order
-  void $ eaLiftEitherServerError err400 show $ validateRequest marketplaceInfo
+  void $ eaLiftEitherApiError' id $ validateRequest marketplaceInfo
 
   -- Get the user address & signing key  from user ID
   (buyerAddr, buyerKey) <-
-    eaLiftMaybeServerError err400 "No Buyer addresses found"
+    eaLiftMaybeApiError (InvalidBuyerPubKey buyer)
       =<< eaGetAddressFromPubkeyhash buyer
 
-  buyerPubkeyHash <- eaLiftMaybeServerError err400 "Cannot decode address" (addressToPubKeyHash buyerAddr)
+  buyerPubkeyHash <- eaLiftMaybeApiError (EaCannotDecodeAddress buyer) (addressToPubKeyHash buyerAddr)
   let tx =
         if isPartial marketplaceInfo
           then -- Partial buy
@@ -233,11 +238,10 @@ handleOrderBuy OrderBuyRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceA
 
   handleTx mCtx buyerAddr buyerKey tx
   where
-    -- TODO: Better error handling
-    validateRequest :: MarketplaceInfo -> Either String ()
-    validateRequest MarketplaceInfo {..} = do
-      when (mktInfoIsSell /= M_SELL) $ Left "Order is not For Sale"
-      when (buyAmount > fromInteger mktInfoAmount) $ Left "Cannot buy more than amount in order"
+    validateRequest :: MarketplaceInfo -> Either OrderApiException ()
+    validateRequest mInfo@MarketplaceInfo {..} = do
+      when (mktInfoIsSell /= M_SELL) $ Left $ OrderNotForSale mInfo
+      when (buyAmount > fromInteger mktInfoAmount) $ Left $ OrderAmountExceeds mInfo (toInteger buyAmount)
 
     isPartial :: MarketplaceInfo -> Bool
     isPartial MarketplaceInfo {..} = buyAmount < fromInteger mktInfoAmount
@@ -247,40 +251,41 @@ handleOrderCancel OrderCancelRequest {..} = withMarketplaceApiCtx $ \mCtx@Market
   marketplaceInfo <- eaMarketplaceAtTxOutRef cancelOrderUtxo
 
   -- validate if user can cancel order
-  void $ eaLiftEitherServerError err400 show $ validateCancelOrder marketplaceInfo
+  void $ eaLiftEitherApiError' id $ validateCancelOrder marketplaceInfo
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeApiError (OrderNoOwnerAddress marketplaceInfo)
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddressFromPubkeyhash owner
 
   handleTx mCtx ownerAddr ownerKey $ cancel mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript mktCtxParams mktCtxScripts
   where
-    validateCancelOrder :: MarketplaceInfo -> Either String ()
-    validateCancelOrder MarketplaceInfo {..} = do
-      when (mktInfoIsSell /= M_SELL) $ Left "Order is not For Sale"
+    validateCancelOrder :: MarketplaceInfo -> Either OrderApiException ()
+    validateCancelOrder mInfo@MarketplaceInfo {..} = do
+      when (mktInfoIsSell /= M_SELL) $ Left (OrderNotForSale mInfo)
 
 handleOrderUpdate :: OrderUpdateRequest -> EAApp SubmitTxResponse
 handleOrderUpdate OrderUpdateRequest {..} = withMarketplaceApiCtx $ \mCtx@MarketplaceApiCtx {..} -> do
   marketplaceInfo <- eaMarketplaceAtTxOutRef orderUtxoRef
 
   -- validate if user can cancel order
-  void $ eaLiftEitherServerError err400 show $ validateUpdateOrder marketplaceInfo
+  void $ eaLiftEitherApiError' id $ validateUpdateOrder marketplaceInfo
 
   -- Owner address and signing Key
   (ownerAddr, ownerKey) <-
-    eaLiftMaybeServerError err400 ("No addresses found with Owner:  " <> show (mktInfoOwner marketplaceInfo))
+    eaLiftMaybeApiError (OrderNoOwnerAddress marketplaceInfo)
       . find (\(a, _) -> addressToPubKeyHash a == Just (mktInfoOwner marketplaceInfo))
       =<< eaGetAddressFromPubkeyhash owner
 
   handleTx mCtx ownerAddr ownerKey $ sell mktCtxNetworkId marketplaceInfo mktCtxOracleRefInput mktCtxMarketplaceRefScript (toInteger updatedPrice) mktCtxParams mktCtxScripts
   where
-    validateUpdateOrder :: MarketplaceInfo -> Either String ()
-    validateUpdateOrder MarketplaceInfo {..} = do
-      when (updatedPrice <= 0) $ Left "Price must be greater than 0"
-      when (updatedPrice == fromInteger mktInfoAmount) $ Left "Price must be different from current price"
-      when (mktInfoIsSell /= M_SELL) $ Left "Can only update price for sell orders"
+    validateUpdateOrder :: MarketplaceInfo -> Either OrderApiException ()
+
+    validateUpdateOrder mInfo@MarketplaceInfo {..} = do
+      when (updatedPrice <= 0) $ Left $ NegativeOrderPrice mInfo (toInteger updatedPrice)
+      when (updatedPrice == fromInteger mktInfoAmount) $ Left $ SameOrderPrice mInfo (toInteger updatedPrice)
+      when (mktInfoIsSell /= M_SELL) $ Left $ NonSellOrderPriceUpdate mInfo
 
 handleListOrders :: Maybe Natural -> Maybe MarketplaceOrderType -> EAApp [MarketplaceInfo]
 handleListOrders ownerUserId orderType = withMarketplaceApiCtx $ \MarketplaceApiCtx {..} -> do
