@@ -19,18 +19,20 @@ import EA (
     eaAppEnvOracleNftMintingPolicyId,
     eaAppEnvOracleNftTokenName,
     eaAppEnvOracleOperatorPubKeyHash,
+    eaAppEnvOracleRefInputUtxo,
     eaAppEnvScripts
   ),
   eaLiftEitherServerError,
-  eaLiftMaybe,
-  eaLiftMaybeServerError,
+  eaLiftMaybeApiError,
   eaSubmitTx,
  )
+import EA.Api.Order.Exception (OrderApiException (OrderNoOraclePolicyId, OrderNoOracleToken, OrderNoOracleUtxo))
 import EA.Api.Types (
   CarbonMintRequest (amount, sell, userId),
   SubmitTxResponse,
   txBodySubmitTxResponse,
  )
+import EA.CommonException (CommonException (EaCustomError, EaInvalidAddres, EaInvalidUserAddress, EaNoCollateral, EaNoInternalUtxo))
 import EA.Orphans (MultipartFormDataTmp)
 import EA.Script (marketplaceValidator, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
@@ -112,7 +114,7 @@ handleCarbonApi multipartData = do
       lookupInput "data" multipartData
 
   request <-
-    eaLiftMaybeServerError err400 "Cannot decode JSON data" $
+    eaLiftMaybeApiError (EaCustomError "INVALID_JSON_REQUEST" "Cannot Decode JSON data") $
       Aeson.decode @CarbonMintRequest $
         encodeUtf8 dataPart
 
@@ -123,31 +125,34 @@ handleCarbonApi multipartData = do
   escrowPubkeyHash <- asks eaAppEnvMarketplaceEscrowPubKeyHash
   backdoorPubkeyHash <- asks eaAppEnvMarketplaceBackdoorPubKeyHash
   operatorPubkeyHash <- asks eaAppEnvOracleOperatorPubKeyHash
-  oracleAssetName <- asks eaAppEnvOracleNftTokenName >>= eaLiftMaybe "No Oracle NFT token name"
-  oraclePolicyId <- asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybe "No Oracle NFT minting policy ID"
+  oracleInfo <-
+    asks eaAppEnvOracleRefInputUtxo
+      >>= eaLiftMaybeApiError OrderNoOracleUtxo
+  oracleAssetName <- asks eaAppEnvOracleNftTokenName >>= eaLiftMaybeApiError (OrderNoOracleToken oracleInfo)
+  oraclePolicyId <- asks eaAppEnvOracleNftMintingPolicyId >>= eaLiftMaybeApiError (OrderNoOraclePolicyId oracleInfo)
 
   -- Get the internal address pairs.
   internalAddrPairs <- eaGetInternalAddresses False
 
   -- Get the user address. We don't need the signing key here.
   (userAddr, _) <-
-    eaLiftMaybe "No addresses found"
+    eaLiftMaybeApiError (EaInvalidUserAddress $ userId request)
       . listToMaybe
       =<< eaGetAddresses (userId request)
 
   -- Get the collateral address and its signing key.
   (collateral, colKey) <-
-    eaGetCollateralFromInternalWallet >>= eaLiftMaybe "No collateral found"
+    eaGetCollateralFromInternalWallet >>= eaLiftMaybeApiError EaNoCollateral
 
   (addr, key, oref) <-
     eaSelectOref
       internalAddrPairs
       (\r -> collateral /= Just (r, True))
-      >>= eaLiftMaybe "No UTxO found"
+      >>= eaLiftMaybeApiError EaNoInternalUtxo
 
   -- TODO: Issuer should be Internal Wallet address ?
-  issuer <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash userAddr)
-  owner <- eaLiftMaybe "Cannot decode address" (addressToPubKeyHash userAddr)
+  issuer <- eaLiftMaybeApiError (EaInvalidAddres userAddr) (addressToPubKeyHash userAddr)
+  owner <- eaLiftMaybeApiError (EaInvalidAddres userAddr) (addressToPubKeyHash userAddr)
 
   let orcValidatorHash =
         validatorHash $ oracleValidator (GYToken oraclePolicyId oracleAssetName) operatorPubkeyHash scripts

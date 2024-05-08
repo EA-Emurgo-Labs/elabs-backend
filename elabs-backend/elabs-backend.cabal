@@ -66,6 +66,7 @@ common deps
     , servant-server
     , servant-swagger
     , swagger2
+    , string-conversions
     , tagged
     , text
     , text-class
@@ -137,10 +138,13 @@ library
     EA.Api
     EA.Api.Carbon
     EA.Api.Order
+    EA.Api.Order.Exception
     EA.Api.Order.Types
     EA.Api.Tx
     EA.Api.Types
     EA.Api.Wallet
+    EA.CommonException
+    EA.ErrorMiddleware
     EA.Internal
     EA.Orphans
     EA.Routes

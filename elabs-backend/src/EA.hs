@@ -21,7 +21,10 @@ module EA (
   eaMarketplaceAtTxOutRef,
   eaMarketplaceInfos,
   eaLiftMaybeServerError,
+  eaLiftMaybeApiError,
   eaLiftEitherServerError,
+  eaLiftEitherApiError,
+  eaLiftEitherApiError',
 )
 where
 
@@ -39,7 +42,8 @@ import EA.Script.Marketplace (
   marketplaceDatumToInfo,
  )
 import EA.Script.Oracle (OracleInfo)
-import GeniusYield.TxBuilder (adaOnlyUTxOPure, utxoDatumPure)
+import GeniusYield.HTTP.Errors (IsGYApiError)
+import GeniusYield.TxBuilder (GYTxMonadException, MonadError (catchError, throwError), adaOnlyUTxOPure, throwAppError, utxoDatumPure)
 import GeniusYield.Types
 import Internal.Wallet (RootKey)
 import Servant (ServerError (errBody), err400)
@@ -62,6 +66,10 @@ newtype EAApp a = EAApp
 
 instance MonadMetrics EAApp where
   getMetrics = asks eaAppEnvMetrics
+
+instance MonadError GYTxMonadException EAApp where
+  throwError = eaThrow
+  catchError = eaCatch
 
 data EAAppEnv = EAAppEnv
   { eaAppEnvGYProviders :: !GYProviders
@@ -146,6 +154,10 @@ eaLiftMaybeServerError :: ServerError -> LB.ByteString -> Maybe a -> EAApp a
 eaLiftMaybeServerError error body Nothing = eaThrow $ error {errBody = body}
 eaLiftMaybeServerError _ _ (Just a) = pure a
 
+eaLiftMaybeApiError :: (IsGYApiError e, Exception e) => e -> Maybe a -> EAApp a
+eaLiftMaybeApiError error Nothing = throwAppError error
+eaLiftMaybeApiError _ (Just a) = pure a
+
 eaLiftEitherServerError ::
   ServerError ->
   (a -> LB.ByteString) ->
@@ -153,6 +165,13 @@ eaLiftEitherServerError ::
   EAApp b
 eaLiftEitherServerError error toBody =
   either (\a -> eaThrow $ error {errBody = toBody a}) pure
+
+eaLiftEitherApiError :: (IsGYApiError e, Exception e) => e -> Either a b -> EAApp b
+eaLiftEitherApiError error (Left _) = throwAppError error
+eaLiftEitherApiError _ (Right a) = pure a
+
+eaLiftEitherApiError' :: (IsGYApiError e, Exception e) => (a -> e) -> Either a b -> EAApp b
+eaLiftEitherApiError' f = either (throwAppError . f) pure
 
 --------------------------------------------------------------------------------
 -- Provider functions

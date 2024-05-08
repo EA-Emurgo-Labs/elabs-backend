@@ -25,7 +25,10 @@ import EA.Api.Order (OrderApi, handleOrderApi)
 import EA.Api.Tx (TxApi, handleTxApi)
 import EA.Api.Types (AuthorizationHeader (unAuthorizationHeader))
 import EA.Api.Wallet (WalletApi, handleWalletApi)
+import GeniusYield.HTTP.Errors (GYApiError (GYApiError, gaeErrorCode, gaeHttpStatus, gaeMsg), IsGYApiError (toApiError))
+import GeniusYield.TxBuilder (throwAppError)
 import Internal.Wallet.DB.Sql (checkToken)
+import Network.HTTP.Types (status401)
 import Servant (
   GenericMode ((:-)),
   HasServer (ServerT),
@@ -86,6 +89,18 @@ changeblockServer _ =
     , orderApi = handleOrderApi
     }
 
+data UnAuthorizedError = UnAuthorizedError
+  deriving stock (Show)
+  deriving anyclass (Exception)
+
+instance IsGYApiError UnAuthorizedError where
+  toApiError _ =
+    GYApiError
+      { gaeErrorCode = "UNAUTHORIZED"
+      , gaeHttpStatus = status401
+      , gaeMsg = "Unauthorized access to the API. Please provide a valid token in Header."
+      }
+
 changeblockServer' ::
   Maybe AuthorizationHeader ->
   ServerT (NamedRoutes ChangeblockApi) EAApp
@@ -105,5 +120,5 @@ changeblockServer' maybeAuthHeader =
         isValidToken <- liftIO $ runSqlPool (checkToken hashedToken) pool
         unless
           isValidToken
-          (eaThrow err401)
+          (throwAppError UnAuthorizedError)
         action
