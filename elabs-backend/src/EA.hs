@@ -45,6 +45,7 @@ import EA.Script.Oracle (OracleInfo)
 import GeniusYield.HTTP.Errors (IsGYApiError)
 import GeniusYield.TxBuilder (GYTxMonadException, MonadError (catchError, throwError), adaOnlyUTxOPure, throwAppError, utxoDatumPure)
 import GeniusYield.Types
+import Internal.AdaPrice (getAdaPrice)
 import Internal.Wallet (RootKey)
 import Servant (ServerError (errBody), err400)
 import UnliftIO (MonadUnliftIO (withRunInIO))
@@ -230,10 +231,11 @@ eaMarketplaceAtTxOutRef oref = do
       utxoDatumPure @MarketplaceDatum utxo
 
   eaLiftEither (const "Cannot create market place info") $
-    marketplaceDatumToInfo oref val addr datum
+    marketplaceDatumToInfo oref val addr datum Nothing
 
 eaMarketplaceInfos :: MarketplaceParams -> EAApp [MarketplaceInfo]
 eaMarketplaceInfos mktPlaceParams = do
+  adaPriceResp <- liftIO getAdaPrice
   providers <- asks eaAppEnvGYProviders
   nid <- asks eaAppEnvGYNetworkId
   scripts <- asks eaAppEnvScripts
@@ -248,11 +250,11 @@ eaMarketplaceInfos mktPlaceParams = do
   eaLiftEither (const "No marketplace infos found.") $
     sequence $
       filter isRight $
-        map utxoToMarketplaceInfo utxos
+        map (`utxoToMarketplaceInfo` adaPriceResp) utxos
   where
-    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Either String MarketplaceInfo
-    utxoToMarketplaceInfo t@(utxo, _) = do
+    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Maybe String -> Either String MarketplaceInfo
+    utxoToMarketplaceInfo t@(utxo, _) adaPrice = do
       (addr, value, datum) <-
         either (Left . show) Right $
           utxoDatumPure @MarketplaceDatum t
-      marketplaceDatumToInfo (utxoRef utxo) value addr datum
+      marketplaceDatumToInfo (utxoRef utxo) value addr datum adaPrice

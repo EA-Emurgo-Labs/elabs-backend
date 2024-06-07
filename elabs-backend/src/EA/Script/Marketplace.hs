@@ -127,6 +127,7 @@ data MarketplaceInfo = MarketplaceInfo
   , mktInfoAmount :: Integer
   , mktInfoIssuer :: GYPubKeyHash
   , mktInfoIsSell :: MarketplaceOrderType
+  , mktInfoAdaPrice :: Maybe String
   }
   deriving stock (Show, Generic)
 
@@ -138,11 +139,12 @@ instance Aeson.ToJSON MarketplaceInfo where
       , "value" Aeson..= mktInfoValue
       , "owner" Aeson..= mktInfoOwner
       , "price" Aeson..= mktInfoSalePrice
-      , "carbon-token-id" Aeson..= mktInfoCarbonPolicyId
-      , "carbon-token-name" Aeson..= mktInfoCarbonAssetName
+      , "carbon_token_id" Aeson..= mktInfoCarbonPolicyId
+      , "carbon_token_name" Aeson..= mktInfoCarbonAssetName
       , "amount" Aeson..= mktInfoAmount
       , "issuer" Aeson..= mktInfoIssuer
       , "order_type" Aeson..= mktInfoIsSell
+      , "ada_price" Aeson..= mktInfoAdaPrice
       ]
 
 instance Aeson.FromJSON MarketplaceInfo where
@@ -168,6 +170,8 @@ instance Aeson.FromJSON MarketplaceInfo where
       Aeson..: "issuer"
       <*> v
       Aeson..: "order_type"
+      <*> v
+      Aeson..: "ada_price"
 
 instance Swagger.ToSchema MarketplaceInfo where
   declareNamedSchema _ = do
@@ -217,8 +221,9 @@ marketplaceDatumToInfo ::
   GYValue ->
   GYAddress ->
   MarketplaceDatum ->
+  Maybe String ->
   Either String MarketplaceInfo
-marketplaceDatumToInfo oref val addr datum = do
+marketplaceDatumToInfo oref val addr datum mAdaPrice = do
   pubkeyIssuer <- seither . pubKeyHashFromPlutus $ mktDtmIssuer datum
   pubkeyOwner <- seither . pubKeyHashFromPlutus $ mktDtmOwner datum
   (tokenPolicy, tokenName) <-
@@ -239,6 +244,7 @@ marketplaceDatumToInfo oref val addr datum = do
       , mktInfoAmount = mktDtmAmount datum
       , mktInfoIssuer = pubkeyIssuer
       , mktInfoIsSell = toEnum $ fromInteger $ mktDtmIsSell datum
+      , mktInfoAdaPrice = mAdaPrice
       }
   where
     seither :: (Show b) => Either b a -> Either String a
