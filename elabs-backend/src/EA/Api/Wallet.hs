@@ -9,6 +9,7 @@ import Servant (Capture, GenericMode ((:-)), Get, HasServer (ServerT), JSON, Nam
 import EA (EAApp, eaGetAddressValue)
 import EA.Api.Types (UserId, WalletResponse (WalletResponse), WalletValueResp (WalletValueResp), walletAddressWithPubKeyHash)
 import EA.Wallet (eaGetAddresses)
+import GeniusYield.Types (GYValue, valueSplitAda)
 import Internal.AdaPrice (getAdaPrice)
 import Servant.Swagger (HasSwagger (toSwagger))
 
@@ -50,4 +51,11 @@ handleWalletBalanceApi userid = do
   addrs <- eaGetAddresses userid
   value <- eaGetAddressValue (map fst addrs)
   adaPrice <- liftIO getAdaPrice
-  return $ WalletValueResp value adaPrice
+  let totalAdaValueUsd = calcTotAdaPrice value =<< adaPrice
+
+  return $ WalletValueResp value adaPrice totalAdaValueUsd
+  where
+    calcTotAdaPrice :: GYValue -> Double -> Maybe Double
+    calcTotAdaPrice value adaPrice =
+      let adaAmt = fst $ valueSplitAda value
+       in Just $ (fromIntegral adaAmt / 1000000) * adaPrice
