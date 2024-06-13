@@ -127,7 +127,8 @@ data MarketplaceInfo = MarketplaceInfo
   , mktInfoAmount :: Integer
   , mktInfoIssuer :: GYPubKeyHash
   , mktInfoIsSell :: MarketplaceOrderType
-  , mktInfoAdaPrice :: Maybe String
+  , mktInfoAdaPrice :: Maybe Double
+  , mktInfoTokenPrice :: Maybe Double
   }
   deriving stock (Show, Generic)
 
@@ -144,7 +145,8 @@ instance Aeson.ToJSON MarketplaceInfo where
       , "amount" Aeson..= mktInfoAmount
       , "issuer" Aeson..= mktInfoIssuer
       , "order_type" Aeson..= mktInfoIsSell
-      , "ada_price" Aeson..= mktInfoAdaPrice
+      , "ada_price_usd" Aeson..= mktInfoAdaPrice
+      , "token_price_in_usd" Aeson..= mktInfoTokenPrice
       ]
 
 instance Aeson.FromJSON MarketplaceInfo where
@@ -171,7 +173,9 @@ instance Aeson.FromJSON MarketplaceInfo where
       <*> v
       Aeson..: "order_type"
       <*> v
-      Aeson..: "ada_price"
+      Aeson..: "ada_price_usd"
+      <*> v
+      Aeson..: "token_price_in_usd"
 
 instance Swagger.ToSchema MarketplaceInfo where
   declareNamedSchema _ = do
@@ -183,6 +187,7 @@ instance Swagger.ToSchema MarketplaceInfo where
     tokenNameSchema <- Swagger.declareSchemaRef @GYTokenName Proxy
     orderTypeSchema <- Swagger.declareSchemaRef @MarketplaceOrderType Proxy
     integerSchema <- Swagger.declareSchemaRef @Integer Proxy
+    doubleSchema <- Swagger.declareSchemaRef @Double Proxy
     return $
       Swagger.named "MarketplaceInfo" $
         mempty
@@ -198,11 +203,13 @@ instance Swagger.ToSchema MarketplaceInfo where
                , (T.pack "amount", integerSchema)
                , (T.pack "issuer", pubKeyHashSchema)
                , (T.pack "order_type", orderTypeSchema)
+               , (T.pack "ada_price_usd", doubleSchema)
+               , (T.pack "token_price_in_usd", doubleSchema)
                ]
           & Swagger.required .~ [T.pack "tx_ref", T.pack "address", T.pack "value", T.pack "owner", T.pack "price", T.pack "carbon-token-id", T.pack "carbon-token-name", T.pack "amount", T.pack "issuer", T.pack "order_type"]
           & Swagger.description ?~ "Marketplace Order Info"
-          & Swagger.maxProperties ?~ 10
-          & Swagger.minProperties ?~ 10
+          & Swagger.maxProperties ?~ 12
+          & Swagger.minProperties ?~ 12
 
 marketplaceInfoToDatum :: MarketplaceInfo -> MarketplaceDatum
 marketplaceInfoToDatum MarketplaceInfo {..} =
@@ -221,7 +228,7 @@ marketplaceDatumToInfo ::
   GYValue ->
   GYAddress ->
   MarketplaceDatum ->
-  Maybe String ->
+  Maybe Double ->
   Either String MarketplaceInfo
 marketplaceDatumToInfo oref val addr datum mAdaPrice = do
   pubkeyIssuer <- seither . pubKeyHashFromPlutus $ mktDtmIssuer datum
@@ -231,20 +238,22 @@ marketplaceDatumToInfo oref val addr datum mAdaPrice = do
       unpackAc
         <$> assetClassFromPlutus
           (assetClass (mktDtmAssetSymbol datum) (mktDtmAssetName datum))
-
+  let salePrice = mktDtmSalePrice datum
+      tknPrice = (`tokenPrice` salePrice) =<< mAdaPrice
   return
     MarketplaceInfo
       { mktInfoTxOutRef = oref
       , mktInfoAddress = addr
       , mktInfoValue = val
       , mktInfoOwner = pubkeyOwner
-      , mktInfoSalePrice = mktDtmSalePrice datum
+      , mktInfoSalePrice = salePrice
       , mktInfoCarbonPolicyId = tokenPolicy
       , mktInfoCarbonAssetName = tokenName
       , mktInfoAmount = mktDtmAmount datum
       , mktInfoIssuer = pubkeyIssuer
       , mktInfoIsSell = toEnum $ fromInteger $ mktDtmIsSell datum
       , mktInfoAdaPrice = mAdaPrice
+      , mktInfoTokenPrice = tknPrice
       }
   where
     seither :: (Show b) => Either b a -> Either String a
@@ -253,3 +262,6 @@ marketplaceDatumToInfo oref val addr datum mAdaPrice = do
     unpackAc :: GYAssetClass -> (GYMintingPolicyId, GYTokenName)
     unpackAc (GYToken tokenPolicy tokenName) = (tokenPolicy, tokenName)
     unpackAc _ = ("", "")
+
+    tokenPrice :: Double -> Integer -> Maybe Double
+    tokenPrice adaUsdPrice tokenLovelacePriceRate = Just $ (fromIntegral tokenLovelacePriceRate / 1000000) * adaUsdPrice

@@ -45,9 +45,9 @@ runAdaPriceClient' client = do
   let baseUrl = BaseUrl Https "api.binance.com" 443 "api/v3"
   runClientM client (mkClientEnv manager baseUrl)
 
-getAdaPrice :: IO (Maybe String)
+getAdaPrice :: IO (Maybe Double)
 getAdaPrice = do
   resp <- runAdaPriceClient' $ client api (Just "ADAUSDT")
   case resp of
     Left _ -> return Nothing
-    Right (AdaPriceResponse {..}) -> return $ Just price
+    Right (AdaPriceResponse {..}) -> return $ readMaybe price

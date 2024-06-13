@@ -9,6 +9,7 @@ import Servant (Capture, GenericMode ((:-)), Get, HasServer (ServerT), JSON, Nam
 import EA (EAApp, eaGetAddressValue)
 import EA.Api.Types (UserId, WalletResponse (WalletResponse), WalletValueResp (WalletValueResp), walletAddressWithPubKeyHash)
 import EA.Wallet (eaGetAddresses)
+import Internal.AdaPrice (getAdaPrice)
 import Servant.Swagger (HasSwagger (toSwagger))
 
 --------------------------------------------------------------------------------
@@ -48,4 +49,5 @@ handleWalletBalanceApi :: UserId -> EAApp WalletValueResp
 handleWalletBalanceApi userid = do
   addrs <- eaGetAddresses userid
   value <- eaGetAddressValue (map fst addrs)
-  return $ WalletValueResp value
+  adaPrice <- liftIO getAdaPrice
+  return $ WalletValueResp value adaPrice

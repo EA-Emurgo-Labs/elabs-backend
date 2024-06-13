@@ -34,7 +34,7 @@ import EA.Api.Types (
  )
 import EA.CommonException (CommonException (EaCustomError, EaInvalidAddres, EaInvalidUserAddress, EaNoCollateral, EaNoInternalUtxo))
 import EA.Orphans (MultipartFormDataTmp)
-import EA.Script (marketplaceValidator, oracleValidator)
+import EA.Script (carbonNftMintingPolicy, marketplaceValidator, oracleValidator)
 import EA.Script.Marketplace (MarketplaceParams (..))
 import EA.Tx.Changeblock.MintIpfsNftCarbonToken (mintIpfsNftCarbonToken)
 import EA.Wallet (
@@ -50,6 +50,7 @@ import GeniusYield.TxBuilder (
  )
 import GeniusYield.Types (
   GYAssetClass (GYToken),
+  mintingPolicyId,
   unsafeTokenNameFromHex,
   validatorHash,
  )
@@ -95,6 +96,7 @@ data CarbonMintResponse = CarbonMintResponse
   , ipfsName :: !Text
   , ipfsSize :: !Text
   , ipfsPinningState :: !Text
+  , carbonAsset :: !GYAssetClass
   , submitTxInfo :: !SubmitTxResponse
   }
   deriving stock (Show, Generic)
@@ -194,6 +196,8 @@ handleCarbonApi multipartData = do
         (toInteger $ amount request)
         scripts
 
+    carbonNftAsset = GYToken (mintingPolicyId $ carbonNftMintingPolicy oref tokenName scripts) tokenName
+
   txBody <-
     liftIO $
       runGYTxMonadNode nid providers [addr] addr collateral (return tx)
@@ -206,4 +210,5 @@ handleCarbonApi multipartData = do
       ipfsAddResp.name
       ipfsAddResp.size
       ipfsPinObjResp.state
+      carbonNftAsset
       (txBodySubmitTxResponse txBody)
