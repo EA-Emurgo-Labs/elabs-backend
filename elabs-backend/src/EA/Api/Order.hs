@@ -100,7 +100,7 @@ type OrderCreate =
   Description "This call allows owner to sell carbon tokens. It creates new sell order for provided amount and price."
     :> "orders"
     :> ReqBody '[JSON] OrderSellRequest
-    :> "create"
+    :> "create_sell_order"
     :> Post '[JSON] SubmitTxResponse
 
 type OrderBuy =
