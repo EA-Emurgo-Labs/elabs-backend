@@ -252,7 +252,7 @@ eaMarketplaceInfos mktPlaceParams = do
       filter isRight $
         map (`utxoToMarketplaceInfo` adaPriceResp) utxos
   where
-    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Maybe String -> Either String MarketplaceInfo
+    utxoToMarketplaceInfo :: (GYUTxO, Maybe GYDatum) -> Maybe Double -> Either String MarketplaceInfo
     utxoToMarketplaceInfo t@(utxo, _) adaPrice = do
       (addr, value, datum) <-
         either (Left . show) Right $
