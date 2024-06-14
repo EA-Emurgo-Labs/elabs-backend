@@ -42,12 +42,15 @@ api = Proxy
 runAdaPriceClient' :: ClientM a -> IO (Either ClientError a)
 runAdaPriceClient' client = do
   manager <- newManager tlsManagerSettings
-  let baseUrl = BaseUrl Https "api.binance.com" 443 "api/v3"
+  let baseUrl = BaseUrl Https "api.binance.us" 443 "api/v3"
   runClientM client (mkClientEnv manager baseUrl)
 
 getAdaPrice :: IO (Maybe Double)
 getAdaPrice = do
   resp <- runAdaPriceClient' $ client api (Just "ADAUSDT")
   case resp of
-    Left _ -> return Nothing
+    Left err -> do
+      putStrLn $ "Failed to get ADA price \n " <> show err
+      return
+        Nothing
     Right (AdaPriceResponse {..}) -> return $ readMaybe price
