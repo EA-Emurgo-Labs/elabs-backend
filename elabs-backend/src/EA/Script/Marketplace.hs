@@ -97,7 +97,25 @@ marketPlaceParamsToScriptParams MarketplaceParams {..} =
 
 data MarketplaceOrderType = M_BUY | M_SELL
   deriving stock (Enum, Show, Eq, Generic)
-  deriving anyclass (Swagger.ToSchema, Swagger.ToParamSchema)
+
+instance Swagger.ToSchema MarketplaceOrderType where
+  declareNamedSchema _ = do
+    return $
+      Swagger.named "MarketplaceOrderType" $
+        mempty
+          & Swagger.type_ ?~ Swagger.SwaggerString
+          & Swagger.enum_ ?~ ["BUY", "SELL"]
+          & Swagger.description ?~ "Marketplace Order Type"
+          & Swagger.maxItems ?~ 1
+          & Swagger.minItems ?~ 1
+
+instance Swagger.ToParamSchema MarketplaceOrderType where
+  toParamSchema _ =
+    mempty
+      & Swagger.type_ ?~ Swagger.SwaggerString
+      & Swagger.enum_ ?~ ["BUY", "SELL"]
+      & Swagger.maxItems ?~ 1
+      & Swagger.minItems ?~ 1
 
 instance Aeson.FromJSON MarketplaceOrderType where
   parseJSON = Aeson.withText "MarketplaceOrderType" $ \case
